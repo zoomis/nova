@@ -143,6 +143,8 @@ def bm_pxe_ip_get_all(context, session=None):
 
 @require_admin_context
 def bm_pxe_ip_create(context, address, server_address, service_host, session=None):
+    if not session:
+        session = get_session()
     ref = model_query(context, baremetal_models.BareMetalPxeIp, read_deleted="no", session=session).\
                      filter_by(address=address).\
                      filter_by(service_host=service_host).\
@@ -154,7 +156,7 @@ def bm_pxe_ip_create(context, address, server_address, service_host, session=Non
         ref.service_host = service_host
         ref.save(session=session)
     else:
-        if ref.server_addess != server_address:
+        if ref.server_address != server_address:
             raise exception.NovaException('address exists, but server_address is not same')
     return ref.id
 

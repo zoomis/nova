@@ -38,7 +38,7 @@ FLAGS = flags.FLAGS
 
 def main():
     id = None
-    flagfile = '/etc/nova/nova.conf'
+    flagfile = None
 
     opts, args = getopt.getopt(
         sys.argv[1:],
@@ -49,7 +49,7 @@ def main():
         if o == '--id':
             id = a
         elif o == '--flagfile':
-            flagfile = a
+            flagfile = [ a ]
             pass
         else:
             print "unrecognized option '%s'" % o
