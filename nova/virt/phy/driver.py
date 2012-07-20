@@ -127,10 +127,23 @@ class BareMetalDriver(driver.ComputeDriver):
 
     def __init__(self):
         LOG.info(_("BareMetal driver __init__"))
-
         super(BareMetalDriver, self).__init__()
+
+        # borrow ISI's instance_type_extra_specs code
+        extra_specs = {}
+        extra_specs["hypervisor_type"] = self.get_hypervisor_type()
+        extra_specs["baremetal_driver"] = FLAGS.baremetal_driver
+        for pair in FLAGS.instance_type_extra_specs:
+            keyval = pair.split(':', 1)
+            keyval[0] = keyval[0].strip()
+            keyval[1] = keyval[1].strip()
+            extra_specs[keyval[0]] = keyval[1]
+        if not 'cpu_arch' in extra_specs:
+            LOG.warning('cpu_arch is not found in instance_type_extra_specs')
+            extra_specs['cpu_arch'] = ''
+        self._extra_specs = extra_specs
+
         self.baremetal_nodes = nodes.get_baremetal_nodes()
-        
         self._vif_driver = importutils.import_object(FLAGS.baremetal_vif_driver)
         self._firewall_driver = importutils.import_object(FLAGS.baremetal_firewall_driver)
         self._volume_driver = importutils.import_object(FLAGS.baremetal_volume_driver)
@@ -409,16 +422,6 @@ class BareMetalDriver(driver.ComputeDriver):
         disk_total = dic['local_gb'] * 1024 * 1024 * 1024
         disk_used = dic['local_gb_used'] * 1024 * 1024 * 1024
 
-        # borrow ISI's instance_type_extra_specs code
-        extra_specs = {}
-        extra_specs["hypervisor_type"] = self.get_hypervisor_type()
-        extra_specs["baremetal_driver"] = FLAGS.baremetal_driver
-        for pair in FLAGS.instance_type_extra_specs:
-            keyval = pair.split(':', 1)
-            keyval[0] = keyval[0].strip()
-            keyval[1] = keyval[1].strip()
-            extra_specs[keyval[0]] = keyval[1]
-
         return {
           'host_name-description': 'baremetal ' + FLAGS.host,
           'host_hostname': FLAGS.host,
@@ -434,8 +437,9 @@ class BareMetalDriver(driver.ComputeDriver):
           'disk_used': disk_used,
 #          'host_uuid': 'cedb9b39-9388-41df-8891-c5c9a0c0fe5f',
           'host_name_label': FLAGS.host,
+          'cpu_arch': self._extra_specs.get('cpu_arch'),
           'type': 'baremetal',
-          'instance_type_extra_specs': extra_specs,
+          'instance_type_extra_specs': self._extra_specs,
           }
 
     def update_host_status(self):
