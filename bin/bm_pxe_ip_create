@@ -40,13 +40,11 @@ def main():
              sys.argv[1:],
              "",
              [ 
-                 'flagfile=',
                  'address=',
                  'server_address=',
                  'service_host=',
              ] )
 
-    flagfile = '/etc/nova/nova.conf'
     address = None
     server_address = None
     service_host = None
@@ -58,8 +56,6 @@ def main():
             server_address = a
         if o == "--service_host":
             service_host = a
-        if o == "--flagfile":
-            flagfile = a
 
     if not address:
         print "address is None"
@@ -72,7 +68,7 @@ def main():
         sys.exit(1)
 
     args = sys.argv[:1] + args
-    args = flags.parse_args(args, default_config_files=flagfile)
+    args = flags.parse_args(args)
     ctx = context.get_admin_context()
    
     id = bmdb.bm_pxe_ip_create(ctx, address, server_address, service_host)

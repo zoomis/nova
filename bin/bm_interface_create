@@ -51,7 +51,7 @@ usage:
           'port_no=',
         ])
 
-    flagfile = '/etc/nova/nova.conf'
+    flagfile = None
     values = {
         'bm_node_id': None,
         'mac_address': None,
@@ -61,9 +61,8 @@ usage:
 
     for o, a in opts:
         if o == '--flagfile':
-            flagfile = a
+            flagfile = [ a ]
             continue
-
         if o.startswith("--"):
             o = o[2:]
         if values.has_key(o):
