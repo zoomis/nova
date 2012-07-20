@@ -54,8 +54,8 @@ deploy_server_opts = [
 FLAGS = flags.FLAGS
 FLAGS.register_opts(deploy_server_opts)
 
-flags.parse_args(sys.argv,)
-logging.setup()
+flags.parse_args(sys.argv)
+logging.setup("nova")
 
 LOG = logging.getLogger('nova.virt.baremetal.deploy_server')
 
