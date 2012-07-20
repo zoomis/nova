@@ -169,7 +169,7 @@ class BareMetalDriver(driver.ComputeDriver):
         for node in _get_baremetal_nodes(ctx):
             if node['instance_id']:
                 pm = nodes.get_power_manager(node)
-                ps = power_state.SHUTOFF
+                ps = power_state.SHUTDOWN
                 if pm.is_power_on():
                     ps = power_state.RUNNING
                 inst = db.instance_get(ctx, node['instance_id'])
@@ -289,7 +289,7 @@ class BareMetalDriver(driver.ComputeDriver):
         if not node:
             raise exception.InstanceNotFound(instance_id=instance['id'])
         pm = nodes.get_power_manager(node)
-        ps = power_state.SHUTOFF
+        ps = power_state.SHUTDOWN
         if pm.is_power_on():
             ps = power_state.RUNNING
         LOG.debug("power_state=%s", ps)
