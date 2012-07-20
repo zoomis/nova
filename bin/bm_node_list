@@ -35,8 +35,7 @@ from nova import utils
 FLAGS = flags.FLAGS
 
 def main():
-    utils.default_flagfile('/etc/nova/nova.conf')
-    argv = FLAGS(sys.argv)
+    argv = flags.parse_args(sys.argv)
     #logging.setup()
     ctx = context.get_admin_context()
 
