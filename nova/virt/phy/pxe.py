@@ -20,9 +20,9 @@
 from nova.openstack.common import cfg
 from nova import exception
 from nova import flags
-from nova import log as logging
+from nova.openstack.common import log as logging
 from nova import utils
-from nova.virt.libvirt import connection as libvirt_connection
+from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.phy import vlan 
 from nova.virt.baremetal import bmdb
@@ -140,7 +140,7 @@ def _cache_image_libvirt(context, target, cow, image_id, user_id, project_id, ro
     fname = hashlib.sha1(str(image_id)).hexdigest()
     # do not extend 
     size = None
-    libvirt_connection.LibvirtConnection._cache_image(
+    libvirt_driver.LibvirtDriver._cache_image(
             fn=libvirt_utils.fetch_image,
             context=context,
             target=target,

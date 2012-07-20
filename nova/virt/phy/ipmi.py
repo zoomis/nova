@@ -20,7 +20,7 @@
 """ start add by NTT DOCOMO """
 
 from nova.openstack.common import cfg
-from nova import log as logging
+from nova.openstack.common import log as logging
 from nova import utils
 from nova import flags
 
@@ -31,7 +31,6 @@ import stat
 import time
 import tempfile
 
-#TODO: rename to baremeteal_xxx
 opts = [
     cfg.StrOpt('baremetal_term',
                default='shellinaboxd',

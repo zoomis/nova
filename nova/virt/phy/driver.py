@@ -19,7 +19,8 @@
 """ start add by NTT DOCOMO """
 
 from nova import exception
-from nova import log as logging
+from nova.openstack.common import log as logging
+from nova.openstack.common import importutils
 from nova.openstack.common import cfg
 from nova import utils
 from nova import flags
@@ -132,9 +133,9 @@ class BareMetalDriver(driver.ComputeDriver):
         super(BareMetalDriver, self).__init__()
         self.baremetal_nodes = nodes.get_baremetal_nodes()
         
-        self._vif_driver = utils.import_object(FLAGS.baremetal_vif_driver)
-        self._firewall_driver = utils.import_object(FLAGS.baremetal_firewall_driver)
-        self._volume_driver = utils.import_object(FLAGS.baremetal_volume_driver)
+        self._vif_driver = importutils.import_object(FLAGS.baremetal_vif_driver)
+        self._firewall_driver = importutils.import_object(FLAGS.baremetal_firewall_driver)
+        self._volume_driver = importutils.import_object(FLAGS.baremetal_volume_driver)
         self._image_cache_manager = imagecache.ImageCacheManager()
 
     @classmethod
@@ -189,7 +190,7 @@ class BareMetalDriver(driver.ComputeDriver):
 
         if not node:
             LOG.info("no suitable baremetal node found")
-            raise NoSuitableBareMetal()
+            raise NoSuitableBareMetalNode()
         
         _update_baremetal_state(context, node, instance, baremetal_states.BUILDING)
                 

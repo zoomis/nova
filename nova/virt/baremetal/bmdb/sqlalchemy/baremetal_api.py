@@ -24,8 +24,8 @@
 
 from nova import exception
 from nova import flags
-from nova import utils
-from nova import log as logging
+from nova.openstack.common import log as logging
+from nova.openstack.common import timeutils
 from nova.virt.baremetal.bmdb.sqlalchemy import baremetal_models
 from nova.virt.baremetal.bmdb.sqlalchemy.baremetal_session import get_session
 from sqlalchemy import and_
@@ -131,7 +131,7 @@ def bm_node_destroy(context, bm_node_id, session=None):
     model_query(context, baremetal_models.BareMetalNode, session=session).\
                 filter_by(id=bm_node_id).\
                 update({'deleted': True,
-                        'deleted_at': utils.utcnow(),
+                        'deleted_at': timeutils.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
 
@@ -230,7 +230,7 @@ def bm_interface_destroy(context, if_id, session=None):
     model_query(context, baremetal_models.BareMetalInterface, read_deleted="no", session=session).\
                 filter_by(id=if_id).\
                 update({'deleted': True,
-                        'deleted_at': utils.utcnow(),
+                        'deleted_at': timeutils.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
 
@@ -307,7 +307,7 @@ def bm_deployment_destroy(context, dep_id, session=None):
     model_query(context, baremetal_models.BareMetalDeployment, session=session).\
                 filter_by(id=dep_id).\
                 update({'deleted': True,
-                        'deleted_at': utils.utcnow(),
+                        'deleted_at': timeutils.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
 

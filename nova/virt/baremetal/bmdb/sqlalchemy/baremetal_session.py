@@ -28,7 +28,7 @@ from sqlalchemy.pool import NullPool, StaticPool
 from nova.openstack.common import cfg
 import nova.exception
 import nova.flags as flags
-import nova.log as logging
+from nova.openstack.common import log as logging
 
 from nova.db.sqlalchemy.session import SynchronousSwitchListener
 from nova.db.sqlalchemy.session import MySQLPingListener
