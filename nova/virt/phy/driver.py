@@ -22,7 +22,6 @@ from nova import exception
 from nova.openstack.common import log as logging
 from nova.openstack.common import importutils
 from nova.openstack.common import cfg
-from nova import utils
 from nova import flags
 from nova import context as nova_context
 from nova import db
