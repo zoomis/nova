@@ -70,10 +70,6 @@ pxe_opts = [
 FLAGS = flags.FLAGS
 FLAGS.register_opts(pxe_opts)
 
-_USE_LIBVIRT_CACHE_IMAGE = True
-#_USE_COW_IMAGES = FLAGS.use_cow_images
-# disk/nbd.py can comflict with bm_deploy_work on qemu-nbd. So do not use cow.
-_USE_COW_IMAGES = False
 
 def get_baremetal_nodes():
     return PXE()
@@ -260,7 +256,7 @@ class PXE:
         disk.inject_files(target,
                           [ ('/etc/udev/rules.d/70-persistent-net.rules', rules) ],
                           partition=target_partition,
-                          use_cow=_USE_COW_IMAGES)
+                          use_cow=False)
         bootif_name = "eth%d" % (i - 1)
 
         if inst['key_data']:
@@ -331,7 +327,7 @@ class PXE:
                 disk.inject_data(target,
                                  key, net, metadata, admin_password,
                                  partition=target_partition,
-                                 use_cow=_USE_COW_IMAGES)
+                                 use_cow=False)
 
             except Exception as e:
                 # This could be a windows image, or a vmdk format disk
