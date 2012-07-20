@@ -32,7 +32,6 @@ from nova.virt.libvirt import imagecache
 from nova.virt.phy import baremetal_states
 from nova.virt.baremetal import nodes
 
-#TODO: rename to baremetal_xxx
 opts = [
     cfg.BoolOpt('baremetal_inject_password',
                 default=True,
