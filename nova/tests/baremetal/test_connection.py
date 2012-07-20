@@ -30,6 +30,7 @@ from nova.tests import utils as test_utils
 from nova.virt.phy import driver as c
 from nova.virt.phy import baremetal_states
 from nova.tests.baremetal import bmdb as bmdb_utils
+from nova.tests.image import fake as fake_image
 
 
 FLAGS = flags.FLAGS
@@ -77,6 +78,7 @@ class BaremetalConnectionTestCase(test.TestCase):
                                       nic['address'],
                                       nic['datapath_id'],
                                       nic['port_no'])
+        fake_image.stub_out_image_service(self.stubs)
 
     def tearDown(self):
         super(BaremetalConnectionTestCase, self).tearDown()
