@@ -20,11 +20,11 @@
 from webob import exc
 
 from nova import context
+from nova.openstack.common import cfg
 from nova import db
 from nova import flags
-from nova import log as logging
-from nova.openstack.common import cfg
-from nova import utils
+from nova.openstack.common import importutils
+from nova.openstack.common import log as logging
 from nova.virt import firewall
 from nova.network.quantum.quantum_connection import QuantumClientConnection
 
@@ -197,7 +197,7 @@ class QuantumFilterFirewall(firewall.FirewallDriver):
     
     def __init__(self):
         LOG.debug("QFC = %s", FLAGS.baremetal_quantum_filter_connection)
-        QFC = utils.import_class(FLAGS.baremetal_quantum_filter_connection)
+        QFC = importutils.import_class(FLAGS.baremetal_quantum_filter_connection)
         self._connection = QFC()
         self._network_infos = {}
         self._basic_filters = {}

@@ -18,7 +18,7 @@ class VIFINFOClient(object):
             import logging
             self.LOG = logging.getLogger("vifinfo_client")
         else:
-            from nova import log
+            from nova.openstack.common import log
             self.LOG = log.getLogger(__name__)
         self.server = "%s:%s" % (host, port)
         self.LOG.debug("quantum server: self.server")

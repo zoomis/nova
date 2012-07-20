@@ -1,5 +1,5 @@
 from nova import flags
-from nova import log as logging
+from nova.openstack.common import log as logging
 from nova import exception
 
 from nova.virt.phy import vif_driver
@@ -22,6 +22,6 @@ class NECVIFDriver(vif_driver.BareMetalVIFDriver):
         client = VIFINFOClient(FLAGS.quantum_connection_host, FLAGS.quantum_connection_port)
         try:
             client.delete_vifinfo(mapping['vif_uuid'])
-        except (exception.Error, exc.HTTPNotFound, exc.HTTPInternalServerError), e:
+        except (exception.NovaException, exc.HTTPNotFound, exc.HTTPInternalServerError), e:
             LOG.warn("client.delete_vifinfo(%s) is failed. (unplugging is continued): %s", mapping['vif_uuid'], e)
 

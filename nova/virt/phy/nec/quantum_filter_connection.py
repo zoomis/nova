@@ -19,7 +19,7 @@
 """ start mod by NTT DOCOMO """
 
 from nova import flags
-from nova import log as logging
+from nova.openstack.common import log as logging
 from nova.virt.phy.nec import filter_client as quantum_filter_client
 
 
