@@ -56,10 +56,6 @@ FLAGS.register_opts(opts)
 LOG = logging.getLogger(__name__)
 
 
-def get_connection(_):
-    return BareMetalDriver.instance()
-
-
 class NoSuitableBareMetalNode(exception.NovaException):
     message = _("Failed to find suitable BareMetalNode")
 
@@ -129,7 +125,12 @@ class BareMetalDriver(driver.ComputeDriver):
         LOG.info(_("BareMetal driver __init__"))
         super(BareMetalDriver, self).__init__()
 
-        # borrow ISI's instance_type_extra_specs code
+        self.baremetal_nodes = nodes.get_baremetal_nodes()
+        self._vif_driver = importutils.import_object(FLAGS.baremetal_vif_driver)
+        self._firewall_driver = importutils.import_object(FLAGS.baremetal_firewall_driver)
+        self._volume_driver = importutils.import_object(FLAGS.baremetal_volume_driver)
+        self._image_cache_manager = imagecache.ImageCacheManager()
+
         extra_specs = {}
         extra_specs["hypervisor_type"] = self.get_hypervisor_type()
         extra_specs["baremetal_driver"] = FLAGS.baremetal_driver
@@ -143,11 +144,6 @@ class BareMetalDriver(driver.ComputeDriver):
             extra_specs['cpu_arch'] = ''
         self._extra_specs = extra_specs
 
-        self.baremetal_nodes = nodes.get_baremetal_nodes()
-        self._vif_driver = importutils.import_object(FLAGS.baremetal_vif_driver)
-        self._firewall_driver = importutils.import_object(FLAGS.baremetal_firewall_driver)
-        self._volume_driver = importutils.import_object(FLAGS.baremetal_volume_driver)
-        self._image_cache_manager = imagecache.ImageCacheManager()
 
     @classmethod
     def instance(cls):

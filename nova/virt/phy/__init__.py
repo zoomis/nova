@@ -16,5 +16,6 @@
 
 """ start add by NTT DOCOMO """
 
+from nova.virt.phy.driver import BareMetalDriver
 
 """ end add by NTT DOCOMO """
