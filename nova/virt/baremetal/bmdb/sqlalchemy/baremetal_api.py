@@ -155,7 +155,7 @@ def bm_pxe_ip_create(context, address, server_address, service_host, session=Non
         ref.save(session=session)
     else:
         if ref.server_addess != server_address:
-            raise exception.Error('address exists, but server_address is not same')
+            raise exception.NovaException('address exists, but server_address is not same')
     return ref.id
 
 
@@ -180,22 +180,22 @@ def bm_pxe_ip_associate(context, bm_node_id, session=None):
     if not session:
         session = get_session()
     with session.begin():
-        ph_ref = bm_node_get(context, bm_node_id, session=session)
-        if not ph_ref:
-            raise exception.Error(host=bm_node_id)
+        node_ref = bm_node_get(context, bm_node_id, session=session)
+        if not node_ref:
+            raise exception.NovaException()
         ip_ref = model_query(context, baremetal_models.BareMetalPxeIp, read_deleted="no", session=session).\
-                         filter_by(service_host=ph_ref.service_host).\
-                         filter_by(bm_node_id=ph_ref.id).\
+                         filter_by(service_host=node_ref.service_host).\
+                         filter_by(bm_node_id=node_ref.id).\
                          first()
         if ip_ref:
             return ip_ref.id
         ip_ref = model_query(context, baremetal_models.BareMetalPxeIp, read_deleted="no", session=session).\
-                         filter_by(service_host=ph_ref.service_host).\
+                         filter_by(service_host=node_ref.service_host).\
                          filter_by(bm_node_id=None).\
                          with_lockmode('update').\
                          first()
         if not ip_ref:
-            raise exception.Error()
+            raise exception.NovaException()
         ip_ref.bm_node_id = bm_node_id
         session.add(ip_ref)
         return ip_ref.id
@@ -258,7 +258,7 @@ def bm_interface_set_vif_uuid(context, if_id, vif_uuid, session=None):
                          with_lockmode('update').\
                          first()
         if not ref:
-            raise exception.Error()
+            raise exception.NovaException()
         ref.vif_uuid = vif_uuid
         session.add(ref)
 
