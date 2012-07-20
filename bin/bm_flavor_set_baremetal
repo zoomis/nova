@@ -45,7 +45,7 @@ def main():
                  'unset',
              ] )
 
-    flagfile = '/etc/nova/nova.conf'
+    flagfile = None
     type = None
     unset = False
 
@@ -55,7 +55,7 @@ def main():
         if o == "--unset":
             unset = True
         if o == "--flagfile":
-            flagfile = a
+            flagfile = [a]
 
     if not type:
         print "type is None"
