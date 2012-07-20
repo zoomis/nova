@@ -22,14 +22,12 @@ from nova import exception
 from nova import flags
 from nova.openstack.common import log as logging
 from nova import utils
-from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.phy import vlan 
 from nova.virt.baremetal import bmdb
 from nova.compute import instance_types
 from nova.virt.disk import api as disk
 
-import hashlib
 import os
 import shutil
 
@@ -134,22 +132,6 @@ def _start_dnsmasq(interface, tftp_root, client_address, pid_path, lease_path):
 def _cache_image_x(context, target, image_id, user_id, project_id):
     if not os.path.exists(target):
         libvirt_utils.fetch_image(context, target, image_id, user_id, project_id)
-
-
-def _cache_image_libvirt(context, target, cow, image_id, user_id, project_id, root_gb):
-    fname = hashlib.sha1(str(image_id)).hexdigest()
-    # do not extend 
-    size = None
-    libvirt_driver.LibvirtDriver._cache_image(
-            fn=libvirt_utils.fetch_image,
-            context=context,
-            target=target,
-            fname=fname,
-            cow=cow,
-            image_id=image_id,
-            user_id=user_id,
-            project_id=project_id,
-            size=size)
 
 
 def _build_pxe_config(deployment_id, deployment_key, iscsi_iqn, deploy_aki_path, deploy_ari_path, aki_path, ari_path, iscsi_portal):
@@ -366,21 +348,12 @@ class PXE:
         image_path = os.path.join(image_root, 'disk')
         LOG.debug("fetching image id=%s target=%s", ami_id, image_path)
 
-        if _USE_LIBVIRT_CACHE_IMAGE:
-            _cache_image_libvirt(
-                    context=context,
-                    target=image_path,
-                    cow=_USE_COW_IMAGES,
-                    image_id=ami_id,
-                    user_id=instance['user_id'],
-                    project_id=instance['project_id'],
-                    root_gb=instance['root_gb'])
-        else:
-            _cache_image_x(context=context,
-                           target=image_path,
-                           image_id=ami_id,
-                           user_id=instance['user_id'],
-                           project_id=instance['project_id'])
+        _cache_image_x(context=context,
+                       target=image_path,
+                       image_id=ami_id,
+                       user_id=instance['user_id'],
+                       project_id=instance['project_id'])
+
         LOG.debug("injecting to image id=%s target=%s", ami_id, image_path)
         self._inject_to_image(context, image_path, node, instance, network_info)
         var['image_path'] = image_path
