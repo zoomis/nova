@@ -19,7 +19,7 @@
 """ start add by NTT DOCOMO """
 
 from nova import exception
-from nova.openstack.common import log as logging
+from nova.openstack.common import log as logging, importutils
 from nova.openstack.common import cfg
 from nova import utils
 from nova import flags
@@ -156,7 +156,7 @@ class VolumeDriver(object):
         raise NotImplementedError()
 
 
-flags.DECLARE('libvirt_volume_drivers', 'nova.virt.libvirt.connection')
+flags.DECLARE('libvirt_volume_drivers', 'nova.virt.libvirt.driver')
 
 class LibvirtVolumeDriver(VolumeDriver):
     """The VolumeDriver deligates nova.virt.libvirt.volume"""
@@ -166,7 +166,7 @@ class LibvirtVolumeDriver(VolumeDriver):
         self.volume_drivers = {}
         for driver_str in FLAGS.libvirt_volume_drivers:
             driver_type, _sep, driver = driver_str.partition('=')
-            driver_class = utils.import_class(driver)
+            driver_class = importutils.import_class(driver)
             self.volume_drivers[driver_type] = driver_class(self)
 
     def _volume_driver_method(self, method_name, connection_info,
@@ -187,7 +187,7 @@ class LibvirtVolumeDriver(VolumeDriver):
         pxe_ip = bmdb.bm_pxe_ip_get_by_bm_node_id(ctx, node['id'])
         if not pxe_ip:
             if not FLAGS.baremetal_use_unsafe_iscsi:
-                raise exception.Error("No fixed PXE IP is associated to %s" % instance_name)
+                raise exception.NovaException("No fixed PXE IP is associated to %s" % instance_name)
         mount_device = mountpoint.rpartition("/")[2]
         conf = self._volume_driver_method('connect_volume',
                                          connection_info,

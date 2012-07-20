@@ -25,14 +25,12 @@ import os
 import stat
 
 from nova import flags
-from nova import log as logging
 from nova import test
 from nova import utils
 
 from nova.virt.phy import ipmi
 from nova.tests.baremetal import bmdb as bmdb_utils
 
-LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 class BaremetalIPMITestCase(test.TestCase):

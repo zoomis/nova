@@ -24,7 +24,6 @@ Tests for baremetal connection
 import mox
 
 from nova import flags
-from nova import log as logging
 from nova import test
 from nova.tests import utils as test_utils
 
@@ -33,7 +32,6 @@ from nova.virt.phy import baremetal_states
 from nova.tests.baremetal import bmdb as bmdb_utils
 
 
-LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 class FakeVifDriver(object):

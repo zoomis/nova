@@ -338,7 +338,7 @@ class BaremetalHostManagerTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'compute_node_get_all')
         self.mox.StubOutWithMock(baremetal_host_manager.LOG, 'warn')
         self.mox.StubOutWithMock(db, 'instance_get_all')
-        self.stubs.Set(utils, 'utcnow', lambda: 31337)
+        self.stubs.Set(timeutils, 'utcnow', lambda: 31337)
         
         def _fake_bm_node_get_all_by_service_host(context, service_host):
             if service_host == 'host1':

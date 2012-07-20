@@ -23,12 +23,10 @@ import mox
 
 from nova import exception
 from nova import flags
-from nova import log as logging
 from nova import test
 
 from nova.virt.phy import pxe
 
-LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 class BaremetalPXETestCase(test.TestCase):

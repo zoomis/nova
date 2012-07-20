@@ -23,12 +23,10 @@ import mox
 
 from nova import utils
 from nova import flags
-from nova import log as logging
 from nova import test
 
 from nova.virt.phy import volume_driver
 
-LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 SHOW_OUTPUT = """Target 1: iqn.2010-10.org.openstack:volume-00000001
