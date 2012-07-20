@@ -35,8 +35,9 @@ class BareMetalVIFDriver(VIFDriver):
     def _after_unplug(self, instance, network, mapping, pif):
         pass
 
-    def plug(self, instance, network, mapping):
+    def plug(self, instance, vif):
         LOG.debug("plug: %s", locals())
+        network, mapping = vif
         ctx = context.get_admin_context()
         node = bmdb.bm_node_get_by_instance_id(ctx, instance['id'])
         if not node:
@@ -50,8 +51,9 @@ class BareMetalVIFDriver(VIFDriver):
                 return
         raise exception.NovaException("baremetalnode:%s has no vacant pif for vif_uuid=%s" % (node['id'], mapping['vif_uuid']))
 
-    def unplug(self, instance, network, mapping):
+    def unplug(self, instance, vif):
         LOG.debug("unplug: %s", locals())
+        network, mapping = vif
         ctx = context.get_admin_context()
         pif = bmdb.bm_interface_get_by_vif_uuid(ctx, mapping['vif_uuid'])
         if pif:

@@ -450,12 +450,12 @@ class BareMetalDriver(driver.ComputeDriver):
         """Plugin VIFs into networks."""
         LOG.debug("plug_vifs: %s", locals())
         for (network, mapping) in network_info:
-            self._vif_driver.plug(instance, network, mapping)
+            self._vif_driver.plug(instance, (network, mapping))
 
     def _unplug_vifs(self, instance, network_info):
         LOG.debug("_unplug_vifs: %s", locals())
         for (network, mapping) in network_info:
-            self._vif_driver.unplug(instance, network, mapping)
+            self._vif_driver.unplug(instance, (network, mapping))
 
     def manage_image_cache(self, context):
         """Manage the local cache of images."""
