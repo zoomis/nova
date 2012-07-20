@@ -60,8 +60,7 @@ def main():
         sys.exit(1)
 
     args = sys.argv[:1] + args
-    utils.default_flagfile(filename=flagfile, args=args)
-    argv = FLAGS(args)
+    args = flags.parse_args(args, default_config_files=flagfile)
     ctx = context.get_admin_context()
 
     bmdb.bm_interface_destroy(ctx, id)

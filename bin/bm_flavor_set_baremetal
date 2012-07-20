@@ -31,7 +31,6 @@ from nova import context
 from nova import db
 from nova import flags
 from nova import utils
-from nova import log as logging
 
 FLAGS = flags.FLAGS
 
@@ -63,9 +62,7 @@ def main():
         sys.exit(1)
    
     args = sys.argv[:1] + args
-    utils.default_flagfile(filename=flagfile, args=args)
-    argv = FLAGS(args)
-
+    args = flags.parse_args(args, default_config_files=flagfile)
     ctx = context.get_admin_context()
 
     t = db.instance_type_get_by_name(ctx, type)

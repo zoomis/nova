@@ -29,7 +29,6 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
 from nova import context
 from nova.virt.baremetal import bmdb
 from nova import flags
-from nova import utils
 
 FLAGS = flags.FLAGS
 
@@ -37,9 +36,7 @@ FLAGS = flags.FLAGS
 def main():
     flagfile = '/etc/nova/nova.conf'
 
-    args = sys.argv
-    utils.default_flagfile(filename=flagfile, args=args)
-    argv = FLAGS(args)
+    args = flags.parse_args(sys.argv, default_config_files=flagfile)
 
     fmt = "%-8s  %-15s  %-15s  %-8s  %-8s"
     print fmt % (

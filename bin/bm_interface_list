@@ -27,18 +27,18 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
 from nova import context
-from nova import db
 from nova.virt.baremetal import bmdb
 from nova import flags
-from nova import utils
 
 FLAGS = flags.FLAGS
 
-utils.default_flagfile('/etc/nova/nova.conf')
-argv = FLAGS(sys.argv)
 ctx = context.get_admin_context()
 
 def main():
+    argv = flags.parse_args(sys.argv)
+    #logging.setup()
+    ctx = context.get_admin_context()
+
     fmt = "%-8s  %-16s  %-18s  %-16s  %-4s"
     print fmt % (
                 _('ID'),
@@ -46,8 +46,7 @@ def main():
                 _('MAC_ADDRESS'),
                 _('DATAPATH_ID'),
                 _('PORT_NO'))
-    ctxt = context.get_admin_context()
-    for pif in bmdb.bm_interface_get_all(ctxt):
+    for pif in bmdb.bm_interface_get_all(ctx):
         print fmt % (pif.id, pif.bm_node_id,
                      pif.address, pif.datapath_id, pif.port_no)
     print

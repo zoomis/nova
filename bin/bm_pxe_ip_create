@@ -28,11 +28,9 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
 from nova import context
-from nova import db
 from nova.virt.baremetal import bmdb
 from nova import flags
 from nova import utils
-from nova import log as logging
 
 FLAGS = flags.FLAGS
 
@@ -74,9 +72,7 @@ def main():
         sys.exit(1)
 
     args = sys.argv[:1] + args
-    utils.default_flagfile(filename=flagfile, args=args)
-    argv = FLAGS(args)
-
+    args = flags.parse_args(args, default_config_files=flagfile)
     ctx = context.get_admin_context()
    
     id = bmdb.bm_pxe_ip_create(ctx, address, server_address, service_host)

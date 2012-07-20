@@ -43,8 +43,7 @@ from nova.openstack.common import cfg
 from nova import context as nova_context
 from nova.virt.baremetal import bmdb
 from nova import flags
-from nova import log as logging
-from nova import utils
+from nova.openstack.common import log as logging
 
 
 deploy_server_opts = [
@@ -55,8 +54,7 @@ deploy_server_opts = [
 FLAGS = flags.FLAGS
 FLAGS.register_opts(deploy_server_opts)
 
-utils.default_flagfile()
-flags.FLAGS(sys.argv)
+flags.parse_args(sys.argv,)
 logging.setup()
 
 LOG = logging.getLogger('nova.virt.baremetal.deploy_server')
