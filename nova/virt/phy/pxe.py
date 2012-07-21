@@ -233,6 +233,7 @@ class PXE:
         return var
 
     def _inject_to_image(self, context, target, node, inst, network_info):
+        files = []
         # For now, we assume that if we're not using a kernel, we're using a
         # partitioned disk image where the target partition is the first
         # partition
@@ -253,10 +254,11 @@ class PXE:
         for hwaddr in nics_in_order:
             rules += 'SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="%s", ATTR{dev_id}=="0x0", ATTR{type}=="1", KERNEL=="eth*", NAME="eth%d"\n' % (hwaddr.lower(), i)
             i += 1
-        disk.inject_files(target,
-                          [ ('/etc/udev/rules.d/70-persistent-net.rules', rules) ],
-                          partition=target_partition,
-                          use_cow=False)
+        #disk.inject_files(target,
+        #                  [ ('/etc/udev/rules.d/70-persistent-net.rules', rules) ],
+        #                  partition=target_partition,
+        #                  use_cow=False)
+        files.append(('/etc/udev/rules.d/70-persistent-net.rules', rules))
         bootif_name = "eth%d" % (i - 1)
 
         if inst['key_data']:
@@ -326,6 +328,7 @@ class PXE:
             try:
                 disk.inject_data(target,
                                  key, net, metadata, admin_password,
+                                 files=files,
                                  partition=target_partition,
                                  use_cow=False)
 
@@ -396,7 +399,7 @@ class PXE:
             _cache_image_b(image_id, target)
 
         pxe_config_dir = os.path.join(tftp_root, 'pxelinux.cfg')
-        pxe_config_path = os.path.join(pxe_config_dir, "01-" + node.pxe_mac_address.replace(":", "-").lower())
+        pxe_config_path = os.path.join(pxe_config_dir, "01-" + node['prov_mac_address'].replace(":", "-").lower())
 
         root_mb = instance['root_gb'] * 1024
 
