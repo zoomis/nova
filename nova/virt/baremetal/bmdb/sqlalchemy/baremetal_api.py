@@ -162,6 +162,17 @@ def bm_pxe_ip_create(context, address, server_address, service_host, session=Non
 
 
 @require_admin_context
+def bm_pxe_ip_create_direct(context, bm_pxe_ip, session=None):
+    if not session:
+        session = get_session()
+    with session.begin():
+        ref = baremetal_models.BareMetalPxeIp()
+        ref.update(bm_pxe_ip)
+        ref.save(session=session)
+        return ref
+
+
+@require_admin_context
 def bm_pxe_ip_get(context, ip_id, session=None):
     ref = model_query(context, baremetal_models.BareMetalPxeIp, read_deleted="no", session=session).\
                      filter_by(id=ip_id).\
@@ -184,7 +195,7 @@ def bm_pxe_ip_associate(context, bm_node_id, session=None):
     with session.begin():
         node_ref = bm_node_get(context, bm_node_id, session=session)
         if not node_ref:
-            raise exception.NovaException()
+            raise exception.NovaException("bm_node %s not found" % bm_node_id)
         ip_ref = model_query(context, baremetal_models.BareMetalPxeIp, read_deleted="no", session=session).\
                          filter_by(service_host=node_ref.service_host).\
                          filter_by(bm_node_id=node_ref.id).\
@@ -197,7 +208,7 @@ def bm_pxe_ip_associate(context, bm_node_id, session=None):
                          with_lockmode('update').\
                          first()
         if not ip_ref:
-            raise exception.NovaException()
+            raise exception.NovaException("free bm_pxe_ip not found")
         ip_ref.bm_node_id = bm_node_id
         session.add(ip_ref)
         return ip_ref.id

@@ -93,6 +93,10 @@ def bm_pxe_ip_create(context, address, server_address, service_host):
     return IMPL.bm_pxe_ip_create(context, address, server_address, service_host)
 
 
+def bm_pxe_ip_create_direct(context, bm_pxe_ip):
+    return IMPL.bm_pxe_ip_create_direct(context, bm_pxe_ip)
+
+
 def bm_pxe_ip_get_all(context):
     return IMPL.bm_pxe_ip_get_all(context)
 
