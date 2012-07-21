@@ -117,6 +117,9 @@ def _update_baremetal_state(context, node, instance, state):
         })
 
 
+# lazy load
+nodes = None
+
 class BareMetalDriver(driver.ComputeDriver):
     """BareMetal hypervisor driver"""
 
@@ -124,7 +127,10 @@ class BareMetalDriver(driver.ComputeDriver):
         LOG.info(_("BareMetal driver __init__"))
         super(BareMetalDriver, self).__init__()
 
-        from nova.virt.baremetal import nodes
+        # lazy load
+        import nova.virt.baremetal
+        global nodes
+        nodes = nova.virt.baremetal.nodes
         self.baremetal_nodes = nodes.get_baremetal_nodes()
         self._vif_driver = importutils.import_object(FLAGS.baremetal_vif_driver)
         self._firewall_driver = importutils.import_object(FLAGS.baremetal_firewall_driver)
