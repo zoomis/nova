@@ -89,8 +89,8 @@ def bm_node_update(context, bm_node_id, values):
     return IMPL.bm_node_update(context, bm_node_id, values)
 
 
-def bm_pxe_ip_create(context, address, server_address, service_host):
-    return IMPL.bm_pxe_ip_create(context, address, server_address, service_host)
+def bm_pxe_ip_create(context, address, server_address):
+    return IMPL.bm_pxe_ip_create(context, address, server_address)
 
 
 def bm_pxe_ip_create_direct(context, bm_pxe_ip):

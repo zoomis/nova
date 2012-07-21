@@ -42,20 +42,16 @@ def main():
              [ 
                  'address=',
                  'server_address=',
-                 'service_host=',
              ] )
 
     address = None
     server_address = None
-    service_host = None
 
     for o, a in opts:
         if o == "--address":
             address = a
         if o == "--server_address":
             server_address = a
-        if o == "--service_host":
-            service_host = a
 
     if not address:
         print "address is None"
@@ -63,15 +59,12 @@ def main():
     if not server_address:
         print "server_address is None"
         sys.exit(1)
-    if not service_host:
-        print "service_host is None"
-        sys.exit(1)
 
     args = sys.argv[:1] + args
     args = flags.parse_args(args)
     ctx = context.get_admin_context()
    
-    id = bmdb.bm_pxe_ip_create(ctx, address, server_address, service_host)
+    id = bmdb.bm_pxe_ip_create(ctx, address, server_address)
     print "id=%s" % id
     ip_ref = bmdb.bm_pxe_ip_get(ctx, id)
     print "address=%s" % ip_ref.address

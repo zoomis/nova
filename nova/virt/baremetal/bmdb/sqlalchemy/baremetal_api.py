@@ -142,18 +142,16 @@ def bm_pxe_ip_get_all(context, session=None):
 
 
 @require_admin_context
-def bm_pxe_ip_create(context, address, server_address, service_host, session=None):
+def bm_pxe_ip_create(context, address, server_address, session=None):
     if not session:
         session = get_session()
     ref = model_query(context, baremetal_models.BareMetalPxeIp, read_deleted="no", session=session).\
                      filter_by(address=address).\
-                     filter_by(service_host=service_host).\
                      first()
     if not ref:
         ref = baremetal_models.BareMetalPxeIp()
         ref.address = address
         ref.server_address = server_address
-        ref.service_host = service_host
         ref.save(session=session)
     else:
         if ref.server_address != server_address:
@@ -197,13 +195,11 @@ def bm_pxe_ip_associate(context, bm_node_id, session=None):
         if not node_ref:
             raise exception.NovaException("bm_node %s not found" % bm_node_id)
         ip_ref = model_query(context, baremetal_models.BareMetalPxeIp, read_deleted="no", session=session).\
-                         filter_by(service_host=node_ref.service_host).\
                          filter_by(bm_node_id=node_ref.id).\
                          first()
         if ip_ref:
             return ip_ref.id
         ip_ref = model_query(context, baremetal_models.BareMetalPxeIp, read_deleted="no", session=session).\
-                         filter_by(service_host=node_ref.service_host).\
                          filter_by(bm_node_id=None).\
                          with_lockmode('update').\
                          first()

@@ -42,7 +42,6 @@
 	  `deleted` tinyint(1) DEFAULT NULL,
 	  `id` int(11) NOT NULL AUTO_INCREMENT,
 	  `address` varchar(255) DEFAULT NULL,
-	  `service_host` varchar(255) NOT NULL,
 	  `bm_node_id` int(11) DEFAULT NULL,
 	  `server_address` varchar(255) DEFAULT NULL,
 	  PRIMARY KEY (`id`)

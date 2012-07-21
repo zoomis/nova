@@ -38,16 +38,15 @@ def main():
 
     args = flags.parse_args(sys.argv)
 
-    fmt = "%-8s  %-15s  %-15s  %-8s  %-8s"
+    fmt = "%-8s  %-15s  %-15s  %-8s"
     print fmt % (
                 _('ID'),
                 _('ADDRESS'),
                 _('SERVER_ADDRESS'),
-                _('SERVICE_HOST'),
                 _('BM_NODE_ID'))
     ctxt = context.get_admin_context()
     for ip in bmdb.bm_pxe_ip_get_all(ctxt):
-        print fmt % (ip.id, ip.address, ip.server_address, ip.service_host, ip.bm_node_id)
+        print fmt % (ip.id, ip.address, ip.server_address, ip.bm_node_id)
     print
 
 

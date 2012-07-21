@@ -63,7 +63,6 @@ class BareMetalPxeIp(BASE, models.NovaBase):
     id = Column(Integer, primary_key=True)
     address = Column(String(255))
     server_address = Column(String(255))
-    service_host = Column(String(255))
     bm_node_id = Column(Integer, ForeignKey('bm_nodes.id'), nullable=True)
 
 
