@@ -36,9 +36,9 @@ from nova.tests.image import fake as fake_image
 FLAGS = flags.FLAGS
 
 class FakeVifDriver(object):
-    def plug(self, instance, network, mapping):
+    def plug(self, instance, vif):
         pass
-    def unplug(self, instance, network, mapping):
+    def unplug(self, instance, vif):
         pass
 
 FakeFirewallDriver = NoopFirewallDriver
