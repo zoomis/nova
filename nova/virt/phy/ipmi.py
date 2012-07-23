@@ -176,21 +176,21 @@ class Ipmi:
         TERMINAL = FLAGS.baremetal_term
         CERTDIR = FLAGS.baremetal_term_cert_dir
     
-        commands = []
+        args = []
     
-        commands.append(TERMINAL)
+        args.append(TERMINAL)
         if CERTDIR:
-            commands.append("-c")
-            commands.append(CERTDIR)
+            args.append("-c")
+            args.append(CERTDIR)
         else:
-            commands.append("-t")
-        commands.append("-p")
-        commands.append(port)
+            args.append("-t")
+        args.append("-p")
+        args.append(str(port))
         if pidfile:
-            commands.append("--background=%s" % pidfile)
+            args.append("--background=%s" % pidfile)
         else:
-            commands.append("--background")
-        commands.append("-s")
+            args.append("--background")
+        args.append("-s")
         
         uid = os.getuid()
         gid = os.getgid()
@@ -198,12 +198,17 @@ class Ipmi:
         pwfile = _make_password_file(self._password)
     
         ipmi_args = "/:" + str(uid) + ":" + str(gid) + ":HOME:/usr/bin/ipmitool "
-        ipmi_args += "-H" + self._address +  " -I lanplus -U " + self._user + " "
-        ipmi_args += "-f" + pwfile + " sol activate" 
+        ipmi_args += "-H " + self._address +  " -I lanplus -U " + self._user + " "
+        ipmi_args += "-f " + pwfile + " sol activate" 
     
-        commands.append(ipmi_args)
-    
-        return utils.execute(commands, run_as_root=True)
+        args.append(ipmi_args)
+        # Run shellinaboxd without pipes. Otherwise utils.execute() waits
+        # infinitly since shellinaboxd does not close passed fds.
+        x = [ "'" + arg.replace("'", "'\\''") + "'" for arg in args ]
+        x.append('</dev/null')
+        x.append('>/dev/null')
+        x.append('2>&1')
+        return utils.execute(' '.join(x), shell=True)
 
     
     def stop_console(self, node_id):
