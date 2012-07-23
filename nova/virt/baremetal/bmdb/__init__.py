@@ -13,9 +13,5 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
-""" start add by NTT DOCOMO """
-
 from nova.virt.baremetal.bmdb.baremetal_api import *
 
-""" end add by NTT DOCOMO """

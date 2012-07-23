@@ -19,6 +19,8 @@
 SQLAlchemy models for baremetal data.
 """
 
+""" start add by NTT DOCOMO """
+
 from sqlalchemy.orm import relationship, backref, object_mapper
 from sqlalchemy import Column, Integer, BigInteger, String, schema
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text, Float
@@ -90,4 +92,7 @@ def register_models():
 def unregister_models():
     engine = baremetal_session.get_engine()
     BASE.metadata.drop_all(engine)
+
+
+""" end add by NTT DOCOMO """
 

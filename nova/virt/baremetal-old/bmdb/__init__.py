@@ -1,7 +1,5 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-# Copyright (c) 2011 University of Southern California / ISI
 # Copyright (c) 2012 NTT DOCOMO, INC. 
+# All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -15,4 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.virt.baremetal.driver import BareMetalDriver
+
+""" start add by NTT DOCOMO """
+
+from nova.virt.baremetal.bmdb.baremetal_api import *
+
+""" end add by NTT DOCOMO """

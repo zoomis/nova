@@ -42,6 +42,8 @@ these objects be simple dictionaries.
 
 """
 
+""" start add by NTT DOCOMO """
+
 from nova import flags
 from nova.openstack.common import cfg
 from nova import utils
@@ -153,4 +155,6 @@ def bm_deployment_get(context, dep_id, session=None):
 
 def bm_deployment_destroy(context, dep_id):
     return IMPL.bm_deployment_destroy(context, dep_id)
+
+""" end add by NTT DOCOMO """
 

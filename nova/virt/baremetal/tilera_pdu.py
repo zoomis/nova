@@ -1,0 +1,152 @@
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright (c) 2012 University of Southern California / ISI
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+from nova.openstack.common import cfg
+from nova import log as logging
+from nova import utils
+from nova import flags
+
+from nova.virt.baremetal import baremetal_states
+
+import subprocess
+import time
+
+opts = [
+    cfg.StrOpt('tile_monitor',
+               default='/usr/local/TileraMDE/bin/tile-monitor',
+               help='Tilera command line program for Bare-metal driver')
+    ]
+
+FLAGS = flags.FLAGS
+FLAGS.register_opts(opts)
+
+LOG = logging.getLogger(__name__)
+
+def get_power_manager(node, **kwargs):
+    pm = Pdu(address=node['pm_address'],
+              node_id=node['id'])
+    return pm
+
+
+class PduError(Exception):
+    def __init__(self, status, message):
+        self.status = status
+        self.message = message
+
+    def __str__(self):
+        return "%s: %s" % (self.status, self.message)
+
+
+class Pdu:
+
+    def __init__(self, address=None, node_id=None):
+        if address == None:
+            raise PduError, (-1, "address is None")
+        if node_id == None:
+            raise PduError, (-1, "node_id is None")
+        self._address = address
+        self._node_id = node_id
+
+    def _exec_status(self):
+        LOG.debug(_("Before ping to the bare-metal node"))
+        tile_output = "/tftpboot/tile_output_" + str(self._node_id)
+        grep_cmd = ("ping -c1 " + self._address + " | grep Unreachable > " +
+                    tile_output)
+        subprocess.Popen(grep_cmd, shell=True)
+        self.sleep_mgr(5)
+        file = open(tile_output, "r")
+        out = file.readline().find("Unreachable")
+        utils.execute('sudo', 'rm', tile_output)
+        return out
+    
+    def activate_node(self):
+        self._power_off()
+        state = self._power_on()
+        return state
+    
+    def reboot_node(self):
+        self._power_off()
+        state = self._power_on()
+        return state
+
+    def deactivate_node(self):
+        state = self._power_off()
+        return state
+    
+    def _power_mgr(self, mode):
+        """
+        Changes power state of the given node.
+
+        According to the mode (1-ON, 2-OFF, 3-REBOOT), power state can be
+        changed. /tftpboot/pdu_mgr script handles power management of
+        PDU (Power Distribution Unit).
+        """
+        if self._node_id < 5:
+            pdu_num = 1
+            pdu_outlet_num = self._node_id + 5
+        else:
+            pdu_num = 2
+            pdu_outlet_num = self._node_id
+        path1 = "10.0.100." + str(pdu_num)
+        utils.execute('/tftpboot/pdu_mgr', path1, str(pdu_outlet_num),
+                      str(mode), '>>', 'pdu_output')
+
+    def _power_on(self):
+        count = 0
+        while not self.is_power_on():
+            count += 1
+            if count > 3:
+                return baremetal_states.ERROR
+            try:
+                self._power_mgr(2)
+                self._power_mgr(3)
+            except Exception as ex:
+                LOG.exception("power_on failed", ex)
+            time.sleep(5)
+        return baremetal_states.ACTIVE
+
+    def _power_off(self):
+        count = 0
+        while not self._is_power_off():
+            count += 1
+            if count > 3:
+                return baremetal_states.ERROR
+            try:
+                self._power_mgr(2)
+            except Exception as ex:
+                LOG.exception("power_off failed", ex)
+            time.sleep(5)
+        return baremetal_states.DELETED
+
+    def _power_status(self):
+        out = self._exec_status()
+        return out
+
+    def _is_power_off(self):
+        r = self._power_status()
+        return r == -1
+
+    def is_power_on(self):
+        r = self._power_status()
+        return r != -1
+ 
+    def start_console(self, port, node_id):
+        pass
+ 
+    def stop_console(self, node_id):
+        pass
+ 
