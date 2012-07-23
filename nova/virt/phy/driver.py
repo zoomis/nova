@@ -1,7 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 # coding=utf-8
 #
-# Copyright (c) 2012 NTT DOCOMO, INC. and 2011 University of Southern California
+# Copyright (c) 2012 NTT DOCOMO, INC and 2011 University of Southern California
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
