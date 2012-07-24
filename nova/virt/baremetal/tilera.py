@@ -225,7 +225,7 @@ class TILERA:
                " --resume --net " + node_ip + " --run - " +
                "/usr/sbin/sshd - --wait --quit")
         subprocess.Popen(cmd, shell=True)
-        self.sleep_mgr(5)
+        time.sleep(5)
 
     def _iptables_set(self, var, node_ip, user_data):
         """

@@ -67,7 +67,7 @@ class Pdu:
         grep_cmd = ("ping -c1 " + self._address + " | grep Unreachable > " +
                     tile_output)
         subprocess.Popen(grep_cmd, shell=True)
-        self.sleep_mgr(5)
+        time.sleep(5)
         file = open(tile_output, "r")
         out = file.readline().find("Unreachable")
         utils.execute('sudo', 'rm', tile_output)
