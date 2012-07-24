@@ -1,8 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2011 University of Southern California / ISI
-# Copyright (c) 2012 NTT DOCOMO, INC.
-# All Rights Reserved.
+# Copyright (c) 2011 University of Southern California and 2012 NTT DOCOMO, INC.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -20,8 +18,8 @@
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
-from nova.virt.baremetal import fake, tilera, tilera_pdu
-from nova.virt.baremetal import pxe, ipmi
+from nova.virt.baremetal import fake, tilera
+from nova.virt.phy import pxe, ipmi
 
 FLAGS = flags.FLAGS
 
@@ -52,8 +50,6 @@ def get_power_manager(node, **kwargs):
     d = FLAGS.power_manager
     if d == 'ipmi':
         return ipmi.get_power_manager(node, **kwargs)
-    if d == 'tilera_pdu':
-        return tilera_pdu.get_power_manager(node, **kwargs)
     if d == 'dummy':
         return ipmi.get_power_manager_dummy(node, **kwargs)
     else:

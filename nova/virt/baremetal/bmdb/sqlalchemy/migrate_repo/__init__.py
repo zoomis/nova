@@ -13,8 +13,3 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
-""" start add by NTT DOCOMO """
-
-
-""" end add by NTT DOCOMO """
