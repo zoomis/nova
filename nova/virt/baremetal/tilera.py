@@ -62,6 +62,7 @@ def _cache_image_x(context, target, image_id, user_id, project_id):
 class TILERA:
 
     def __init__(self):
+        pass
 
     def define_vars(self, instance, network_info, block_device_info):
         var = {}
