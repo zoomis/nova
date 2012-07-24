@@ -28,7 +28,7 @@ from nova import flags
 from nova import test
 from nova import utils
 
-from nova.virt.phy import ipmi
+from nova.virt.baremetal import ipmi
 from nova.tests.baremetal import bmdb as bmdb_utils
 
 FLAGS = flags.FLAGS

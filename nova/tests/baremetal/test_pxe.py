@@ -25,7 +25,7 @@ from nova import exception
 from nova import flags
 from nova import test
 
-from nova.virt.phy import pxe
+from nova.virt.baremetal import pxe
 
 FLAGS = flags.FLAGS
 

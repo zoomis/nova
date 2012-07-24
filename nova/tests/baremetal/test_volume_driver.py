@@ -25,7 +25,7 @@ from nova import utils
 from nova import flags
 from nova import test
 
-from nova.virt.phy import volume_driver
+from nova.virt.baremetal import volume_driver
 
 FLAGS = flags.FLAGS
 

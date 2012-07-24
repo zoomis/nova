@@ -27,12 +27,13 @@ from nova import flags
 from nova import test
 from nova.tests import utils as test_utils
 
-from nova.virt.phy import driver as c
-from nova.virt.phy import baremetal_states
+from nova.virt.baremetal import driver as c
+from nova.virt.baremetal import baremetal_states
 from nova.tests.baremetal import bmdb as bmdb_utils
 from nova.tests.image import fake as fake_image
 
 
+flags.DECLARE('baremetal_driver', 'nova.virt.baremetal.nodes')
 FLAGS = flags.FLAGS
 
 class FakeVifDriver(object):
@@ -100,7 +101,7 @@ class BaremetalConnectionTestCase(test.TestCase):
         image_meta = test_utils.get_test_image_info(None, instance)
 
         from nova.virt.baremetal import nodes
-        from nova.virt.phy import fake
+        from nova.virt.baremetal import fake
         self.mox.StubOutWithMock(nodes, 'get_baremetal_nodes')
         nodes.get_baremetal_nodes().AndReturn(fake.Fake())
         self.mox.ReplayAll()
