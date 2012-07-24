@@ -362,7 +362,7 @@ class BaremetalHostManagerTestCase(test.TestCase):
         
         # Invalid service
         baremetal_host_manager.LOG.warn("No service for compute ID 5")
-        db.instance_get_all(context).AndReturn(BAREMETAL_INSTANCES)
+        db.instance_get_all(context, columns_to_join=['instance_type']).AndReturn(BAREMETAL_INSTANCES)
         self.mox.ReplayAll()
         
         host1_compute_capabs = dict(free_memory=1234, host_memory=5678, timestamp=1)
