@@ -35,7 +35,7 @@ opts = [
                 default=True,
                 help='Whether baremetal compute injects password or not'),
     cfg.StrOpt('baremetal_vif_driver',
-               default='nova.virt.baremetal.vif_driver.BaremetalVIFDriver',
+               default='nova.virt.baremetal.vif_driver.BareMetalVIFDriver',
                help='Baremetal VIF driver.'),
     cfg.StrOpt('baremetal_firewall_driver',
                 default='nova.virt.firewall.NoopFirewallDriver',
