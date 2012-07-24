@@ -240,7 +240,7 @@ class TILERA:
             open_ip = base64.b64decode(user_data)
             utils.execute(rule_path, node_ip, open_ip)
 
-    def activate_node(self, var, node, instance):
+    def activate_node(self, var, context, node, instance):
         network_info = var['network_info']
         for (_, mapping) in network_info:
             ip_address = mapping['ips'][0]['ip']

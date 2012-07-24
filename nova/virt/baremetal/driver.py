@@ -227,7 +227,7 @@ class BareMetalDriver(driver.ComputeDriver):
 
         _update_baremetal_state(context, node, instance, state)
         
-        self.baremetal_nodes.activate_node(var, node, instance)
+        self.baremetal_nodes.activate_node(var, context, node, instance)
         self._firewall_driver.apply_instance_filter(instance, network_info)
         pm.start_console(node['terminal_port'], node['id'])
 
