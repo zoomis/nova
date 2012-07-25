@@ -32,6 +32,9 @@ baremetal_opts = [
     cfg.StrOpt('power_manager',
                default='ipmi',
                help='power management method'),
+    cfg.StrOpt('baremetal_tftp_root',
+               default='/tftpboot',
+               help='BareMetal compute node\'s tftp root path'),
     ]
 
 FLAGS.register_opts(baremetal_opts)

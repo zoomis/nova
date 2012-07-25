@@ -34,9 +34,6 @@ tilera_opts = [
     cfg.StrOpt('tile_monitor',
                default='/usr/local/TileraMDE/bin/tile-monitor',
                help='Tilera command line program for Bare-metal driver'),
-    cfg.StrOpt('baremetal_tftp_root',
-               default='/tftpboot',
-               help='Baremetal compute node\'s tftp root path')
             ]
 
 FLAGS = flags.FLAGS
