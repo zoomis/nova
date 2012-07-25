@@ -59,6 +59,8 @@ pxe_opts = [
     cfg.BoolOpt('baremetal_pxe_append_iscsi_portal',
                 default=True,
                 help='append "bm_iscsi_porttal=<portal_address>" to instances\' /proc/cmdline'),
+    cfg.StrOpt('baremetal_pxe_append_params',
+               help='additional append parameters for baremetal pxe'),
             ]
 
 FLAGS = flags.FLAGS
@@ -138,6 +140,8 @@ def _build_pxe_config(deployment_id, deployment_key, iscsi_iqn, deploy_aki_path,
     pxeconf += " iscsi_target_iqn=%s" % iscsi_iqn
     pxeconf += " deployment_id=%s" % deployment_id
     pxeconf += " deployment_key=%s" % deployment_key
+    if FLAGS.baremetal_pxe_append_params:
+        pxeconf += " %s" % FLAGS.baremetal_pxe_append_params
     pxeconf += "\n"
     pxeconf += "ipappend 3\n"
     pxeconf += "\n"
