@@ -154,6 +154,8 @@ def _build_pxe_config(deployment_id, deployment_key, iscsi_iqn, deploy_aki_path,
     pxeconf += " root=${ROOT} ro"
     if iscsi_portal:
         pxeconf += ' bm_iscsi_portal=%s' % iscsi_portal
+    if FLAGS.baremetal_pxe_append_params:
+        pxeconf += " %s" % FLAGS.baremetal_pxe_append_params
     pxeconf += "\n"
     pxeconf += "\n"
     return pxeconf
