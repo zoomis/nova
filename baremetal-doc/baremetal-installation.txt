@@ -115,7 +115,7 @@ Set these flags in nova.conf
 	baremetal_tftp_root = /tftpboot
 
 	# path to shellinaboxd
-	physical_term = /usr/local/bin/shellinaboxd
+	baremetal_term = /usr/local/bin/shellinaboxd
 
 	# path to bm_deploy_work
 	baremetal_deploy_work = /nova/bin/bm_deploy_work
@@ -156,7 +156,7 @@ Example:
 
 Next, set baremetal extra_spec to the instance type
 
-	$ phy_flavor_set_physical --flavor=bm.small
+	$ bm_flavor_set_baremetal --flavor=bm.small
 
 How to choose the value for flavor:
 -----
