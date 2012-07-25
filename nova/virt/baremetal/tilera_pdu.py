@@ -25,14 +25,9 @@ from nova.virt.baremetal import baremetal_states
 import subprocess
 import time
 
-opts = [
-    cfg.StrOpt('tile_monitor',
-               default='/usr/local/TileraMDE/bin/tile-monitor',
-               help='Tilera command line program for Bare-metal driver')
-    ]
+flags.DECLARE('tile_monitor', 'nova.virt.baremetal.tilera')
 
 FLAGS = flags.FLAGS
-FLAGS.register_opts(opts)
 
 LOG = logging.getLogger(__name__)
 
