@@ -81,7 +81,7 @@ def upgrade(migrate_engine):
         #mysql_charset='utf8'
     )
 
-    bm_deployments = Table('bm_deploymentss', meta,
+    bm_deployments = Table('bm_deployments', meta,
         Column('created_at', DateTime),
         Column('updated_at', DateTime),
         Column('deleted_at', DateTime),
