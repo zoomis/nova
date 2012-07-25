@@ -16,7 +16,7 @@
 #    under the License.
 
 from nova.openstack.common import cfg
-from nova import log as logging
+from nova.openstack.common import log as logging
 from nova import utils
 from nova import flags
 
