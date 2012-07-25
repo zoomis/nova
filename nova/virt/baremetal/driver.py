@@ -255,7 +255,7 @@ class BareMetalDriver(driver.ComputeDriver):
  
         var = self.baremetal_nodes.define_vars(instance, network_info, block_device_info)
 
-        self.baremetal_nodes.activate_node(var, ctx, node, instance)
+        self.baremetal_nodes.deactivate_node(var, ctx, node, instance)
 
         pm = nodes.get_power_manager(node)
 
