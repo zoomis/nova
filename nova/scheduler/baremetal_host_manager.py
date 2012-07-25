@@ -101,8 +101,7 @@ class BaremetalHostState(host_manager.HostState):
         self.available_nodes = []
         self.baremetal_compute = False
         
-        extra_type = self.capabilities.get('type', None)
-        if extra_type == "baremetal":
+        if FLAGS.connection_type == "baremetal":
             self.baremetal_compute = True
         """ end add by NTT DOCOMO """
         
