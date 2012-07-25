@@ -223,7 +223,9 @@ class BareMetalDriver(driver.ComputeDriver):
         
         self.baremetal_nodes.activate_node(var, context, node, instance)
         self._firewall_driver.apply_instance_filter(instance, network_info)
-        pm.start_console(node['terminal_port'], node['id'])
+
+        if node['terminal_port']:
+            pm.start_console(node['terminal_port'], node['id'])
 
     def reboot(self, instance, network_info):
         node = _get_baremetal_node_by_instance_id(instance['id'])
