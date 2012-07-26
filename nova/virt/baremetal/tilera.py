@@ -174,9 +174,11 @@ class TILERA:
     
     def activate_bootloader(self, var, context, node, instance):
         tftp_root = var['tftp_root']
+        image_root = var['image_root']
+        disk_path = os.path.join(image_root, 'disk')
         image_path = tftp_root + "/disk_" + str(node['id'])
         target_path = tftp_root + "/fs_" + str(node['id'])
-        utils.execute('sudo', 'mv', tftp_root, image_path)
+        utils.execute('sudo', 'mv', disk_path, image_path)
         utils.execute('sudo', 'mount', '-o', 'loop', image_path, target_path)
 
         root_mb = instance['root_gb'] * 1024
