@@ -341,7 +341,7 @@ class BareMetalDriver(driver.ComputeDriver):
                }
         return dic
 
-    def _max_baremetal_resouces(self, ctxt):
+    def _max_baremetal_resources(self, ctxt):
         max_cpus = 0
         max_memory_mb = 0
         max_local_gb = 0
@@ -378,7 +378,7 @@ class BareMetalDriver(driver.ComputeDriver):
 
         """
 
-        dic = self._max_baremetal_resouces(ctxt)
+        dic = self._max_baremetal_resources(ctxt)
         #dic = self._sum_baremetal_resources(ctxt)
         dic['hypervisor_type'] = self.get_hypervisor_type()
         dic['hypervisor_version'] = self.get_hypervisor_version()
@@ -413,7 +413,7 @@ class BareMetalDriver(driver.ComputeDriver):
         raise exception.InstanceNotFound(instance_id=instance_name)
 
     def _get_host_stats(self):
-        dic = self._max_baremetal_resouces(nova_context.get_admin_context())
+        dic = self._max_baremetal_resources(nova_context.get_admin_context())
         memory_total = dic['memory_mb'] * 1024 * 1024
         memory_free = (dic['memory_mb'] - dic['memory_mb_used']) * 1024 * 1024
         disk_total = dic['local_gb'] * 1024 * 1024 * 1024
