@@ -14,6 +14,7 @@
 #    under the License.
 from nova.virt.baremetal import bmdb
 from nova.virt.firewall import NoopFirewallDriver
+from nova.tests.baremetal.bmdb import new_bm_node
 
 """
 Tests for baremetal connection
@@ -68,6 +69,7 @@ class BaremetalConnectionTestCase(test.TestCase):
                    baremetal_firewall_driver=class_path(FakeFirewallDriver),
                    baremetal_volume_driver=class_path(FakeVolumeDriver),
                    power_manager='dummy',
+                   instance_type_extra_specs=['cpu_arch:test']
                    )
         bmdb_utils.clear_tables()
         context = test_utils.get_test_admin_context()
@@ -129,7 +131,64 @@ class BaremetalConnectionTestCase(test.TestCase):
         self.assertEqual(es['hypervisor_type'], 'baremetal')
         self.assertEqual(es['baremetal_driver'], 'fake')
         self.assertEqual(len(es), 5)
+    
+    def test_max_baremetal_resources(self):
+        N1 = new_bm_node(service_host="host1", cpus=1, memory_mb=1000, local_gb=10)
+        N2 = new_bm_node(service_host="host1", cpus=1, memory_mb=1000, local_gb=20)
+        N3 = new_bm_node(service_host="host1", cpus=10, memory_mb=1000, local_gb=20)
+        N4 = new_bm_node(service_host="host1", cpus=1, memory_mb=2000, local_gb=20)
+        ns = [ N1, N2, N3, N4, ]
+        context = test_utils.get_test_admin_context()
+        self.stubs.Set(c, '_get_baremetal_nodes', lambda ctx: ns)
+        drv = c.BareMetalDriver()
+        dic = drv._max_baremetal_resources(context)
+        self.assertEqual(dic.get('vcpus'), 1)
+        self.assertEqual(dic.get('memory_mb'), 2000)
+        self.assertEqual(dic.get('local_gb'), 20)
+        self.assertEqual(dic.get('vcpus_used'), 0)
+        self.assertEqual(dic.get('memory_mb_used'), 0)
+        self.assertEqual(dic.get('local_gb_used'), 0)
+        N4['instance_id'] = 1
+        dic = drv._max_baremetal_resources(context)
+        self.assertEqual(dic.get('vcpus'), 10)
+        self.assertEqual(dic.get('memory_mb'), 1000)
+        self.assertEqual(dic.get('local_gb'), 20)
+        self.assertEqual(dic.get('vcpus_used'), 0)
+        self.assertEqual(dic.get('memory_mb_used'), 0)
+        self.assertEqual(dic.get('local_gb_used'), 0)
+        N3['instance_id'] = 2
+        dic = drv._max_baremetal_resources(context)
+        self.assertEqual(dic.get('vcpus'), 1)
+        self.assertEqual(dic.get('memory_mb'), 1000)
+        self.assertEqual(dic.get('local_gb'), 20)
+        self.assertEqual(dic.get('vcpus_used'), 0)
+        self.assertEqual(dic.get('memory_mb_used'), 0)
+        self.assertEqual(dic.get('local_gb_used'), 0)
+        N2['instance_id'] = 3
+        dic = drv._max_baremetal_resources(context)
+        self.assertEqual(dic.get('vcpus'), 1)
+        self.assertEqual(dic.get('memory_mb'), 1000)
+        self.assertEqual(dic.get('local_gb'), 10)
+        self.assertEqual(dic.get('vcpus_used'), 0)
+        self.assertEqual(dic.get('memory_mb_used'), 0)
+        self.assertEqual(dic.get('local_gb_used'), 0)
+        N1['instance_id'] = 4
+        dic = drv._max_baremetal_resources(context)
+        self.assertEqual(dic.get('vcpus'), 0)
+        self.assertEqual(dic.get('memory_mb'), 0)
+        self.assertEqual(dic.get('local_gb'), 0)
+        self.assertEqual(dic.get('vcpus_used'), 0)
+        self.assertEqual(dic.get('memory_mb_used'), 0)
+        self.assertEqual(dic.get('local_gb_used'), 0)
 
+        N2['instance_id'] = None
+        dic = drv._max_baremetal_resources(context)
+        self.assertEqual(dic.get('vcpus'), 1)
+        self.assertEqual(dic.get('memory_mb'), 1000)
+        self.assertEqual(dic.get('local_gb'), 20)
+        self.assertEqual(dic.get('vcpus_used'), 0)
+        self.assertEqual(dic.get('memory_mb_used'), 0)
+        self.assertEqual(dic.get('local_gb_used'), 0)
 
 class FindHostTestCase(test.TestCase):
     
