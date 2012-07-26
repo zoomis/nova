@@ -25,7 +25,9 @@ from nova.compute import instance_types
 from nova.virt.disk import api as disk
 
 import os
+import subprocess
 import shutil
+import time
 
 
 LOG = logging.getLogger(__name__)
@@ -213,6 +215,7 @@ class TILERA:
                "ifconfig xgbe0 hw ether " + mac_address +
                " - --wait --run - ifconfig xgbe0 " + ip_address +
                " - --wait --quit")
+        LOG.debug("cmd=%s", cmd)
         subprocess.Popen(cmd, shell=True)
         time.sleep(5)
 
@@ -223,6 +226,7 @@ class TILERA:
         cmd = (FLAGS.tile_monitor +
                " --resume --net " + node_ip + " --run - " +
                "/usr/sbin/sshd - --wait --quit")
+        LOG.debug("cmd=%s", cmd)
         subprocess.Popen(cmd, shell=True)
         time.sleep(5)
 
@@ -246,6 +250,8 @@ class TILERA:
         node_ip = node['pm_address']
         mac_address = node['prov_mac_address']
         user_data = instance['user_data']
+        LOG.debug("node_ip=%s mac=%s ip_address=%s ud=%s", 
+            node_ip, mac_address, ip_address, user_data)
         try:
             self._network_set(node_ip, mac_address, ip_address)
             self._ssh_set(node_ip)
