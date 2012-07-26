@@ -244,7 +244,7 @@ class TILERA:
         for (_, mapping) in network_info:
             ip_address = mapping['ips'][0]['ip']
         node_ip = node['pm_address']
-        mac_address = node['prov_mac_addr']
+        mac_address = node['prov_mac_address']
         user_data = instance['user_data']
         try:
             self._network_set(node_ip, mac_address, ip_address)
