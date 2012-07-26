@@ -356,7 +356,7 @@ class BareMetalDriver(driver.ComputeDriver):
             if max_memory_mb < node['memory_mb']:
                 max_memory_mb = node['memory_mb']
                 max_cpus = node['cpus']
-                max_local_gb = node['max_local_gb']
+                max_local_gb = node['local_gb']
 
         dic = {'vcpus': max_cpus,
                'memory_mb': max_memory_mb,
