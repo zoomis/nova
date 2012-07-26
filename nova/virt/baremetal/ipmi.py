@@ -194,7 +194,7 @@ class Ipmi:
     
         pwfile = _make_password_file(self._password)
     
-        ipmi_args = "/:" + str(uid) + ":" + str(gid) + ":HOME:/usr/bin/ipmitool "
+        ipmi_args = "/:" + str(uid) + ":" + str(gid) + ":HOME:ipmitool "
         ipmi_args += "-H " + self._address +  " -I lanplus -U " + self._user + " "
         ipmi_args += "-f " + pwfile + " sol activate" 
     
