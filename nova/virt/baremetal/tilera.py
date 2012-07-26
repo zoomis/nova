@@ -251,7 +251,7 @@ class TILERA:
             self._ssh_set(node_ip)
             self._iptables_set(var, node_ip, user_data)
         except Exception as ex:
-            self.deactivate_bootloader(var, None, node, instance)
+            self.deactivate_bootloader(var, context, node, instance)
             raise exception.NovaException(_("Node is unknown error state."))
 
     def deactivate_node(self, var, context, node, instance):

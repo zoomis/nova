@@ -69,7 +69,6 @@ class Pdu:
         return out
     
     def activate_node(self):
-        self._power_off()
         state = self._power_on()
         return state
     
@@ -101,43 +100,36 @@ class Pdu:
                       str(mode), '>>', 'pdu_output')
 
     def _power_on(self):
-        count = 0
+        count = 1 
+        self._power_mgr(2)
+        self._power_mgr(3)
+        time.sleep(100)
         while not self.is_power_on():
             count += 1
             if count > 3:
+                LOG.exception("power_on failed")
                 return baremetal_states.ERROR
-            try:
-                self._power_mgr(2)
-                self._power_mgr(3)
-            except Exception as ex:
-                LOG.exception("power_on failed", ex)
-            time.sleep(5)
+            self._power_mgr(2)
+            self._power_mgr(3)
+            time.sleep(120)
         return baremetal_states.ACTIVE
 
     def _power_off(self):
-        count = 0
-        while not self._is_power_off():
-            count += 1
-            if count > 3:
-                return baremetal_states.ERROR
-            try:
-                self._power_mgr(2)
-            except Exception as ex:
-                LOG.exception("power_off failed", ex)
-            time.sleep(5)
+        count = 1
+        try:
+            self._power_mgr(2)
+        except Exception as ex:
+            LOG.exception("power_off failed", ex)
+            return baremetal_states.ERROR
         return baremetal_states.DELETED
 
-    def _power_status(self):
-        out = self._exec_status()
-        return out
-
     def _is_power_off(self):
-        r = self._power_status()
-        return r == -1
+        r = self._exec_status()
+        return (r != -1)
 
     def is_power_on(self):
-        r = self._power_status()
-        return r != -1
+        r = self._exec_status()
+        return (r == -1)
  
     def start_console(self, port, node_id):
         pass
