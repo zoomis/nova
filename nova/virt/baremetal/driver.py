@@ -353,7 +353,7 @@ class BareMetalDriver(driver.ComputeDriver):
                 continue
             
             #put prioirty to memory size. You can use CPU and HDD, if you change the following line.
-            if max_memory_mb > node['memory_mb']:
+            if max_memory_mb < node['memory_mb']:
                 max_memory_mb = node['memory_mb']
                 max_cpus = node['cpus']
                 max_local_gb = node['max_local_gb']
