@@ -104,7 +104,6 @@ Set these flags in nova.conf
 	baremetal_sql_connection = mysql://nova_bm:password@127.0.0.1/nova_bm
 
 	# baremetal compute driver
-        connection_type = baremetal
 	compute_driver = nova.virt.baremetal.driver.BareMetalDriver
 	baremetal_driver = pxe
 	power_manager = ipmi
