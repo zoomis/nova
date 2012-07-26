@@ -92,6 +92,13 @@ usage:
     args = flags.parse_args(args, default_config_files=flagfile)
     ctx = context.get_admin_context()
 
+    node_ref = bmdb.bm_node_get(ctx, values['bm_node_id'])
+    if not node_ref:
+        print >> sys.stderr, 'node_id %s is not found' % values['bm_node_id']
+        sys.exit(1)
+    if values['mac_address'].lower() == node_ref['prov_mac_address'].lower():
+        print >> sys.stderr, 'mac_address %s is already used as prov_mac_address' % values['mac_address']
+        sys.exit(1)
 
     id = bmdb.bm_interface_create(
              ctx,
