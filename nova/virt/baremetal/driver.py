@@ -342,9 +342,10 @@ class BareMetalDriver(driver.ComputeDriver):
         return dic
 
     def _max_baremetal_resources(self, ctxt):
-        max_cpus = 0
-        max_memory_mb = 0
-        max_local_gb = 0
+        max_node = {'cpus': 0,
+                    'memory_mb': 0,
+                    'local_gb': 0,
+                    }
         
         for node in _get_baremetal_nodes(ctxt):
             if node['registration_status'] != 'done':
@@ -353,14 +354,18 @@ class BareMetalDriver(driver.ComputeDriver):
                 continue
             
             #put prioirty to memory size. You can use CPU and HDD, if you change the following line.
-            if max_memory_mb < node['memory_mb']:
-                max_memory_mb = node['memory_mb']
-                max_cpus = node['cpus']
-                max_local_gb = node['local_gb']
+            if max_node['memory_mb'] < node['memory_mb']:
+                max_node = node
+            elif max_node['memory_mb'] == node['memory_mb']:
+                if max_node['cpus'] < node['cpus']:
+                    max_node = node
+                elif max_node['cpus'] == node['cpus']:
+                    if max_node['local_gb'] < node['local_gb']:
+                        max_node = node
 
-        dic = {'vcpus': max_cpus,
-               'memory_mb': max_memory_mb,
-               'local_gb': max_local_gb,
+        dic = {'vcpus': max_node['cpus'],
+               'memory_mb': max_node['memory_mb'],
+               'local_gb': max_node['local_gb'],
                'vcpus_used': 0,
                'memory_mb_used': 0,
                'local_gb_used': 0,
