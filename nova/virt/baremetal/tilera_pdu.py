@@ -50,9 +50,9 @@ class Pdu:
 
     def __init__(self, address=None, node_id=None):
         if address == None:
-            raise PduError, (-1, "address is None")
+            raise PduError(-1, "address is None")
         if node_id == None:
-            raise PduError, (-1, "node_id is None")
+            raise PduError(-1, "node_id is None")
         self._address = address
         self._node_id = node_id
 
