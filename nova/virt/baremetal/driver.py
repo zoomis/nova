@@ -219,7 +219,7 @@ class BareMetalDriver(driver.ComputeDriver):
                                           instance)
         self.baremetal_nodes.activate_bootloader(var, context, node,
                                                  instance)
-        #TODO(NTTdocomo) attach volumes
+
         pm = nodes.get_power_manager(node)
         state = pm.activate_node()
 
@@ -227,6 +227,13 @@ class BareMetalDriver(driver.ComputeDriver):
 
         self.baremetal_nodes.activate_node(var, context, node, instance)
         self._firewall_driver.apply_instance_filter(instance, network_info)
+
+        block_device_mapping = driver.block_device_info_get_mapping(
+            block_device_info)
+        for vol in block_device_mapping:
+            connection_info = vol['connection_info']
+            mountpoint = vol['mount_device']
+            self.attach_volume(connection_info, instance['name'], mountpoint)
 
         if node['terminal_port']:
             pm.start_console(node['terminal_port'], node['id'])
