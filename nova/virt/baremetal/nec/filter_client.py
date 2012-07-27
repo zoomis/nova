@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2012 NTT DOCOMO, INC. 
+# Copyright (c) 2012 NTT DOCOMO, INC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,14 +15,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.network.quantum.client import Client
+from nova.network.quantum import client as quantum_client
 from nova.network.quantum.client import api_call
 
 
-class FilterClient(Client):
-    """A base client class - derived from Glance.BaseClient"""
+class FilterClient(quantum_client.Client):
 
-    """Action query strings"""
+    # Action query strings
     filters_path = "/networks/%s/filters"
     filter_path = "/networks/%s/filters/%s"
 
@@ -40,37 +39,43 @@ class FilterClient(Client):
         :param key_file: The SSL key file to use if use_ssl is true
         :param cert_file: The SSL cert file to use if use_ssl is true
         """
-        super(FilterClient, self).__init__(host, port, use_ssl, tenant, format, testing_stub, key_file, cert_file, logger)
+        super(FilterClient, self).__init__(host, port, use_ssl, tenant, format,
+                                           testing_stub, key_file, cert_file,
+                                           logger)
 
     @api_call
     def list_filters(self, tenant_id, network_id):
-        """Fetches a list of all filters for a network"""
+        """Fetches a list of all filters for a network."""
         self.tenant = tenant_id
         return self.do_request("GET", self.filters_path % (network_id))
 
     @api_call
     def show_filter_details(self, tenant_id, network_id, filter_id):
-        """Fetches the details of a certain filter"""
+        """Fetches the details of a certain filter."""
         self.tenant = tenant_id
-        return self.do_request("GET", self.filter_path % (network_id, filter_id))
+        return self.do_request("GET",
+                               self.filter_path % (network_id, filter_id))
 
     @api_call
     def create_filter(self, tenant_id, network_id, body=None):
-        """Creates a new filter"""
+        """Creates a new filter."""
         body = self.serialize(body)
         self.tenant = tenant_id
-        return self.do_request("POST", self.filters_path % (network_id), body=body)
+        return self.do_request("POST",
+                               self.filters_path % (network_id), body=body)
 
     @api_call
     def update_filter(self, tenant_id, network_id, filter_id, body=None):
-        """Updates a filter"""
+        """Updates a filter."""
         body = self.serialize(body)
         self.tenant = tenant_id
-        return self.do_request("PUT", self.filter_path % (network_id, filter_id), body=body)
+        return self.do_request("PUT",
+                               self.filter_path % (network_id, filter_id),
+                               body=body)
 
     @api_call
     def delete_filter(self, tenant_id, network_id, filter_id):
-        """Deletes the specified filter"""
+        """Deletes the specified filter."""
         self.tenant = tenant_id
-        return self.do_request("DELETE", self.filter_path % (network_id, filter_id))
-
+        return self.do_request("DELETE",
+                               self.filter_path % (network_id, filter_id))

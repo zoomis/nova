@@ -15,19 +15,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.openstack.common import cfg
+import os
+import shutil
+import subprocess
+import time
+
+from nova.compute import instance_types
 from nova import exception
 from nova import flags
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils
-from nova.virt.libvirt import utils as libvirt_utils
-from nova.compute import instance_types
 from nova.virt.disk import api as disk
-
-import os
-import subprocess
-import shutil
-import time
+from nova.virt.libvirt import utils as libvirt_utils
 
 
 LOG = logging.getLogger(__name__)
@@ -41,6 +41,7 @@ tilera_opts = [
 FLAGS = flags.FLAGS
 FLAGS.register_opts(tilera_opts)
 
+
 def get_baremetal_nodes():
     return TILERA()
 
@@ -52,6 +53,7 @@ def _late_load_cheetah():
         t = __import__('Cheetah.Template', globals(), locals(),
                        ['Template'], -1)
         Template = t.Template
+
 
 def _cache_image_x(context, target, image_id, user_id, project_id):
     if not os.path.exists(target):
@@ -154,7 +156,7 @@ class TILERA:
     def create_image(self, var, context, image_meta, node, instance):
         image_root = var['image_root']
         network_info = var['network_info']
-        
+
         ami_id = str(image_meta['id'])
         libvirt_utils.ensure_tree(image_root)
         image_path = os.path.join(image_root, 'disk')
@@ -173,7 +175,7 @@ class TILERA:
     def destroy_images(self, var, context, node, instance):
         image_root = var['image_root']
         shutil.rmtree(image_root, ignore_errors=True)
-    
+
     def activate_bootloader(self, var, context, node, instance):
         tftp_root = var['tftp_root']
         image_root = var['image_root']
@@ -250,7 +252,7 @@ class TILERA:
         node_ip = node['pm_address']
         mac_address = node['prov_mac_address']
         user_data = instance['user_data']
-        LOG.debug("node_ip=%s mac=%s ip_address=%s ud=%s", 
+        LOG.debug("node_ip=%s mac=%s ip_address=%s ud=%s",
             node_ip, mac_address, ip_address, user_data)
         try:
             self._network_set(node_ip, mac_address, ip_address)
@@ -279,4 +281,3 @@ class TILERA:
         subprocess.Popen(kmsg_cmd, shell=True)
         time.sleep(5)
         utils.execute('cp', log_path, console_log)
-

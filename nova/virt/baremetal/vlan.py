@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2012 NTT DOCOMO, INC. 
+# Copyright (c) 2012 NTT DOCOMO, INC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -41,6 +41,7 @@ def _device_exists(device):
                            check_exit_code=False)
     return not err
 
+
 @utils.synchronized('ensure_vlan', external=True)
 def ensure_vlan(vlan_num, parent_interface, mac_address=None):
     """Create a vlan unless it already exists."""
@@ -48,10 +49,13 @@ def ensure_vlan(vlan_num, parent_interface, mac_address=None):
     vlan_interface = 'vlan%s' % vlan_num
     if not _device_exists(vlan_interface):
         LOG.debug(_('Starting VLAN interface %s'), vlan_interface)
-        _execute('vconfig', 'set_name_type', 'VLAN_PLUS_VID_NO_PAD', run_as_root=True)
-        _execute('vconfig', 'add', parent_interface, vlan_num, run_as_root=True)
+        _execute('vconfig', 'set_name_type', 'VLAN_PLUS_VID_NO_PAD',
+                 run_as_root=True)
+        _execute('vconfig', 'add', parent_interface, vlan_num,
+                 run_as_root=True)
         if mac_address:
-            _execute('ip', 'link', 'set', vlan_interface, "address", mac_address,
+            _execute('ip', 'link', 'set', vlan_interface,
+                     "address", mac_address,
                      run_as_root=True)
     _execute('ip', 'link', 'set', vlan_interface, 'up', run_as_root=True)
     return vlan_interface
@@ -65,4 +69,3 @@ def ensure_no_vlan(vlan_num, parent_interface):
         LOG.debug(_('Stopping VLAN interface %s'), vlan_interface)
         _execute('ip', 'link', 'set', vlan_interface, 'down', run_as_root=True)
         _execute('vconfig', 'rem', vlan_interface, run_as_root=True)
-

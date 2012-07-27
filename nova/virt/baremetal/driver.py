@@ -17,19 +17,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import exception
-from nova.openstack.common import log as logging
-from nova.openstack.common import importutils
-from nova.openstack.common import cfg
-from nova import flags
+from nova.compute import power_state
 from nova import context as nova_context
 from nova import db
+from nova import exception
+from nova import flags
+from nova.openstack.common import cfg
+from nova.openstack.common import importutils
+from nova.openstack.common import log as logging
+from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import bmdb
-from nova.compute import power_state
+from nova.virt.baremetal import nodes
 from nova.virt import driver
 from nova.virt.libvirt import imagecache
-from nova.virt.baremetal import baremetal_states
-from nova.virt.baremetal import nodes
 
 opts = [
     cfg.BoolOpt('baremetal_inject_password',
@@ -71,7 +71,7 @@ def _get_baremetal_node_by_instance_id(instance_id):
             return host
     return None
 
-    
+
 def _get_baremetal_node_by_instance_name(instance_name):
     context = nova_context.get_admin_context()
     for node in _get_baremetal_nodes(context):
@@ -85,7 +85,7 @@ def _get_baremetal_node_by_instance_name(instance_name):
             continue
     return None
 
-    
+
 def _find_suitable_baremetal_node(context, instance):
     result = None
     for node in _get_baremetal_nodes(context):
@@ -102,7 +102,8 @@ def _find_suitable_baremetal_node(context, instance):
         else:
             if node['cpus'] < result['cpus']:
                 result = node
-            elif node['cpus'] == result['cpus'] and node['memory_mb'] < result['memory_mb']:
+            elif node['cpus'] == result['cpus'] \
+                    and node['memory_mb'] < result['memory_mb']:
                 result = node
     return result
 
@@ -113,21 +114,24 @@ def _update_baremetal_state(context, node, instance, state):
         instance_id = instance['id']
     bmdb.bm_node_update(context, node['id'],
         {'instance_id': instance_id,
-        'task_state' : state,
+        'task_state': state,
         })
 
 
 class BareMetalDriver(driver.ComputeDriver):
-    """BareMetal hypervisor driver"""
+    """BareMetal hypervisor driver."""
 
     def __init__(self):
         LOG.info(_("BareMetal driver __init__"))
         super(BareMetalDriver, self).__init__()
 
         self.baremetal_nodes = nodes.get_baremetal_nodes()
-        self._vif_driver = importutils.import_object(FLAGS.baremetal_vif_driver)
-        self._firewall_driver = importutils.import_object(FLAGS.baremetal_firewall_driver)
-        self._volume_driver = importutils.import_object(FLAGS.baremetal_volume_driver)
+        self._vif_driver = importutils.import_object(
+                FLAGS.baremetal_vif_driver)
+        self._firewall_driver = importutils.import_object(
+                FLAGS.baremetal_firewall_driver)
+        self._volume_driver = importutils.import_object(
+                FLAGS.baremetal_volume_driver)
         self._image_cache_manager = imagecache.ImageCacheManager()
 
         extra_specs = {}
@@ -142,7 +146,6 @@ class BareMetalDriver(driver.ComputeDriver):
             LOG.warning('cpu_arch is not found in instance_type_extra_specs')
             extra_specs['cpu_arch'] = ''
         self._extra_specs = extra_specs
-
 
     @classmethod
     def instance(cls):
@@ -183,7 +186,7 @@ class BareMetalDriver(driver.ComputeDriver):
                     ii = driver.InstanceInfo(inst['name'], ps)
                     l.append(ii)
         return l
- 
+
     def spawn(self, context, instance, image_meta,
               network_info=None, block_device_info=None):
         LOG.debug("spawn:")
@@ -191,16 +194,18 @@ class BareMetalDriver(driver.ComputeDriver):
         LOG.debug("image_meta=%s", image_meta)
         LOG.debug("network_info=%s", network_info)
         LOG.debug("block_device_info=%s", block_device_info)
-       
+
         node = _find_suitable_baremetal_node(context, instance)
 
         if not node:
             LOG.info("no suitable baremetal node found")
             raise NoSuitableBareMetalNode()
-        
-        _update_baremetal_state(context, node, instance, baremetal_states.BUILDING)
-                
-        var = self.baremetal_nodes.define_vars(instance, network_info, block_device_info)
+
+        _update_baremetal_state(context, node, instance,
+                                baremetal_states.BUILDING)
+
+        var = self.baremetal_nodes.define_vars(instance, network_info,
+                                               block_device_info)
 
         # clear previous vif info
         pifs = bmdb.bm_interface_get_all_by_bm_node_id(context, node['id'])
@@ -213,14 +218,16 @@ class BareMetalDriver(driver.ComputeDriver):
         self._firewall_driver.setup_basic_filtering(instance, network_info)
         self._firewall_driver.prepare_instance_filter(instance, network_info)
 
-        self.baremetal_nodes.create_image(var, context, image_meta, node, instance)
-        self.baremetal_nodes.activate_bootloader(var, context, node, instance)
-        #TODO attach volumes
+        self.baremetal_nodes.create_image(var, context, image_meta, node,
+                                          instance)
+        self.baremetal_nodes.activate_bootloader(var, context, node,
+                                                 instance)
+        #TODO(NTTdocomo) attach volumes
         pm = nodes.get_power_manager(node)
         state = pm.activate_node()
 
         _update_baremetal_state(context, node, instance, state)
-        
+
         self.baremetal_nodes.activate_node(var, context, node, instance)
         self._firewall_driver.apply_instance_filter(instance, network_info)
 
@@ -229,7 +236,7 @@ class BareMetalDriver(driver.ComputeDriver):
 
     def reboot(self, instance, network_info):
         node = _get_baremetal_node_by_instance_id(instance['id'])
-        
+
         if not node:
             raise exception.InstanceNotFound(instance_id=instance['id'])
 
@@ -248,8 +255,9 @@ class BareMetalDriver(driver.ComputeDriver):
         if not node:
             LOG.warning("Instance:id='%s' not found" % instance['id'])
             return
- 
-        var = self.baremetal_nodes.define_vars(instance, network_info, block_device_info)
+
+        var = self.baremetal_nodes.define_vars(instance, network_info,
+                                               block_device_info)
 
         self.baremetal_nodes.deactivate_node(var, ctx, node, instance)
 
@@ -257,7 +265,7 @@ class BareMetalDriver(driver.ComputeDriver):
 
         ## stop console
         pm.stop_console(node['id'])
-        
+
         ## power off the node
         state = pm.deactivate_node()
 
@@ -279,19 +287,21 @@ class BareMetalDriver(driver.ComputeDriver):
                                                 network_info=network_info)
 
         self._unplug_vifs(instance, network_info)
- 
+
         _update_baremetal_state(ctx, node, None, state)
 
     def get_volume_connector(self, instance):
         return self._volume_driver.get_volume_connector(instance)
 
     def attach_volume(self, connection_info, instance_name, mountpoint):
-        return self._volume_driver.attach_volume(connection_info, instance_name, mountpoint)
+        return self._volume_driver.attach_volume(connection_info,
+                                                 instance_name, mountpoint)
 
     @exception.wrap_exception()
     def detach_volume(self, connection_info, instance_name, mountpoint):
-        return self._volume_driver.detach_volume(connection_info, instance_name, mountpoint)
-    
+        return self._volume_driver.detach_volume(connection_info,
+                                                 instance_name, mountpoint)
+
     def get_info(self, instance):
         node = _get_baremetal_node_by_instance_id(instance['id'])
         if not node:
@@ -317,14 +327,14 @@ class BareMetalDriver(driver.ComputeDriver):
 
     def refresh_provider_fw_rules(self):
         self._firewall_driver.refresh_provider_fw_rules()
-    
+
     def _sum_baremetal_resources(self, ctxt):
         vcpus = 0
         vcpus_used = 0
         memory_mb = 0
         memory_mb_used = 0
         local_gb = 0
-        local_gb_used = 0        
+        local_gb_used = 0
         for node in _get_baremetal_nodes(ctxt):
             if node['registration_status'] != 'done':
                 continue
@@ -346,14 +356,15 @@ class BareMetalDriver(driver.ComputeDriver):
                     'memory_mb': 0,
                     'local_gb': 0,
                     }
-        
+
         for node in _get_baremetal_nodes(ctxt):
             if node['registration_status'] != 'done':
                 continue
             if node['instance_id']:
                 continue
-            
-            #put prioirty to memory size. You can use CPU and HDD, if you change the following line.
+
+            # Put prioirty to memory size.
+            # You can use CPU and HDD, if you change the following line.
             if max_node['memory_mb'] < node['memory_mb']:
                 max_node = node
             elif max_node['memory_mb'] == node['memory_mb']:
@@ -388,7 +399,7 @@ class BareMetalDriver(driver.ComputeDriver):
         dic['hypervisor_type'] = self.get_hypervisor_type()
         dic['hypervisor_version'] = self.get_hypervisor_version()
         dic['cpu_info'] = 'baremetal cpu'
-        
+
         try:
             service_ref = db.service_get_all_compute_by_host(ctxt, host)[0]
         except exception.NotFound:
@@ -406,14 +417,15 @@ class BareMetalDriver(driver.ComputeDriver):
 
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
         self._firewall_driver.setup_basic_filtering(instance_ref, network_info)
-        self._firewall_driver.prepare_instance_filter(instance_ref, network_info)
+        self._firewall_driver.prepare_instance_filter(instance_ref,
+                                                      network_info)
 
     def unfilter_instance(self, instance_ref, network_info):
         self._firewall_driver.unfilter_instance(instance_ref,
                                                 network_info=network_info)
 
     def test_remove_vm(self, instance_name):
-        """ Removes the named VM, as if it crashed. For testing"""
+        """Removes the named VM, as if it crashed. For testing."""
         LOG.info(_("test_remove_vm: instance_name=%s") % (instance_name))
         raise exception.InstanceNotFound(instance_id=instance_name)
 
@@ -466,8 +478,7 @@ class BareMetalDriver(driver.ComputeDriver):
     def manage_image_cache(self, context):
         """Manage the local cache of images."""
         self._image_cache_manager.verify_base_images(context)
-    
+
     def get_console_output(self, instance):
         node = _get_baremetal_node_by_instance_id(instance['id'])
         return self.baremetal_nodes.get_console_output(node, instance)
-

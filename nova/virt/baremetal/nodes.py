@@ -20,8 +20,11 @@
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
-from nova.virt.baremetal import fake, tilera, tilera_pdu
-from nova.virt.baremetal import pxe, ipmi
+from nova.virt.baremetal import fake
+from nova.virt.baremetal import ipmi
+from nova.virt.baremetal import pxe
+from nova.virt.baremetal import tilera
+from nova.virt.baremetal import tilera_pdu
 
 FLAGS = flags.FLAGS
 
@@ -39,6 +42,7 @@ baremetal_opts = [
 
 FLAGS.register_opts(baremetal_opts)
 
+
 def get_baremetal_nodes():
     d = FLAGS.baremetal_driver
     if d == 'tilera':
@@ -50,8 +54,9 @@ def get_baremetal_nodes():
     else:
         raise exception.NovaException(_("Unknown baremetal driver %(d)s"))
 
+
 def get_power_manager(node, **kwargs):
-    #TODO: specify power_manager per node
+    #TODO(NTTdocomo): specify power_manager per node
     d = FLAGS.power_manager
     if d == 'ipmi':
         return ipmi.get_power_manager(node, **kwargs)

@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2012 NTT DOCOMO, INC. 
+# Copyright (c) 2012 NTT DOCOMO, INC.
 # Copyright 2011 Nicira Networks
 # All Rights Reserved.
 #
@@ -16,8 +16,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-""" start mod by NTT DOCOMO """
-
 from nova import flags
 from nova.openstack.common import log as logging
 from nova.virt.baremetal.nec import filter_client as quantum_filter_client
@@ -25,10 +23,13 @@ from nova.virt.baremetal.nec import filter_client as quantum_filter_client
 
 LOG = logging.getLogger(__name__)
 
-flags.DECLARE('quantum_connection_host', 'nova.network.quantum.quantum_connection')
-flags.DECLARE('quantum_connection_port', 'nova.network.quantum.quantum_connection')
+flags.DECLARE('quantum_connection_host',
+              'nova.network.quantum.quantum_connection')
+flags.DECLARE('quantum_connection_port',
+              'nova.network.quantum.quantum_connection')
 
 FLAGS = flags.FLAGS
+
 
 def _filters_dict_into_list(filters):
     l = []
@@ -37,7 +38,7 @@ def _filters_dict_into_list(filters):
         if fid:
             l.append(fid)
     return l
-            
+
 
 class QuantumFilterClientConnection(object):
     """Abstracts connection to Quantum service into higher level
@@ -118,15 +119,14 @@ class FakeQuantumFilterClientConnection(object):
 
     def list_filters(self, tenant_id, network_id):
         l = []
-        for (fid,d) in self.filters.iteritems():
+        for (fid, d) in self.filters.iteritems():
             if d['tenant_id'] == tenant_id and d['network_id'] == network_id:
                 l.append(fid)
         return l
 
     def show_filter(self, tenant_id, network_id, filter_id):
         f = self.filters.get(filter_id, {})
-        if f.get('tenant_id') == tenant_id and f.get('network_id') == network_id:
+        if f.get('tenant_id') == tenant_id \
+                and f.get('network_id') == network_id:
             return f
         return None
-
-""" end mod by NTT DOCOMO """

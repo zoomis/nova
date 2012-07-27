@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2012 NTT DOCOMO, INC. 
+# Copyright (c) 2012 NTT DOCOMO, INC.
 # Copyright 2010 OpenStack LLC.
 # All Rights Reserved.
 #
@@ -18,9 +18,10 @@
 
 """Possible baremetal node states for instances.
 
-Compute instance baremetal states represent the state of an instance as it pertains to
-a user or administrator. When combined with task states (task_states.py), a
-better picture can be formed regarding the instance's health.
+Compute instance baremetal states represent the state of an instance as it
+pertains to a user or administrator. When combined with task states
+(task_states.py), a better picture can be formed regarding the instance's
+health.
 
 """
 
@@ -33,4 +34,3 @@ DELETED = 'deleted'
 STOPPED = 'stopped'
 
 ERROR = 'error'
-

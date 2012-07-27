@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2012 NTT DOCOMO, INC. 
+# Copyright (c) 2012 NTT DOCOMO, INC.
 # Copyright (c) 2011 X.commerce, a business unit of eBay Inc.
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
@@ -27,21 +27,22 @@ from nova.openstack.common import timeutils
 from nova.virt.baremetal.bmdb.sqlalchemy import baremetal_models
 from nova.virt.baremetal.bmdb.sqlalchemy.baremetal_session import get_session
 from sqlalchemy import and_
-from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import joinedload_all
-from sqlalchemy.sql import func
 from sqlalchemy.sql.expression import asc
 from sqlalchemy.sql.expression import desc
 from sqlalchemy.sql.expression import literal_column
+from sqlalchemy.sql import func
 
-from nova.db.sqlalchemy.api import require_admin_context
 from nova.db.sqlalchemy.api import is_user_context
+from nova.db.sqlalchemy.api import require_admin_context
 
 FLAGS = flags.FLAGS
 
 LOG = logging.getLogger(__name__)
+
 
 def model_query(context, *args, **kwargs):
     """Query helper that accounts for context's `read_deleted` field.
@@ -73,23 +74,26 @@ def model_query(context, *args, **kwargs):
 
     return query
 
-    
+
 @require_admin_context
 def bm_node_get_all(context, session=None):
-    query = model_query(context, baremetal_models.BareMetalNode, read_deleted="no", session=session)
+    query = model_query(context, baremetal_models.BareMetalNode,
+                        read_deleted="no", session=session)
     return query.all()
 
 
 @require_admin_context
 def bm_node_get_all_by_service_host(context, service_host, session=None):
-    query = model_query(context, baremetal_models.BareMetalNode, read_deleted="no", session=session).\
+    query = model_query(context, baremetal_models.BareMetalNode,
+                        read_deleted="no", session=session).\
                    filter_by(service_host=service_host)
     return query.all()
 
 
 @require_admin_context
 def bm_node_get(context, bm_node_id, session=None):
-    result = model_query(context, baremetal_models.BareMetalNode, read_deleted="no", session=session).\
+    result = model_query(context, baremetal_models.BareMetalNode,
+                         read_deleted="no", session=session).\
                      filter_by(id=bm_node_id).\
                      first()
     return result
@@ -97,7 +101,8 @@ def bm_node_get(context, bm_node_id, session=None):
 
 @require_admin_context
 def bm_node_get_by_instance_id(context, instance_id, session=None):
-    result = model_query(context, baremetal_models.BareMetalNode, read_deleted="no", session=session).\
+    result = model_query(context, baremetal_models.BareMetalNode,
+                         read_deleted="no", session=session).\
                      filter_by(instance_id=instance_id).\
                      first()
     return result
@@ -135,7 +140,8 @@ def bm_node_destroy(context, bm_node_id, session=None):
 
 @require_admin_context
 def bm_pxe_ip_get_all(context, session=None):
-    query = model_query(context, baremetal_models.BareMetalPxeIp, read_deleted="no", session=session)
+    query = model_query(context, baremetal_models.BareMetalPxeIp,
+                        read_deleted="no", session=session)
     return query.all()
 
 
@@ -143,7 +149,8 @@ def bm_pxe_ip_get_all(context, session=None):
 def bm_pxe_ip_create(context, address, server_address, session=None):
     if not session:
         session = get_session()
-    ref = model_query(context, baremetal_models.BareMetalPxeIp, read_deleted="no", session=session).\
+    ref = model_query(context, baremetal_models.BareMetalPxeIp,
+                      read_deleted="no", session=session).\
                      filter_by(address=address).\
                      first()
     if not ref:
@@ -153,7 +160,8 @@ def bm_pxe_ip_create(context, address, server_address, session=None):
         ref.save(session=session)
     else:
         if ref.server_address != server_address:
-            raise exception.NovaException('address exists, but server_address is not same')
+            raise exception.NovaException(
+                    'address exists, but server_address is not same')
     return ref.id
 
 
@@ -170,7 +178,8 @@ def bm_pxe_ip_create_direct(context, bm_pxe_ip, session=None):
 
 @require_admin_context
 def bm_pxe_ip_get(context, ip_id, session=None):
-    ref = model_query(context, baremetal_models.BareMetalPxeIp, read_deleted="no", session=session).\
+    ref = model_query(context, baremetal_models.BareMetalPxeIp,
+                      read_deleted="no", session=session).\
                      filter_by(id=ip_id).\
                      first()
     return ref
@@ -178,7 +187,8 @@ def bm_pxe_ip_get(context, ip_id, session=None):
 
 @require_admin_context
 def bm_pxe_ip_get_by_bm_node_id(context, bm_node_id, session=None):
-    ref = model_query(context, baremetal_models.BareMetalPxeIp, read_deleted="no", session=session).\
+    ref = model_query(context, baremetal_models.BareMetalPxeIp,
+                      read_deleted="no", session=session).\
                      filter_by(bm_node_id=bm_node_id).\
                      first()
     return ref
@@ -192,12 +202,14 @@ def bm_pxe_ip_associate(context, bm_node_id, session=None):
         node_ref = bm_node_get(context, bm_node_id, session=session)
         if not node_ref:
             raise exception.NovaException("bm_node %s not found" % bm_node_id)
-        ip_ref = model_query(context, baremetal_models.BareMetalPxeIp, read_deleted="no", session=session).\
+        ip_ref = model_query(context, baremetal_models.BareMetalPxeIp,
+                             read_deleted="no", session=session).\
                          filter_by(bm_node_id=node_ref.id).\
                          first()
         if ip_ref:
             return ip_ref.id
-        ip_ref = model_query(context, baremetal_models.BareMetalPxeIp, read_deleted="no", session=session).\
+        ip_ref = model_query(context, baremetal_models.BareMetalPxeIp,
+                             read_deleted="no", session=session).\
                          filter_by(bm_node_id=None).\
                          with_lockmode('update').\
                          first()
@@ -217,24 +229,27 @@ def bm_pxe_ip_disassociate(context, bm_node_id, session=None):
         if ip:
             ip.bm_node_id = None
             ip.save(session=session)
-    
+
 
 @require_admin_context
 def bm_interface_get(context, if_id, session=None):
-    result = model_query(context, baremetal_models.BareMetalInterface, read_deleted="no", session=session).\
+    result = model_query(context, baremetal_models.BareMetalInterface,
+                         read_deleted="no", session=session).\
                      filter_by(id=if_id).\
                      first()
     return result
 
 
 def bm_interface_get_all(context, session=None):
-    query = model_query(context, baremetal_models.BareMetalInterface, read_deleted="no", session=session)
+    query = model_query(context, baremetal_models.BareMetalInterface,
+                        read_deleted="no", session=session)
     return query.all()
 
 
 @require_admin_context
 def bm_interface_destroy(context, if_id, session=None):
-    model_query(context, baremetal_models.BareMetalInterface, read_deleted="no", session=session).\
+    model_query(context, baremetal_models.BareMetalInterface,
+                read_deleted="no", session=session).\
                 filter_by(id=if_id).\
                 update({'deleted': True,
                         'deleted_at': timeutils.utcnow(),
@@ -242,7 +257,8 @@ def bm_interface_destroy(context, if_id, session=None):
 
 
 @require_admin_context
-def bm_interface_create(context, bm_node_id, address, datapath_id, port_no, session=None):
+def bm_interface_create(context, bm_node_id, address, datapath_id, port_no,
+                        session=None):
     if not session:
         session = get_session()
     with session.begin():
@@ -260,7 +276,8 @@ def bm_interface_set_vif_uuid(context, if_id, vif_uuid, session=None):
     if not session:
         session = get_session()
     with session.begin():
-        ref = model_query(context, baremetal_models.BareMetalInterface, read_deleted="no", session=session).\
+        ref = model_query(context, baremetal_models.BareMetalInterface,
+                          read_deleted="no", session=session).\
                          filter_by(id=if_id).\
                          with_lockmode('update').\
                          first()
@@ -272,7 +289,8 @@ def bm_interface_set_vif_uuid(context, if_id, vif_uuid, session=None):
 
 @require_admin_context
 def bm_interface_get_by_vif_uuid(context, vif_uuid, session=None):
-    result = model_query(context, baremetal_models.BareMetalInterface, read_deleted="no", session=session).\
+    result = model_query(context, baremetal_models.BareMetalInterface,
+                         read_deleted="no", session=session).\
                 filter_by(vif_uuid=vif_uuid).\
                 first()
     return result
@@ -280,14 +298,16 @@ def bm_interface_get_by_vif_uuid(context, vif_uuid, session=None):
 
 @require_admin_context
 def bm_interface_get_all_by_bm_node_id(context, bm_node_id, session=None):
-    result = model_query(context, baremetal_models.BareMetalInterface, read_deleted="no", session=session).\
+    result = model_query(context, baremetal_models.BareMetalInterface,
+                         read_deleted="no", session=session).\
                  filter_by(bm_node_id=bm_node_id).\
                  all()
     return result
 
 
 @require_admin_context
-def bm_deployment_create(context, key, image_path, pxe_config_path, root_mb, swap_mb, session=None):
+def bm_deployment_create(context, key, image_path, pxe_config_path, root_mb,
+                         swap_mb, session=None):
     if not session:
         session = get_session()
     with session.begin():
@@ -303,7 +323,8 @@ def bm_deployment_create(context, key, image_path, pxe_config_path, root_mb, swa
 
 @require_admin_context
 def bm_deployment_get(context, dep_id, session=None):
-    result = model_query(context, baremetal_models.BareMetalDeployment, read_deleted="no", session=session).\
+    result = model_query(context, baremetal_models.BareMetalDeployment,
+                         read_deleted="no", session=session).\
                      filter_by(id=dep_id).\
                      first()
     return result
@@ -311,9 +332,9 @@ def bm_deployment_get(context, dep_id, session=None):
 
 @require_admin_context
 def bm_deployment_destroy(context, dep_id, session=None):
-    model_query(context, baremetal_models.BareMetalDeployment, session=session).\
+    model_query(context, baremetal_models.BareMetalDeployment,
+                session=session).\
                 filter_by(id=dep_id).\
                 update({'deleted': True,
                         'deleted_at': timeutils.utcnow(),
                         'updated_at': literal_column('updated_at')})
-

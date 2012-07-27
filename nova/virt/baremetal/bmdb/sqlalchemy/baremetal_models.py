@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2012 NTT DOCOMO, INC. 
+# Copyright (c) 2012 NTT DOCOMO, INC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -83,11 +83,12 @@ class BareMetalDeployment(BASE, models.NovaBase):
     root_mb = Column(Integer)
     swap_mb = Column(Integer)
 
+
 def register_models():
     engine = baremetal_session.get_engine()
     BASE.metadata.create_all(engine)
 
+
 def unregister_models():
     engine = baremetal_session.get_engine()
     BASE.metadata.drop_all(engine)
-

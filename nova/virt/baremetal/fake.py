@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2012 NTT DOCOMO, INC. 
+# Copyright (c) 2012 NTT DOCOMO, INC.
 # Copyright (c) 2011 University of Southern California / ISI
 # All Rights Reserved.
 #
@@ -39,21 +39,20 @@ class Fake:
 
     def destroy_images(self, var, context, node, instance):
         pass
-    
+
     def activate_bootloader(self, var, context, node, instance):
         pass
 
     def deactivate_bootloader(self, var, context, node, instance):
         pass
-    
+
     def activate_node(self, var, context, node, instance):
-        """For operations after power on"""
+        """For operations after power on."""
         pass
-    
+
     def deativate_node(self, var, context, node, instance):
-        """For operations before power off"""
+        """For operations before power off."""
         pass
-    
+
     def get_console_output(self, node, instance):
         return 'fake\nconsole\noutput for instance %s' % instance['id']
-

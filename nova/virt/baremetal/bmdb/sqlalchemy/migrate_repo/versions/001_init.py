@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2012 NTT DOCOMO, INC. 
+# Copyright (c) 2012 NTT DOCOMO, INC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -25,6 +25,7 @@ from nova.openstack.common import log as logging
 FLAGS = flags.FLAGS
 
 LOG = logging.getLogger(__name__)
+
 
 def upgrade(migrate_engine):
     meta = MetaData()
@@ -67,7 +68,7 @@ def upgrade(migrate_engine):
         mysql_engine='InnoDB',
         #mysql_charset='utf8'
     )
-    
+
     bm_pxe_ips = Table('bm_pxe_ips', meta,
         Column('created_at', DateTime),
         Column('updated_at', DateTime),
@@ -101,6 +102,7 @@ def upgrade(migrate_engine):
     bm_interfaces.create()
     bm_pxe_ips.create()
     bm_deployments.create()
+
 
 def downgrade(migrate_engine):
     pass

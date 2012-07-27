@@ -67,19 +67,19 @@ class VIFINFOClient(object):
             #                      'code': status_code,
             #                      'detail': error_message}}
             if status_code == httplib.NOT_FOUND:
-                """404"""
+                # 404
                 raise exc.HTTPNotFound(error_message)
             elif status_code == httplib.METHOD_NOT_ALLOWED:
-                """405"""
+                # 405
                 raise exc.HTTPMethodNotAllowed(error_message)
             elif status_code == httplib.UNPROCESSABLE_ENTITY:
-                """422"""
+                # 422
                 raise exc.HTTPUnprocessableEntity(error_message)
             elif status_code == httplib.NOT_IMPLEMENTED:
-                """501"""
+                # 501
                 raise exc.HTTPNotImplemented(error_message)
             else:
-                """other error is 500"""
+                # other error is 500
                 raise exc.HTTPInternalServerError(error_message)
 
     def list_vifinfos(self):

@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2012 NTT DOCOMO, INC. 
+# Copyright (c) 2012 NTT DOCOMO, INC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,19 +15,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.openstack.common import cfg
-from nova import exception
-from nova import flags
-from nova.openstack.common import log as logging
-from nova import utils
-from nova.virt.libvirt import utils as libvirt_utils
-from nova.virt.baremetal import vlan 
-from nova.virt.baremetal import bmdb
-from nova.compute import instance_types
-from nova.virt.disk import api as disk
-
 import os
 import shutil
+
+from nova.compute import instance_types
+from nova import exception
+from nova import flags
+from nova.openstack.common import cfg
+from nova.openstack.common import log as logging
+from nova import utils
+from nova.virt.baremetal import bmdb
+from nova.virt.baremetal import vlan
+from nova.virt.disk import api as disk
+from nova.virt.libvirt import utils as libvirt_utils
 
 
 LOG = logging.getLogger(__name__)
@@ -58,7 +58,8 @@ pxe_opts = [
                help='ramdisk image ID used in deployment phase'),
     cfg.BoolOpt('baremetal_pxe_append_iscsi_portal',
                 default=True,
-                help='append "bm_iscsi_porttal=<portal_address>" to instances\' /proc/cmdline'),
+                help='append "bm_iscsi_porttal=<portal_address>" '
+                     'to instances\' /proc/cmdline'),
     cfg.StrOpt('baremetal_pxe_append_params',
                help='additional append parameters for baremetal pxe'),
             ]
@@ -79,15 +80,18 @@ def _late_load_cheetah():
                        ['Template'], -1)
         Template = t.Template
 
+
 def _dnsmasq_pid_path(pxe_interface):
     name = 'dnsmasq-%s.pid' % pxe_interface
     path = os.path.join(FLAGS.baremetal_dnsmasq_pid_dir, name)
     return path
 
+
 def _dnsmasq_lease_path(pxe_interface):
     name = 'dnsmasq-%s.lease' % pxe_interface
     path = os.path.join(FLAGS.baremetal_dnsmasq_lease_dir, name)
     return path
+
 
 def _dnsmasq_pid(pxe_interface):
     pidfile = _dnsmasq_pid_path(pxe_interface)
@@ -96,17 +100,20 @@ def _dnsmasq_pid(pxe_interface):
             return int(f.read())
     return None
 
+
 def _unlink_without_raise(path):
     try:
         libvirt_utils.file_delete(path)
     except OSError:
         LOG.exception("failed to unlink %s" % path)
 
+
 def _random_alnum(count):
     import random
     import string
     chars = string.ascii_uppercase + string.digits
-    return "".join([ random.choice(chars) for _ in range(count) ])
+    return "".join([random.choice(chars) for _ in range(count)])
+
 
 def _start_dnsmasq(interface, tftp_root, client_address, pid_path, lease_path):
     utils.execute('dnsmasq',
@@ -121,12 +128,17 @@ def _start_dnsmasq(interface, tftp_root, client_address, pid_path, lease_path):
              '--dhcp-boot=pxelinux.0',
              '--dhcp-range=%s,%s' % (client_address, client_address))
 
-def _cache_image_x(context, target, image_id, user_id, project_id):
+
+def _cache_image_x(context, target, image_id,
+                   user_id, project_id):
     if not os.path.exists(target):
-        libvirt_utils.fetch_image(context, target, image_id, user_id, project_id)
+        libvirt_utils.fetch_image(context, target, image_id,
+                                  user_id, project_id)
 
 
-def _build_pxe_config(deployment_id, deployment_key, iscsi_iqn, deploy_aki_path, deploy_ari_path, aki_path, ari_path, iscsi_portal):
+def _build_pxe_config(deployment_id, deployment_key, iscsi_iqn,
+                      deploy_aki_path, deploy_ari_path, aki_path, ari_path,
+                      iscsi_portal):
     # 'default deploy' will be replaced to 'default boot' by bm_deploy_work
     pxeconf = "default deploy\n"
     pxeconf += "\n"
@@ -160,20 +172,23 @@ def _build_pxe_config(deployment_id, deployment_key, iscsi_iqn, deploy_aki_path,
     pxeconf += "\n"
     return pxeconf
 
-def _start_per_host_pxe_server(tftp_root, vlan_id, server_address, client_address):
+
+def _start_per_host_pxe_server(tftp_root, vlan_id,
+                               server_address, client_address):
     parent_interface = FLAGS.baremetal_pxe_parent_interface
 
     pxe_interface = vlan.ensure_vlan(vlan_id, parent_interface)
 
     from nova.network import linux_net
-    
+
     chain = 'bm-%s' % pxe_interface
     iptables = linux_net.iptables_manager
-    iptables.ipv4['filter'].add_chain(chain)
-    iptables.ipv4['filter'].add_rule('INPUT', '-i %s -j $%s' % (pxe_interface, chain))
-    iptables.ipv4['filter'].add_rule(chain, '--proto udp --sport=68 --dport=67 -j ACCEPT')
-    iptables.ipv4['filter'].add_rule(chain, '-s %s -j ACCEPT' % client_address)
-    iptables.ipv4['filter'].add_rule(chain, '-j DROP')
+    f = iptables.ipv4['filter']
+    f.add_chain(chain)
+    f.add_rule('INPUT', '-i %s -j $%s' % (pxe_interface, chain))
+    f.add_rule(chain, '--proto udp --sport=68 --dport=67 -j ACCEPT')
+    f.add_rule(chain, '-s %s -j ACCEPT' % client_address)
+    f.add_rule(chain, '-j DROP')
     iptables.apply()
 
     utils.execute('ip', 'address',
@@ -184,7 +199,8 @@ def _start_per_host_pxe_server(tftp_root, vlan_id, server_address, client_addres
             client_address, 'scope', 'host', 'dev', pxe_interface,
             run_as_root=True)
 
-    shutil.copyfile(FLAGS.baremetal_pxelinux_path, os.path.join(tftp_root, 'pxelinux.0'))
+    shutil.copyfile(FLAGS.baremetal_pxelinux_path,
+                    os.path.join(tftp_root, 'pxelinux.0'))
     libvirt_utils.ensure_tree(os.path.join(tftp_root, 'pxelinux.cfg'))
 
     _start_dnsmasq(interface=pxe_interface,
@@ -193,39 +209,46 @@ def _start_per_host_pxe_server(tftp_root, vlan_id, server_address, client_addres
                    pid_path=_dnsmasq_pid_path(pxe_interface),
                    lease_path=_dnsmasq_lease_path(pxe_interface))
 
+
 def _stop_per_host_pxe_server(tftp_root, vlan_id):
     pxe_interface = 'vlan%d' % vlan_id
-    
+
     dnsmasq_pid = _dnsmasq_pid(pxe_interface)
     if dnsmasq_pid:
-        utils.execute(FLAGS.baremetal_kill_dnsmasq_path, str(dnsmasq_pid), run_as_root=True)
+        utils.execute(FLAGS.baremetal_kill_dnsmasq_path,
+                      str(dnsmasq_pid),
+                      run_as_root=True)
     _unlink_without_raise(_dnsmasq_pid_path(pxe_interface))
-    _unlink_without_raise(_dnsmasq_lease_path(pxe_interface))                
+    _unlink_without_raise(_dnsmasq_lease_path(pxe_interface))
 
-    vlan.ensure_no_vlan(vlan_id, FLAGS.baremetal_pxe_parent_interface)    
-    
+    vlan.ensure_no_vlan(vlan_id, FLAGS.baremetal_pxe_parent_interface)
+
     shutil.rmtree(os.path.join(tftp_root, 'pxelinux.cfg'), ignore_errors=True)
 
     from nova.network import linux_net
     chain = 'bm-%s' % pxe_interface
     iptables = linux_net.iptables_manager
     iptables.ipv4['filter'].remove_chain(chain)
-    iptables.apply()            
+    iptables.apply()
 
 
 class PXE:
 
     def __init__(self):
         if not FLAGS.baremetal_deploy_kernel:
-            raise exception.NovaException('baremetal_deploy_kernel is not defined')
+            raise exception.NovaException(
+                    'baremetal_deploy_kernel is not defined')
         if not FLAGS.baremetal_deploy_ramdisk:
-            raise exception.NovaException('baremetal_deploy_ramdisk is not defined')
+            raise exception.NovaException(
+                    'baremetal_deploy_ramdisk is not defined')
 
     def define_vars(self, instance, network_info, block_device_info):
         var = {}
-        var['image_root'] = os.path.join(FLAGS.instances_path, instance['name'])
+        var['image_root'] = os.path.join(FLAGS.instances_path,
+                                         instance['name'])
         if FLAGS.baremetal_pxe_vlan_per_host:
-            var['tftp_root'] = os.path.join(FLAGS.baremetal_tftp_root, str(instance['id']))
+            var['tftp_root'] = os.path.join(FLAGS.baremetal_tftp_root,
+                                            str(instance['id']))
         else:
             var['tftp_root'] = FLAGS.baremetal_tftp_root
         var['network_info'] = network_info
@@ -246,18 +269,17 @@ class PXE:
         for pif in pifs:
             nics_in_order.append(pif['address'])
         nics_in_order.append(node['prov_mac_address'])
-                
+
         # rename nics to be in the order in the DB
         LOG.debug("injecting persisitent net")
         rules = ""
         i = 0
         for hwaddr in nics_in_order:
-            rules += 'SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="%s", ATTR{dev_id}=="0x0", ATTR{type}=="1", KERNEL=="eth*", NAME="eth%d"\n' % (hwaddr.lower(), i)
+            rules += 'SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ' \
+                     'ATTR{address}=="%s", ATTR{dev_id}=="0x0", ' \
+                     'ATTR{type}=="1", KERNEL=="eth*", NAME="eth%d"\n' \
+                     % (hwaddr.lower(), i)
             i += 1
-        #disk.inject_files(target,
-        #                  [ ('/etc/udev/rules.d/70-persistent-net.rules', rules) ],
-        #                  partition=target_partition,
-        #                  use_cow=False)
         files.append(('/etc/udev/rules.d/70-persistent-net.rules', rules))
         bootif_name = "eth%d" % (i - 1)
 
@@ -286,7 +308,9 @@ class PXE:
                 netmask_v6 = mapping['ip6s'][0]['netmask']
                 gateway_v6 = mapping['gateway_v6']
             name = 'eth%d' % ifc_num
-            if FLAGS.baremetal_use_unsafe_vlan and mapping['should_create_vlan'] and network_ref.get('vlan'):
+            if FLAGS.baremetal_use_unsafe_vlan \
+                    and mapping['should_create_vlan'] \
+                    and network_ref.get('vlan'):
                 name = 'eth%d.%d' % (ifc_num, network_ref.get('vlan'))
             net_info = {'name': name,
                    'address': address,
@@ -341,7 +365,7 @@ class PXE:
     def create_image(self, var, context, image_meta, node, instance):
         image_root = var['image_root']
         network_info = var['network_info']
-        
+
         ami_id = str(image_meta['id'])
         libvirt_utils.ensure_tree(image_root)
         image_path = os.path.join(image_root, 'disk')
@@ -354,14 +378,19 @@ class PXE:
                        project_id=instance['project_id'])
 
         LOG.debug("injecting to image id=%s target=%s", ami_id, image_path)
-        self._inject_to_image(context, image_path, node, instance, network_info)
+        self._inject_to_image(context, image_path, node,
+                              instance, network_info)
         var['image_path'] = image_path
         LOG.debug("fetching images all done")
 
     def destroy_images(self, var, context, node, instance):
         image_root = var['image_root']
         shutil.rmtree(image_root, ignore_errors=True)
-    
+
+    def _pxe_cfg_name(self, node):
+        name = "01-" + node['prov_mac_address'].replace(":", "-").lower()
+        return name
+
     def activate_bootloader(self, var, context, node, instance):
         tftp_root = var['tftp_root']
         image_path = var['image_path']
@@ -377,8 +406,8 @@ class PXE:
             tftp_paths = images
         else:
             tftp_image_dir = os.path.join(tftp_root, str(instance['id']))
-            tftp_paths = [ os.path.join(str(instance['id']), i) for i in images ]
-        targets = [ os.path.join(tftp_root, i) for i in tftp_paths ]
+            tftp_paths = [os.path.join(str(instance['id']), i) for i in images]
+        targets = [os.path.join(tftp_root, i) for i in tftp_paths]
 
         LOG.debug("tftp_paths=%s", tftp_paths)
         LOG.debug("targets=%s", targets)
@@ -386,7 +415,7 @@ class PXE:
         libvirt_utils.ensure_tree(tftp_root)
         if tftp_image_dir:
             libvirt_utils.ensure_tree(tftp_image_dir)
-        
+
         def _cache_image_b(image_id, target):
             LOG.debug("fetching id=%s target=%s", image_id, target)
             _cache_image_x(context=context,
@@ -394,12 +423,13 @@ class PXE:
                            target=target,
                            user_id=instance['user_id'],
                            project_id=instance['project_id'])
-    
-        for image_id,target in zip(images,targets):
+
+        for image_id, target in zip(images, targets):
             _cache_image_b(image_id, target)
 
         pxe_config_dir = os.path.join(tftp_root, 'pxelinux.cfg')
-        pxe_config_path = os.path.join(pxe_config_dir, "01-" + node['prov_mac_address'].replace(":", "-").lower())
+        pxe_config_path = os.path.join(pxe_config_dir,
+                                       self._pxe_cfg_name(node))
 
         root_mb = instance['root_gb'] * 1024
 
@@ -415,14 +445,17 @@ class PXE:
             pxe_ip = bmdb.bm_pxe_ip_get(context, pxe_ip_id)
 
         deployment_key = _random_alnum(32)
-        deployment_id = bmdb.bm_deployment_create(context, deployment_key, image_path, pxe_config_path, root_mb, swap_mb)
+        deployment_id = bmdb.bm_deployment_create(context, deployment_key,
+                                                  image_path, pxe_config_path,
+                                                  root_mb, swap_mb)
         iscsi_iqn = "iqn-%s" % str(instance['uuid'])
         iscsi_portal = None
         if FLAGS.baremetal_pxe_append_iscsi_portal:
             if pxe_ip:
                 iscsi_portal = pxe_ip['server_address']
         pxeconf = _build_pxe_config(deployment_id, deployment_key, iscsi_iqn,
-            tftp_paths[0], tftp_paths[1], tftp_paths[2], tftp_paths[3], iscsi_portal)
+            tftp_paths[0], tftp_paths[1], tftp_paths[2], tftp_paths[3],
+            iscsi_portal)
 
         libvirt_utils.ensure_tree(pxe_config_dir)
         libvirt_utils.write_to_file(pxe_config_path, pxeconf)
@@ -431,7 +464,8 @@ class PXE:
             vlan_id = node['prov_vlan_id']
             server_address = pxe_ip['server_address']
             client_address = pxe_ip['address']
-            _start_per_host_pxe_server(tftp_root, vlan_id, server_address, client_address)
+            _start_per_host_pxe_server(tftp_root, vlan_id,
+                                       server_address, client_address)
 
     def deactivate_bootloader(self, var, context, node, instance):
         tftp_root = var['tftp_root']
@@ -444,9 +478,11 @@ class PXE:
             tftp_image_dir = os.path.join(tftp_root, str(instance['id']))
         shutil.rmtree(tftp_image_dir, ignore_errors=True)
 
-        pxe_config_path = os.path.join(tftp_root, "pxelinux.cfg", "01-" + node['prov_mac_address'].replace(":", "-").lower())
+        pxe_config_path = os.path.join(tftp_root,
+                                       "pxelinux.cfg",
+                                       self._pxe_cfg_name(node))
         _unlink_without_raise(pxe_config_path)
-    
+
     def activate_node(self, var, context, node, instance):
         pass
 
@@ -455,4 +491,3 @@ class PXE:
 
     def get_console_output(self, node, instance):
         raise NotImplementedError()
-

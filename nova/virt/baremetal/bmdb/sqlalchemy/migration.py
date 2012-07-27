@@ -17,19 +17,16 @@
 #    under the License.
 
 import distutils.version as dist_version
+import migrate
+from migrate.versioning import util as migrate_util
 import os
+import sqlalchemy
 
-from nova.virt.baremetal.bmdb import migration
-from nova.virt.baremetal.bmdb.sqlalchemy.baremetal_session import get_engine
 from nova import exception
 from nova import flags
 from nova.openstack.common import log as logging
-
-
-import migrate
-from migrate.versioning import util as migrate_util
-import sqlalchemy
-
+from nova.virt.baremetal.bmdb import migration
+from nova.virt.baremetal.bmdb.sqlalchemy.baremetal_session import get_engine
 
 LOG = logging.getLogger(__name__)
 

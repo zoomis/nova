@@ -15,11 +15,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils
-from nova import flags
-
 from nova.virt.baremetal import baremetal_states
 
 import subprocess
@@ -30,6 +29,7 @@ flags.DECLARE('tile_monitor', 'nova.virt.baremetal.tilera')
 FLAGS = flags.FLAGS
 
 LOG = logging.getLogger(__name__)
+
 
 def get_power_manager(node, **kwargs):
     pm = Pdu(address=node['pm_address'],
@@ -67,11 +67,11 @@ class Pdu:
         out = file.readline().find("Unreachable")
         utils.execute('sudo', 'rm', tile_output)
         return out
-    
+
     def activate_node(self):
         state = self._power_on()
         return state
-    
+
     def reboot_node(self):
         self._power_off()
         state = self._power_on()
@@ -80,7 +80,7 @@ class Pdu:
     def deactivate_node(self):
         state = self._power_off()
         return state
-    
+
     def _power_mgr(self, mode):
         """
         Changes power state of the given node.
@@ -100,7 +100,7 @@ class Pdu:
                       str(mode), '>>', 'pdu_output')
 
     def _power_on(self):
-        count = 1 
+        count = 1
         self._power_mgr(2)
         self._power_mgr(3)
         time.sleep(100)
@@ -130,10 +130,9 @@ class Pdu:
     def is_power_on(self):
         r = self._exec_status()
         return (r == -1)
- 
+
     def start_console(self, port, node_id):
         pass
- 
+
     def stop_console(self, node_id):
         pass
- 

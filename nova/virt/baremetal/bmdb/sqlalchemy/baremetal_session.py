@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2012 NTT DOCOMO, INC. 
+# Copyright (c) 2012 NTT DOCOMO, INC.
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -25,21 +25,21 @@ import sqlalchemy
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.pool import NullPool, StaticPool
 
-from nova.openstack.common import cfg
 import nova.exception
 import nova.flags as flags
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 
-from nova.db.sqlalchemy.session import SynchronousSwitchListener
-from nova.db.sqlalchemy.session import MySQLPingListener
-from nova.db.sqlalchemy.session import is_db_connection_error
 from nova.db.sqlalchemy.session import get_maker
+from nova.db.sqlalchemy.session import is_db_connection_error
+from nova.db.sqlalchemy.session import MySQLPingListener
+from nova.db.sqlalchemy.session import SynchronousSwitchListener
 
 opts = [
     cfg.StrOpt('baremetal_sql_connection',
                default='sqlite:///$state_path/baremetal_$sqlite_db',
                help='The SQLAlchemy connection string used to connect to the '
-                    'database'),
+                    'bare-metal database'),
     ]
 
 FLAGS = flags.FLAGS
@@ -63,11 +63,13 @@ def get_session(autocommit=True, expire_on_commit=False):
     session.flush = nova.exception.wrap_db_error(session.flush)
     return session
 
+
 def get_engine():
     """Return a SQLAlchemy engine."""
     global _ENGINE
     if _ENGINE is None:
-        connection_dict = sqlalchemy.engine.url.make_url(FLAGS.baremetal_sql_connection)
+        connection_dict = sqlalchemy.engine.url.make_url(
+                FLAGS.baremetal_sql_connection)
 
         engine_args = {
             "pool_recycle": FLAGS.sql_idle_timeout,
@@ -94,7 +96,8 @@ def get_engine():
         if 'mysql' in connection_dict.drivername:
             engine_args['listeners'] = [MySQLPingListener()]
 
-        _ENGINE = sqlalchemy.create_engine(FLAGS.baremetal_sql_connection, **engine_args)
+        _ENGINE = sqlalchemy.create_engine(FLAGS.baremetal_sql_connection,
+                                           **engine_args)
 
         try:
             _ENGINE.connect()

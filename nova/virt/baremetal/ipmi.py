@@ -1,7 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 # coding=utf-8
 
-# Copyright (c) 2012 NTT DOCOMO, INC. 
+# Copyright (c) 2012 NTT DOCOMO, INC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,17 +16,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os
+import stat
+import tempfile
+import time
+
+from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils
-from nova import flags
-
 from nova.virt.baremetal import baremetal_states
-
-import os
-import stat
-import time
-import tempfile
 
 opts = [
     cfg.StrOpt('baremetal_term',
@@ -45,6 +44,7 @@ FLAGS.register_opts(opts)
 
 LOG = logging.getLogger(__name__)
 
+
 def get_power_manager(node, **kwargs):
     pm = Ipmi(address=node['pm_address'],
               user=node['pm_user'],
@@ -52,8 +52,10 @@ def get_power_manager(node, **kwargs):
               interface="lanplus")
     return pm
 
+
 def get_power_manager_dummy(node, **kwargs):
     return DummyIpmi()
+
 
 def _make_password_file(password):
     fd, path = tempfile.mkstemp()
@@ -62,12 +64,13 @@ def _make_password_file(password):
         f.write(password)
     return path
 
+
 def _unlink_without_raise(path):
     try:
         os.unlink(path)
     except OSError:
         LOG.exception("failed to unlink %s" % path)
-    
+
 
 class IpmiError(Exception):
     def __init__(self, status, message):
@@ -80,15 +83,16 @@ class IpmiError(Exception):
 
 class Ipmi:
 
-    def __init__(self, address=None, user=None, password=None, interface="lanplus"):
+    def __init__(self, address=None, user=None, password=None,
+                 interface="lanplus"):
         if address == None:
-            raise IpmiError, (-1, "address is None")
+            raise IpmiError(-1, "address is None")
         if user == None:
-            raise IpmiError, (-1, "user is None")
+            raise IpmiError(-1, "user is None")
         if password == None:
-            raise IpmiError, (-1, "password is None")
+            raise IpmiError(-1, "password is None")
         if interface == None:
-            raise IpmiError, (-1, "interface is None")
+            raise IpmiError(-1, "interface is None")
         self._address = address
         self._user = user
         self._password = password
@@ -108,18 +112,18 @@ class Ipmi:
         try:
             args.append(pwfile)
             args.extend(command.split(" "))
-            out,err = utils.execute(*args, attempts=3)
+            out, err = utils.execute(*args, attempts=3)
         finally:
             _unlink_without_raise(pwfile)
         LOG.debug("out: %s", out)
         LOG.debug("err: %s", err)
         return out, err
-    
+
     def activate_node(self):
         self._power_off()
         state = self._power_on()
         return state
-    
+
     def reboot_node(self):
         self._power_off()
         state = self._power_on()
@@ -128,7 +132,7 @@ class Ipmi:
     def deactivate_node(self):
         state = self._power_off()
         return state
-    
+
     def _power_on(self):
         count = 0
         while not self.is_power_on():
@@ -172,9 +176,9 @@ class Ipmi:
 
         TERMINAL = FLAGS.baremetal_term
         CERTDIR = FLAGS.baremetal_term_cert_dir
-    
+
         args = []
-    
+
         args.append(TERMINAL)
         if CERTDIR:
             args.append("-c")
@@ -188,34 +192,35 @@ class Ipmi:
         else:
             args.append("--background")
         args.append("-s")
-        
+
         uid = os.getuid()
         gid = os.getgid()
-    
+
         pwfile = _make_password_file(self._password)
-    
-        ipmi_args = "/:" + str(uid) + ":" + str(gid) + ":HOME:ipmitool "
-        ipmi_args += "-H " + self._address +  " -I lanplus -U " + self._user + " "
-        ipmi_args += "-f " + pwfile + " sol activate" 
-    
+
+        ipmi_args = "/:%s:%s:HOME:ipmitool -H %s -I lanplus " \
+                    " -U %s -f %s sol activate" \
+                    % (str(uid), str(gid), self._address, self._user, pwfile)
+
         args.append(ipmi_args)
         # Run shellinaboxd without pipes. Otherwise utils.execute() waits
         # infinitly since shellinaboxd does not close passed fds.
-        x = [ "'" + arg.replace("'", "'\\''") + "'" for arg in args ]
+        x = ["'" + arg.replace("'", "'\\''") + "'" for arg in args]
         x.append('</dev/null')
         x.append('>/dev/null')
         x.append('2>&1')
         return utils.execute(' '.join(x), shell=True)
 
-    
     def stop_console(self, node_id):
         console_pid = self._console_pid(node_id)
         if console_pid:
-            utils.execute('kill', str(console_pid), run_as_root=True, check_exit_code=[0,1])
+            utils.execute('kill', str(console_pid),
+                          run_as_root=True,
+                          check_exit_code=[0, 1])
         _unlink_without_raise(self._console_pidfile(node_id))
-            
+
     def _console_pidfile(self, node_id):
-        pidfile = "%s/%s.pid" % (FLAGS.baremetal_console_pid_dir,node_id)
+        pidfile = "%s/%s.pid" % (FLAGS.baremetal_console_pid_dir, node_id)
         return pidfile
 
     def _console_pid(self, node_id):
@@ -248,4 +253,3 @@ class DummyIpmi:
 
     def stop_console(self, node_id):
         pass
-

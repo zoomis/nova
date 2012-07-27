@@ -1,7 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 # coding=utf-8
 
-# Copyright (c) 2012 NTT DOCOMO, INC. 
+# Copyright (c) 2012 NTT DOCOMO, INC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,12 +16,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import exception
-from nova.openstack.common import log as logging, importutils
-from nova.openstack.common import cfg
-from nova import utils
-from nova import flags
 from nova import context as nova_context
+from nova import exception
+from nova import flags
+from nova.openstack.common import cfg
+from nova.openstack.common import importutils
+from nova.openstack.common import log as logging
+from nova import utils
 from nova.virt.baremetal import bmdb
 from nova.virt import driver
 from nova.virt.libvirt import utils as libvirt_utils
@@ -32,11 +33,12 @@ opts = [
     cfg.BoolOpt('baremetal_use_unsafe_iscsi',
                  default=True,
                  help='If a node dose not have an fixed PXE IP address, '
-                      'volumes are exported with globally opened ACL' ),
+                      'volumes are exported with globally opened ACL'),
     cfg.IntOpt('baremetal_iscsi_tid_offset',
                default=1000000,
-               help="offset for iSCSI TID. This offset prevents baremetal volume's TID "
-                    "from conflicting with nova-volume's one"),
+               help="offset for iSCSI TID. This offset prevents "
+                    "baremetal volume's TID from conflicting with "
+                    "nova-volume's one"),
     cfg.StrOpt('baremetal_iscsi_iqn_prefix',
                default='iqn.2010-10.org.openstack.baremetal',
                help='iSCSI IQN prefix used in baremetal volume connections.'),
@@ -84,7 +86,7 @@ def _delete_iscsi_export_tgtadm(tid):
                   '--tid', tid,
                   '--lun', '1',
                   run_as_root=True)
-    except:
+    except exception.ProcessExecutionError:
         pass
     try:
         utils.execute('tgtadm', '--lld', 'iscsi',
@@ -92,7 +94,7 @@ def _delete_iscsi_export_tgtadm(tid):
                       '--op', 'delete',
                       '--tid', tid,
                       run_as_root=True)
-    except:
+    except exception.ProcessExecutionError:
         pass
     # Check if the tid is deleted, that is, check the tid no longer exists.
     # If the tid dose not exist, tgtadm returns with exit_code 22.
@@ -156,9 +158,10 @@ class VolumeDriver(object):
 
 flags.DECLARE('libvirt_volume_drivers', 'nova.virt.libvirt.driver')
 
+
 class LibvirtVolumeDriver(VolumeDriver):
-    """The VolumeDriver deligates nova.virt.libvirt.volume"""
-    
+    """The VolumeDriver deligates nova.virt.libvirt.volume."""
+
     def __init__(self):
         super(LibvirtVolumeDriver, self).__init__()
         self.volume_drivers = {}
@@ -177,7 +180,7 @@ class LibvirtVolumeDriver(VolumeDriver):
         return method(connection_info, *args, **kwargs)
 
     def attach_volume(self, connection_info, instance_name, mountpoint):
-        LOG.info("attach_volume: connection_info=%s instance_name=%s mountpoint=%s", connection_info, instance_name, mountpoint)
+        LOG.info("attach_volume: %s", locals())
         node = _get_baremetal_node_by_instance_name(instance_name)
         if not node:
             raise exception.InstanceNotFound(instance_id=instance_name)
@@ -185,7 +188,8 @@ class LibvirtVolumeDriver(VolumeDriver):
         pxe_ip = bmdb.bm_pxe_ip_get_by_bm_node_id(ctx, node['id'])
         if not pxe_ip:
             if not FLAGS.baremetal_use_unsafe_iscsi:
-                raise exception.NovaException("No fixed PXE IP is associated to %s" % instance_name)
+                raise exception.NovaException(
+                        "No fixed PXE IP is associated to %s" % instance_name)
         mount_device = mountpoint.rpartition("/")[2]
         conf = self._volume_driver_method('connect_volume',
                                          connection_info,
@@ -206,7 +210,9 @@ class LibvirtVolumeDriver(VolumeDriver):
 
     @exception.wrap_exception()
     def detach_volume(self, connection_info, instance_name, mountpoint):
-        LOG.info("detach_volume: connection_info=%s instance_name=%s mountpoint=%s", connection_info, instance_name, mountpoint)
+        LOG.info("detach_volume: connection_info=%s instance_name=%s "
+                 "mountpoint=%s",
+                 connection_info, instance_name, mountpoint)
         mount_device = mountpoint.rpartition("/")[2]
         try:
             volume_id = connection_info['data']['volume_id']
@@ -231,4 +237,3 @@ class LibvirtVolumeDriver(VolumeDriver):
         """
 
         return 'baremetal'
-
