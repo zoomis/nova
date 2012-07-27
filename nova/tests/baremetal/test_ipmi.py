@@ -14,7 +14,7 @@
 #    under the License.
 
 """
-Tests for baremetal impi driver
+Tests for baremetal ipmi driver
 """
 
 import mox
