@@ -1,4 +1,4 @@
-# Copyright (c) 2012 NTT DOCOMO, INC. 
+# Copyright (c) 2012 NTT DOCOMO, INC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,14 +15,16 @@
 
 """Baremetal DB utils for test."""
 
+from nova import context as nova_context
 from nova import flags
 from nova import test
-from nova import context as nova_context
 from nova.virt.baremetal import bmdb
 from nova.virt.baremetal.bmdb.sqlalchemy import baremetal_models
 
-flags.DECLARE('baremetal_sql_connection', 'nova.virt.baremetal.bmdb.sqlalchemy.baremetal_session')
-    
+flags.DECLARE('baremetal_sql_connection',
+              'nova.virt.baremetal.bmdb.sqlalchemy.baremetal_session')
+
+
 def new_bm_node(**kwargs):
     h = baremetal_models.BareMetalNode()
     h.id = kwargs.pop('id', None)
@@ -43,12 +45,14 @@ def new_bm_node(**kwargs):
         raise Exception("unknown field: %s" % ','.join(kwargs.keys()))
     return h
 
+
 def clear_tables():
     baremetal_models.unregister_models()
     baremetal_models.register_models()
 
+
 class BMDBTestCase(test.TestCase):
-    
+
     def setUp(self):
         super(BMDBTestCase, self).setUp()
         self.flags(baremetal_sql_connection='sqlite:///:memory:')

@@ -1,4 +1,4 @@
-# Copyright (c) 2012 NTT DOCOMO, INC. 
+# Copyright (c) 2012 NTT DOCOMO, INC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -26,10 +26,11 @@ from nova import flags
 from nova import test
 from nova import utils
 
-from nova.virt.baremetal import ipmi
 from nova.tests.baremetal import bmdb as bmdb_utils
+from nova.virt.baremetal import ipmi
 
 FLAGS = flags.FLAGS
+
 
 class BaremetalIPMITestCase(test.TestCase):
 
@@ -38,7 +39,7 @@ class BaremetalIPMITestCase(test.TestCase):
 
     def tearDown(self):
         super(BaremetalIPMITestCase, self).tearDown()
-    
+
     def test_get_power_manager(self):
         n1 = bmdb_utils.new_bm_node(
                 pm_address='10.1.1.1',
@@ -57,7 +58,7 @@ class BaremetalIPMITestCase(test.TestCase):
         self.assertEqual(pm2._address, '10.2.2.2')
         self.assertEqual(pm2._user, 'n2_user')
         self.assertEqual(pm2._password, 'n2_password')
-    
+
     def test_make_password_file(self):
         PASSWORD = 'xyz'
         path = ipmi._make_password_file(PASSWORD)
@@ -69,14 +70,14 @@ class BaremetalIPMITestCase(test.TestCase):
             self.assertEqual(s, PASSWORD)
         finally:
             os.unlink(path)
-    
+
     def test_exec_ipmitool(self):
         H = 'address'
         U = 'user'
         P = 'password'
         I = 'interface'
         F = 'password_file'
-        
+
         self.mox.StubOutWithMock(ipmi, '_make_password_file')
         self.mox.StubOutWithMock(utils, 'execute')
         self.mox.StubOutWithMock(ipmi, '_unlink_without_raise')

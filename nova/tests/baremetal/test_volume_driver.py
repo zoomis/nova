@@ -1,4 +1,4 @@
-# Copyright (c) 2012 NTT DOCOMO, INC. 
+# Copyright (c) 2012 NTT DOCOMO, INC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -19,9 +19,9 @@ Tests for baremetal volume driver
 
 import mox
 
-from nova import utils
 from nova import flags
 from nova import test
+from nova import utils
 
 from nova.virt.baremetal import volume_driver
 
@@ -47,7 +47,7 @@ SHOW_OUTPUT = """Target 1: iqn.2010-10.org.openstack:volume-00000001
             Readonly: No
             Backing store type: null
             Backing store path: None
-            Backing store flags: 
+            Backing store flags:
         LUN: 1
             Type: disk
             SCSI ID: IET     00010001
@@ -58,7 +58,7 @@ SHOW_OUTPUT = """Target 1: iqn.2010-10.org.openstack:volume-00000001
             Readonly: No
             Backing store type: rdwr
             Backing store path: /dev/nova-volumes/volume-00000001
-            Backing store flags: 
+            Backing store flags:
     Account information:
     ACL information:
         ALL
@@ -78,7 +78,7 @@ Target 2: iqn.2010-10.org.openstack:volume-00000002
             Readonly: No
             Backing store type: null
             Backing store path: None
-            Backing store flags: 
+            Backing store flags:
         LUN: 1
             Type: disk
             SCSI ID: IET     00020001
@@ -89,7 +89,7 @@ Target 2: iqn.2010-10.org.openstack:volume-00000002
             Readonly: No
             Backing store type: rdwr
             Backing store path: /dev/nova-volumes/volume-00000002
-            Backing store flags: 
+            Backing store flags:
     Account information:
     ACL information:
         ALL
@@ -109,7 +109,7 @@ Target 1000001: iqn.2010-10.org.openstack.baremetal:1000001-dev.vdc
             Readonly: No
             Backing store type: null
             Backing store path: None
-            Backing store flags: 
+            Backing store flags:
         LUN: 1
             Type: disk
             SCSI ID: IET     f42410001
@@ -119,17 +119,20 @@ Target 1000001: iqn.2010-10.org.openstack.baremetal:1000001-dev.vdc
             Removable media: No
             Readonly: No
             Backing store type: rdwr
-            Backing store path: /dev/disk/by-path/ip-172.17.12.10:3260-iscsi-iqn.2010-10.org.openstack:volume-00000001-lun-1
-            Backing store flags: 
+            Backing store path: /dev/disk/by-path/ip-172.17.12.10:3260-iscsi-\
+                               iqn.2010-10.org.openstack:volume-00000001-lun-1
+            Backing store flags:
     Account information:
     ACL information:
         ALL
 """
 
+
 class BaremetalVolumeTestCase(test.TestCase):
-    
+
     def test_list_backingstore_path(self):
-        self.stubs.Set(utils, 'execute', lambda *args,**kwargs: (SHOW_OUTPUT,''))
+        self.stubs.Set(utils, 'execute', lambda *args,
+                       **kwargs: (SHOW_OUTPUT, ''))
         l = volume_driver._list_backingstore_path()
         self.assertEqual(len(l), 3)
         self.assertIn('/dev/nova-volumes/volume-00000001', l)

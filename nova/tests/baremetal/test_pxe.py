@@ -1,4 +1,4 @@
-# Copyright (c) 2012 NTT DOCOMO, INC. 
+# Copyright (c) 2012 NTT DOCOMO, INC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -27,6 +27,7 @@ from nova.virt.baremetal import pxe
 
 FLAGS = flags.FLAGS
 
+
 class BaremetalPXETestCase(test.TestCase):
 
     def setUp(self):
@@ -34,7 +35,7 @@ class BaremetalPXETestCase(test.TestCase):
 
     def tearDown(self):
         super(BaremetalPXETestCase, self).tearDown()
-    
+
     def test_init(self):
         self.flags(
                 baremetal_deploy_kernel="x",

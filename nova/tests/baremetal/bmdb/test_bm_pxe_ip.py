@@ -1,4 +1,4 @@
-# Copyright (c) 2012 NTT DOCOMO, INC. 
+# Copyright (c) 2012 NTT DOCOMO, INC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,10 +18,12 @@ Baremetal DB testcase for PhyHost
 """
 
 from nova import exception
+from nova.tests.baremetal.bmdb import BMDBTestCase
+from nova.tests.baremetal.bmdb import new_bm_node
 from nova.virt.baremetal import bmdb
-from nova.tests.baremetal.bmdb import BMDBTestCase, new_bm_node
 
 from nova.virt.baremetal.bmdb.sqlalchemy import baremetal_models
+
 
 def new_bm_pxe_ip(**kwargs):
     x = baremetal_models.BareMetalPxeIp()
@@ -35,7 +37,7 @@ def new_bm_pxe_ip(**kwargs):
 
 
 class BareMetalPxeIpTestCase(BMDBTestCase):
-    
+
     def setUp(self):
         super(BareMetalPxeIpTestCase, self).setUp()
 
@@ -49,14 +51,13 @@ class BareMetalPxeIpTestCase(BMDBTestCase):
 
         i2_ref = bmdb.bm_pxe_ip_create_direct(self.context, i2)
         self.assertTrue(i2_ref['id'] is not None)
-        
+
         i3_ref = bmdb.bm_pxe_ip_create_direct(self.context, i3)
         self.assertTrue(i3_ref['id'] is not None)
-        
+
         self.i1 = i1_ref
         self.i2 = i2_ref
         self.i3 = i3_ref
-
 
     def test_bm_pxe_ip_associate(self):
         self._create_pxe_ip()
