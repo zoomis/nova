@@ -73,6 +73,8 @@ def get_baremetal_nodes():
 
 
 Template = None
+
+
 def _late_load_cheetah():
     global Template
     if Template is None:

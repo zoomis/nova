@@ -42,8 +42,8 @@ opts = [
                 default='nova.virt.firewall.NoopFirewallDriver',
                 help='Baremetal firewall driver.'),
     cfg.StrOpt('baremetal_volume_driver',
-                default='nova.virt.baremetal.volume_driver.LibvirtVolumeDriver',
-                help='Baremetal volume driver.'),
+               default='nova.virt.baremetal.volume_driver.LibvirtVolumeDriver',
+               help='Baremetal volume driver.'),
     ]
 
 FLAGS = flags.FLAGS

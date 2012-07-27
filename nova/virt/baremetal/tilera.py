@@ -47,6 +47,8 @@ def get_baremetal_nodes():
 
 
 Template = None
+
+
 def _late_load_cheetah():
     global Template
     if Template is None:
@@ -57,7 +59,8 @@ def _late_load_cheetah():
 
 def _cache_image_x(context, target, image_id, user_id, project_id):
     if not os.path.exists(target):
-        libvirt_utils.fetch_image(context, target, image_id, user_id, project_id)
+        libvirt_utils.fetch_image(context, target, image_id,
+                                  user_id, project_id)
 
 
 class TILERA:
@@ -67,7 +70,8 @@ class TILERA:
 
     def define_vars(self, instance, network_info, block_device_info):
         var = {}
-        var['image_root'] = os.path.join(FLAGS.instances_path, instance['name'])
+        var['image_root'] = os.path.join(FLAGS.instances_path,
+                                         instance['name'])
         var['tftp_root'] = FLAGS.baremetal_tftp_root
         var['network_info'] = network_info
         var['block_device_info'] = block_device_info
@@ -168,7 +172,8 @@ class TILERA:
                            user_id=instance['user_id'],
                            project_id=instance['project_id'])
         LOG.debug("injecting to image id=%s target=%s", ami_id, image_path)
-        self._inject_to_image(context, image_path, node, instance, network_info)
+        self._inject_to_image(context, image_path, node, instance,
+                              network_info)
         var['image_path'] = image_path
         LOG.debug("fetching images all done")
 
