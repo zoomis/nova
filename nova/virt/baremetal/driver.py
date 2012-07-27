@@ -44,9 +44,6 @@ opts = [
     cfg.StrOpt('baremetal_volume_driver',
                 default='nova.virt.baremetal.volume_driver.LibvirtVolumeDriver',
                 help='Baremetal volume driver.'),
-    cfg.StrOpt('baremetal_cpu_arch',
-               default='x86_64',
-               help='Baremetal cpu_arch in capability.')
     ]
 
 FLAGS = flags.FLAGS
