@@ -50,7 +50,8 @@ DEFAULT_ACCEPT_PRIORITY = 10000
 def _get_vifinfo_uuid(tenant_id, vif_uuid):
     try:
         qc = QuantumClientConnection()
-        network_uuid, vifinfo_uuid = qc.get_port_by_attachment(tenant_id, vif_uuid)
+        network_uuid, vifinfo_uuid = qc.get_port_by_attachment(tenant_id,
+                                                               vif_uuid)
         LOG.debug("vif_uuid:%s -> vifinfo_uuid:%s", vif_uuid, vifinfo_uuid)
         return vifinfo_uuid
     except exc.HTTPNotFound:
@@ -137,11 +138,14 @@ def _create_filters(qfc, tenant_id, network_uuid, filter_bodys):
     filter_ids = []
     dup_ids = []
     for filter_body in filter_bodys:
-        LOG.debug("creating filter %s/%s %s", tenant_id, network_uuid, filter_body)
+        LOG.debug("creating filter %s/%s %s",
+                   tenant_id, network_uuid, filter_body)
         try:
-            filter_id = qfc.create_filter(tenant_id, network_uuid, filter_body)
+            filter_id = qfc.create_filter(tenant_id, network_uuid,
+                                                     filter_body)
             #TODO(NTTdocomo) if same filter already exists, add to dup_ids
-            LOG.debug("created filter %s/%s/%s", tenant_id, network_uuid, filter_id)
+            LOG.debug("created filter %s/%s/%s",
+                       tenant_id, network_uuid, filter_id)
             filter_ids.append(filter_id)
         except Exception:
             LOG.exception("exception")
@@ -150,7 +154,8 @@ def _create_filters(qfc, tenant_id, network_uuid, filter_bodys):
 
 def _delete_filters(qfc, tenant_id, network_uuid, filter_ids):
     for filter_id in filter_ids:
-        LOG.debug("deleting filter %s/%s/%s", tenant_id, network_uuid, filter_id)
+        LOG.debug("deleting filter %s/%s/%s",
+                   tenant_id, network_uuid, filter_id)
         try:
             qfc.delete_filter(tenant_id, network_uuid, filter_id)
         except Exception:
@@ -202,7 +207,8 @@ class QuantumFilterFirewall(firewall.FirewallDriver):
 
     def __init__(self):
         LOG.debug("QFC = %s", FLAGS.baremetal_quantum_filter_connection)
-        QFC = importutils.import_class(FLAGS.baremetal_quantum_filter_connection)
+        QFC = importutils.import_class(
+              FLAGS.baremetal_quantum_filter_connection)
         self._connection = QFC()
         self._network_infos = {}
         self._basic_filters = {}
@@ -229,24 +235,29 @@ class QuantumFilterFirewall(firewall.FirewallDriver):
                 filter_bodys.extend(dd_f)
                 for sg in instance.security_groups:
                     LOG.debug("security_group.id=%s", sg.id)
-                    rules = db.security_group_rule_get_by_security_group(ctxt, sg.id)
+                    rules = db.security_group_rule_get_by_security_group(ctxt,
+                                                                        sg.id)
                     for rule in rules:
-                        rule_f = _build_security_group_rule_filter(ip + "/32", rule, SECURITY_GROUP_PRIORITY)
+                        rule_f = _build_security_group_rule_filter(ip + "/32",
+                                                rule, SECURITY_GROUP_PRIORITY)
                         filter_bodys.extend(rule_f)
             #TODO(NTTdocomo) add duplicated id to list
-            ids, dup_ids = _create_filters(self._connection, tenant_id, network_uuid, filter_bodys)
+            ids, dup_ids = _create_filters(self._connection, tenant_id,
+                                           network_uuid, filter_bodys)
             new_filters[network_uuid] = ids
             not_to_delete[network_uuid] = dup_ids
         LOG.debug("new_filters = %s", new_filters)
 
         # delete old filters
-        for (network_uuid, filter_ids) in self._filters.get(instance.id, {}).iteritems():
+        for (network_uuid, filter_ids)\
+            in self._filters.get(instance.id, {}).iteritems():
             fid_dict = {}
             for fid in filter_ids:
                 fid_dict[fid] = None
             for excl_fid in not_to_delete[network_uuid]:
                 del(fid_dict[excl_fid])
-            _delete_filters(self._connection, tenant_id, network_uuid, fid_dict.keys())
+            _delete_filters(self._connection, tenant_id, network_uuid,
+                            fid_dict.keys())
 
         self._filters[instance.id] = new_filters
         self._network_infos[instance.id] = network_info
@@ -258,10 +269,14 @@ class QuantumFilterFirewall(firewall.FirewallDriver):
         tenant_id = instance['project_id']
         LOG.debug("filters: %s", self._filters)
         filters = self._filters.pop(instance.id, {})
-        for (network_uuid, filter_ids) in self._filters.pop(instance.id, {}).iteritems():
-            _delete_filters(self._connection, tenant_id, network_uuid, filter_ids)
-        for (network_uuid, filter_ids) in self._basic_filters.pop(instance.id, {}).iteritems():
-            _delete_filters(self._connection, tenant_id, network_uuid, filter_ids)
+        for (network_uuid, filter_ids)\
+            in self._filters.pop(instance.id, {}).iteritems():
+            _delete_filters(self._connection, tenant_id, network_uuid,
+                            filter_ids)
+        for (network_uuid, filter_ids)\
+            in self._basic_filters.pop(instance.id, {}).iteritems():
+            _delete_filters(self._connection, tenant_id, network_uuid,
+                            filter_ids)
         self._network_infos.pop(instance.id, {})
         LOG.debug("unfilter_instance: end")
 

@@ -26,13 +26,13 @@ from nova.openstack.common import log as logging
 from nova.virt.baremetal import bmdb
 from nova.virt import firewall
 
-from nec_firewall import _get_vifinfo_uuid
-from nec_firewall import _build_deny_dhcp_server
 from nec_firewall import _build_allow_dhcp_client
+from nec_firewall import _build_deny_dhcp_server
 from nec_firewall import _build_security_group_rule_filter
 from nec_firewall import _create_filters
-from nec_firewall import _list_filters
 from nec_firewall import _delete_filters
+from nec_firewall import _get_vifinfo_uuid
+from nec_firewall import _list_filters
 
 
 LOG = logging.getLogger(__name__)
@@ -200,7 +200,9 @@ def _fullbuild(conn):
                     rules = db.security_group_rule_get_by_security_group(
                             ctxt, sg.id)
                     for rule in rules:
-                        rule_f = _build_security_group_rule_filter(t_ip + "/32", rule, EXTERNAL_SECURITY_GROUP_PRIORITY)
+                        rule_f = _build_security_group_rule_filter(
+                                  t_ip + "/32", rule,
+                                  EXTERNAL_SECURITY_GROUP_PRIORITY)
                         filter_bodys.extend(rule_f)
                 rule_f = _build_default_drop_filter(t_ip + "/32")
                 filter_bodys.extend(rule_f)
@@ -215,20 +217,27 @@ def _fullbuild(conn):
                 continue
             fi = db.instance_get(ctxt, f.instance_id)
             LOG.debug('from.instance=%s', fi.__dict__)
-            for (in_port, network_uuid, mac, f_ips) in _from_bm_node(fi.id, fi.project_id):
+            for (in_port, network_uuid, mac, f_ips) in _from_bm_node(fi.id,
+                                                                fi.project_id):
                 filter_bodys = []
                 for (_, _, _, t_ips) in _from_bm_node(ti.id, ti.project_id):
                     for f_ip in f_ips:
                         for t_ip in t_ips:
-                            for sg in db.security_group_get_by_instance(ctxt, ti.id):
-                                rules = db.security_group_rule_get_by_security_group(ctxt, sg.id)
+                            for sg in db.security_group_get_\
+                                                 by_instance(ctxt, ti.id):
+                                rules = db.security_group_rule_get_\
+                                                 by_security_group(ctxt, sg.id)
                                 for rule in rules:
-                                    if rule.cidr and not _in_cidr(f_ip, rule.cidr):
+                                    if rule.cidr and not _in_cidr(f_ip,
+                                                                  rule.cidr):
                                         continue
-                                    rule_f = _build_full_security_group_rule_filter(in_port, mac, f_ip + "/32",
-                                                                                    t_ip + "/32", rule)
+                                    rule_f = _build_full_security_group_\
+                                              rule_filter(in_port, mac,
+                                                          f_ip + "/32",
+                                                          t_ip + "/32", rule)
                                     filter_bodys.extend(rule_f)
-                            rule_f = _build_full_default_drop_filter(in_port, mac, f_ip + "/32", t_ip + "/32")
+                            rule_f = _build_full_default_drop_filter(in_port,
+                                             mac, f_ip + "/32", t_ip + "/32")
                             filter_bodys.extend(rule_f)
                 _extend(fi.project_id, network_uuid, filter_bodys)
 
