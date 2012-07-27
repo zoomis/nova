@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2012 NTT DOCOMO, INC. 
+# Copyright (c) 2012 NTT DOCOMO, INC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,11 +15,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-""" start add by NTT DOCOMO """
-
+import getopt
 import os
 import sys
-import getopt
 
 POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
                                    os.pardir,
@@ -43,7 +41,7 @@ def main():
                  'flagfile=',
                  'flavor=',
                  'unset',
-             ] )
+             ])
 
     flagfile = None
     type = None
@@ -60,7 +58,7 @@ def main():
     if not type:
         print "type is None"
         sys.exit(1)
-   
+
     args = sys.argv[:1] + args
     args = flags.parse_args(args, default_config_files=flagfile)
     ctx = context.get_admin_context()
@@ -68,12 +66,10 @@ def main():
     t = db.instance_type_get_by_name(ctx, type)
     if not unset:
         extra = t['extra_specs']
-        extra['type'] = 'baremetal';
+        extra['type'] = 'baremetal'
         db.instance_type_extra_specs_update_or_create(ctx, t['id'], extra)
     else:
         db.instance_type_extra_specs_delete(ctx, t['id'], 'type')
 
 if __name__ == "__main__":
     main()
-
-""" end add by NTT DOCOMO """

@@ -18,15 +18,15 @@ Tests For BaremetalHostManager
 
 import datetime
 
-from nova.virt.baremetal import bmdb
 from nova import db
 from nova import exception
 from nova import flags
+from nova.openstack.common import timeutils
 from nova.scheduler import baremetal_host_manager
 from nova import test
 from nova.tests.scheduler import fakes
 from nova import utils
-from nova.openstack.common import timeutils
+from nova.virt.baremetal import bmdb
 
 
 FLAGS = flags.FLAGS
@@ -42,73 +42,115 @@ BAREMETAL_COMPUTE_NODES = [
         dict(id=4, service_id=4, local_gb=2048, memory_mb=2048, vcpus=2,
                 service=dict(host='host4', disabled=True)),
         # Broken entry
-        dict(id=5, service_id=5, local_gb=1024, memory_mb=1024, vcpus=1, service=None),
+        dict(id=5, service_id=5, local_gb=1024, memory_mb=1024, vcpus=1,
+                service=None),
 ]
 
 BAREMETAL_INSTANCES = [
-        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=1, host='host1'),
-        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=1, host='host1'),
-        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=2, host='host2'),
-        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=3, host='host3'),
-        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=4, host='host4'),
-        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=2, host='host4'),
-        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=1, host='host3'),
-        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=1, host='host2'),
-        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=3, host='host1'),
+        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=1,
+                host='host1'),
+        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=1,
+                host='host1'),
+        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=2,
+                host='host2'),
+        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=3,
+                host='host3'),
+        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=4,
+                host='host4'),
+        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=2,
+                host='host4'),
+        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=1,
+                host='host3'),
+        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=1,
+                host='host2'),
+        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=3,
+                host='host1'),
         # Broken host
-        dict(root_gb=1024, ephemeral_gb=0, memory_mb=1024, vcpus=1, host=None),
+        dict(root_gb=1024, ephemeral_gb=0, memory_mb=1024, vcpus=1,
+                host=None),
         # No matching host
-        dict(root_gb=1024, ephemeral_gb=0, memory_mb=1024, vcpus=1, host='hostz'),
+        dict(root_gb=1024, ephemeral_gb=0, memory_mb=1024, vcpus=1,
+                host='hostz'),
 ]
 
 BAREMETAL_NODES = [
-        dict(cpus=1, instance_id=None, ipmi_address='172.27.2.110', memory_mb=512, local_gb=0),
-        dict(cpus=1, instance_id=None, ipmi_address='172.27.2.110', memory_mb=2048, local_gb=0),
+        dict(cpus=1, instance_id=None, ipmi_address='172.27.2.110',
+                memory_mb=512, local_gb=0),
+        dict(cpus=1, instance_id=None, ipmi_address='172.27.2.110',
+                memory_mb=2048, local_gb=0),
 ]
 
 BAREMETAL_NODES_1 = [
-        dict(cpus=1, instance_id=None, ipmi_address='172.27.2.111', memory_mb=512, local_gb=0),
-        dict(cpus=1, instance_id=None, ipmi_address='172.27.2.111', memory_mb=1024, local_gb=0),
-        dict(cpus=2, instance_id=None, ipmi_address='172.27.2.111', memory_mb=2048, local_gb=0),
-        dict(cpus=2, instance_id=None, ipmi_address='172.27.2.111', memory_mb=1024, local_gb=0),
-        dict(cpus=3, instance_id=None, ipmi_address='172.27.2.111', memory_mb=4096, local_gb=0),
-        dict(cpus=3, instance_id=None, ipmi_address='172.27.2.111', memory_mb=8192, local_gb=0),
+        dict(cpus=1, instance_id=None, ipmi_address='172.27.2.111',
+                memory_mb=512, local_gb=0),
+        dict(cpus=1, instance_id=None, ipmi_address='172.27.2.111',
+                memory_mb=1024, local_gb=0),
+        dict(cpus=2, instance_id=None, ipmi_address='172.27.2.111',
+                memory_mb=2048, local_gb=0),
+        dict(cpus=2, instance_id=None, ipmi_address='172.27.2.111',
+                memory_mb=1024, local_gb=0),
+        dict(cpus=3, instance_id=None, ipmi_address='172.27.2.111',
+                memory_mb=4096, local_gb=0),
+        dict(cpus=3, instance_id=None, ipmi_address='172.27.2.111',
+                memory_mb=8192, local_gb=0),
         # No matching host
-        dict(cpus=1, instance_id=1, ipmi_address='172.27.2.111', memory_mb=512, local_gb=0),
-        dict(cpus=4, instance_id=1, ipmi_address='172.27.2.111', memory_mb=10240, local_gb=0),
+        dict(cpus=1, instance_id=1, ipmi_address='172.27.2.111',
+                memory_mb=512, local_gb=0),
+        dict(cpus=4, instance_id=1, ipmi_address='172.27.2.111',
+                memory_mb=10240, local_gb=0),
 ]
 
 BAREMETAL_NODES_2 = [
-        dict(cpus=3, instance_id=None, ipmi_address='172.27.2.112', memory_mb=2048, local_gb=0),
-        dict(cpus=4, instance_id=None, ipmi_address='172.27.2.112', memory_mb=1024, local_gb=0),
-        dict(cpus=2, instance_id=None, ipmi_address='172.27.2.112', memory_mb=512, local_gb=0),
-        dict(cpus=3, instance_id=None, ipmi_address='172.27.2.112', memory_mb=8192, local_gb=0),
-        dict(cpus=4, instance_id=None, ipmi_address='172.27.2.112', memory_mb=1024, local_gb=0),
-        dict(cpus=2, instance_id=None, ipmi_address='172.27.2.112', memory_mb=4096, local_gb=0),
+        dict(cpus=3, instance_id=None, ipmi_address='172.27.2.112',
+                memory_mb=2048, local_gb=0),
+        dict(cpus=4, instance_id=None, ipmi_address='172.27.2.112',
+                memory_mb=1024, local_gb=0),
+        dict(cpus=2, instance_id=None, ipmi_address='172.27.2.112',
+                memory_mb=512, local_gb=0),
+        dict(cpus=3, instance_id=None, ipmi_address='172.27.2.112',
+                memory_mb=8192, local_gb=0),
+        dict(cpus=4, instance_id=None, ipmi_address='172.27.2.112',
+                memory_mb=1024, local_gb=0),
+        dict(cpus=2, instance_id=None, ipmi_address='172.27.2.112',
+                memory_mb=4096, local_gb=0),
         # No matching host
-        dict(cpus=1, instance_id=2, ipmi_address='172.27.2.112', memory_mb=512, local_gb=0),
-        dict(cpus=4, instance_id=2, ipmi_address='172.27.2.112', memory_mb=10240, local_gb=0),
+        dict(cpus=1, instance_id=2, ipmi_address='172.27.2.112',
+                memory_mb=512, local_gb=0),
+        dict(cpus=4, instance_id=2, ipmi_address='172.27.2.112',
+                memory_mb=10240, local_gb=0),
 ]
 
 BAREMETAL_NODES_3 = [
-        dict(cpus=4, instance_id=None, ipmi_address='172.27.2.113', memory_mb=512, local_gb=0),
-        dict(cpus=4, instance_id=None, ipmi_address='172.27.2.113', memory_mb=2048, local_gb=0),
-        dict(cpus=5, instance_id=None, ipmi_address='172.27.2.113', memory_mb=8192, local_gb=0),
-        dict(cpus=5, instance_id=None, ipmi_address='172.27.2.113', memory_mb=1024, local_gb=0),
+        dict(cpus=4, instance_id=None, ipmi_address='172.27.2.113',
+                memory_mb=512, local_gb=0),
+        dict(cpus=4, instance_id=None, ipmi_address='172.27.2.113',
+                memory_mb=2048, local_gb=0),
+        dict(cpus=5, instance_id=None, ipmi_address='172.27.2.113',
+                memory_mb=8192, local_gb=0),
+        dict(cpus=5, instance_id=None, ipmi_address='172.27.2.113',
+                memory_mb=1024, local_gb=0),
         # No matching host
-        dict(cpus=1, instance_id=3, ipmi_address='172.27.2.113', memory_mb=512, local_gb=0),
-        dict(cpus=4, instance_id=3, ipmi_address='172.27.2.113', memory_mb=10240, local_gb=0),
+        dict(cpus=1, instance_id=3, ipmi_address='172.27.2.113',
+                memory_mb=512, local_gb=0),
+        dict(cpus=4, instance_id=3, ipmi_address='172.27.2.113',
+                memory_mb=10240, local_gb=0),
 ]
 
 
 BAREMETAL_NODES_4 = [
-        dict(cpus=5, instance_id=None, ipmi_address='172.27.2.114', memory_mb=512, local_gb=0),
-        dict(cpus=5, instance_id=None, ipmi_address='172.27.2.114', memory_mb=8192, local_gb=0),
-        dict(cpus=6, instance_id=None, ipmi_address='172.27.2.114', memory_mb=512, local_gb=0),
-        dict(cpus=6, instance_id=None, ipmi_address='172.27.2.114', memory_mb=8192, local_gb=0),
+        dict(cpus=5, instance_id=None, ipmi_address='172.27.2.114',
+                memory_mb=512, local_gb=0),
+        dict(cpus=5, instance_id=None, ipmi_address='172.27.2.114',
+                memory_mb=8192, local_gb=0),
+        dict(cpus=6, instance_id=None, ipmi_address='172.27.2.114',
+                memory_mb=512, local_gb=0),
+        dict(cpus=6, instance_id=None, ipmi_address='172.27.2.114',
+                memory_mb=8192, local_gb=0),
         # No matching host
-        dict(cpus=1, instance_id=4, ipmi_address='172.27.2.114', memory_mb=512, local_gb=0),
-        dict(cpus=4, instance_id=4, ipmi_address='172.27.2.114', memory_mb=10240, local_gb=0),
+        dict(cpus=1, instance_id=4, ipmi_address='172.27.2.114',
+                memory_mb=512, local_gb=0),
+        dict(cpus=4, instance_id=4, ipmi_address='172.27.2.114',
+                memory_mb=10240, local_gb=0),
 ]
 
 
@@ -127,7 +169,8 @@ class BaremetalHostManagerTestCase(test.TestCase):
 
     def setUp(self):
         super(BaremetalHostManagerTestCase, self).setUp()
-        self.baremetal_host_manager = baremetal_host_manager.BaremetalHostManager()
+        self.baremetal_host_manager =\
+                baremetal_host_manager.BaremetalHostManager()
 
     def test_choose_host_filters_not_found(self):
         self.flags(scheduler_default_filters='ComputeFilterClass3')
@@ -161,7 +204,8 @@ class BaremetalHostManagerTestCase(test.TestCase):
         self.mox.StubOutWithMock(fake_host1, 'passes_filters')
         self.mox.StubOutWithMock(fake_host2, 'passes_filters')
 
-        self.baremetal_host_manager._choose_host_filters(None).AndReturn(filters)
+        self.baremetal_host_manager._choose_host_filters(None).\
+                AndReturn(filters)
         fake_host1.passes_filters(filters, filter_properties).AndReturn(
                 False)
         fake_host2.passes_filters(filters, filter_properties).AndReturn(
@@ -185,18 +229,20 @@ class BaremetalHostManagerTestCase(test.TestCase):
         host1_compute_capabs = dict(free_memory=1234, host_memory=5678,
                 timestamp=1, type='baremetal')
         host1_volume_capabs = dict(free_disk=4321, timestamp=1)
-        host2_compute_capabs = dict(free_memory=8756, timestamp=1, type='baremetal')
+        host2_compute_capabs = dict(free_memory=8756, timestamp=1,
+                                    type='baremetal')
 
         self.mox.ReplayAll()
-        self.baremetal_host_manager.update_service_capabilities('compute', 'host1',
-                host1_compute_capabs)
-        self.baremetal_host_manager.update_service_capabilities('volume', 'host1',
-                host1_volume_capabs)
-        self.baremetal_host_manager.update_service_capabilities('compute', 'host2',
-                host2_compute_capabs)
+        self.baremetal_host_manager.update_service_capabilities('compute',
+                'host1', host1_compute_capabs)
+        self.baremetal_host_manager.update_service_capabilities('volume',
+                'host1', host1_volume_capabs)
+        self.baremetal_host_manager.update_service_capabilities('compute',
+                'host2', host2_compute_capabs)
 
         # Make sure dictionary isn't re-assigned
-        self.assertEqual(self.baremetal_host_manager.service_states, service_states)
+        self.assertEqual(self.baremetal_host_manager.service_states,
+                service_states)
         # Make sure original dictionary wasn't copied
         self.assertEqual(host1_compute_capabs['timestamp'], 1)
         self.assertEqual(host1_compute_capabs['type'], 'baremetal')
@@ -215,7 +261,8 @@ class BaremetalHostManagerTestCase(test.TestCase):
         self.flags(periodic_interval=5)
 
         host1_compute_capabs = dict(free_memory=1234, host_memory=5678,
-                timestamp=datetime.datetime.fromtimestamp(3000), type='baremetal')
+                timestamp=datetime.datetime.fromtimestamp(3000),
+                type='baremetal')
         host1_volume_capabs = dict(free_disk=4321,
                 timestamp=datetime.datetime.fromtimestamp(3005))
         host2_compute_capabs = dict(free_memory=8756,
@@ -233,9 +280,12 @@ class BaremetalHostManagerTestCase(test.TestCase):
         timeutils.utcnow().AndReturn(datetime.datetime.fromtimestamp(3020))
 
         self.mox.ReplayAll()
-        res1 = self.baremetal_host_manager.host_service_caps_stale('host1', 'compute')
-        res2 = self.baremetal_host_manager.host_service_caps_stale('host1', 'volume')
-        res3 = self.baremetal_host_manager.host_service_caps_stale('host2', 'compute')
+        res1 = self.baremetal_host_manager.host_service_caps_stale('host1',
+                'compute')
+        res2 = self.baremetal_host_manager.host_service_caps_stale('host1',
+                'volume')
+        res3 = self.baremetal_host_manager.host_service_caps_stale('host2',
+                'compute')
 
         self.assertEqual(res1, True)
         self.assertEqual(res2, False)
@@ -248,7 +298,8 @@ class BaremetalHostManagerTestCase(test.TestCase):
         host1_volume_capabs = dict(free_disk=4321,
                 timestamp=datetime.datetime.fromtimestamp(3005))
         host2_compute_capabs = dict(free_memory=8756,
-                timestamp=datetime.datetime.fromtimestamp(3010), type='baremetal')
+                timestamp=datetime.datetime.fromtimestamp(3010),
+                type='baremetal')
 
         service_states = {'host1': {'compute': host1_compute_capabs,
                                     'volume': host1_volume_capabs},
@@ -260,7 +311,8 @@ class BaremetalHostManagerTestCase(test.TestCase):
 
         self.baremetal_host_manager.delete_expired_host_services(to_delete)
         # Make sure dictionary isn't re-assigned
-        self.assertEqual(self.baremetal_host_manager.service_states, service_states)
+        self.assertEqual(self.baremetal_host_manager.service_states,
+                service_states)
 
         expected = {'host1': {'compute': host1_compute_capabs}}
         self.assertEqual(service_states, expected)
@@ -312,7 +364,8 @@ class BaremetalHostManagerTestCase(test.TestCase):
 
         self.mox.StubOutWithMock(self.baremetal_host_manager,
                 'delete_expired_host_services')
-        self.baremetal_host_manager.delete_expired_host_services({'host1': ['volume']})
+        self.baremetal_host_manager.\
+                delete_expired_host_services({'host1': ['volume']})
 
         self.mox.ReplayAll()
         result = self.baremetal_host_manager.get_service_capabilities()
@@ -325,7 +378,7 @@ class BaremetalHostManagerTestCase(test.TestCase):
                     'compute_free_memory': (1000, 8756)}
 
         self.assertDictMatch(result, expected)
-        
+
         self.mox.VerifyAll()
 
     def test_get_all_host_states(self):
@@ -339,7 +392,7 @@ class BaremetalHostManagerTestCase(test.TestCase):
         self.mox.StubOutWithMock(baremetal_host_manager.LOG, 'warn')
         self.mox.StubOutWithMock(db, 'instance_get_all')
         self.stubs.Set(timeutils, 'utcnow', lambda: 31337)
-        
+
         def _fake_bm_node_get_all_by_service_host(context, service_host):
             if service_host == 'host1':
                 return BAREMETAL_NODES_1
@@ -351,42 +404,55 @@ class BaremetalHostManagerTestCase(test.TestCase):
                 return BAREMETAL_NODES_4
             else:
                 return {}
-             
+
         def _fake_bm_node_get_by_instance_id(context, instance_id):
-            return None  
-                
-        self.stubs.Set(bmdb, 'bm_node_get_all_by_service_host', _fake_bm_node_get_all_by_service_host)
-        self.stubs.Set(bmdb, 'bm_node_get_by_instance_id', _fake_bm_node_get_by_instance_id)
-        
+            return None
+
+        self.stubs.Set(bmdb, 'bm_node_get_all_by_service_host',
+                _fake_bm_node_get_all_by_service_host)
+        self.stubs.Set(bmdb, 'bm_node_get_by_instance_id',
+                _fake_bm_node_get_by_instance_id)
+
         db.compute_node_get_all(context).AndReturn(BAREMETAL_COMPUTE_NODES)
-        
+
         # Invalid service
         baremetal_host_manager.LOG.warn("No service for compute ID 5")
-        db.instance_get_all(context, columns_to_join=['instance_type']).AndReturn(BAREMETAL_INSTANCES)
+        db.instance_get_all(context,
+                columns_to_join=['instance_type']).\
+                AndReturn(BAREMETAL_INSTANCES)
         self.mox.ReplayAll()
-        
-        host1_compute_capabs = dict(free_memory=1234, host_memory=5678, timestamp=1)
-        host2_compute_capabs = dict(free_memory=1234, host_memory=5678, timestamp=1, type='baremetal')
-        self.baremetal_host_manager.update_service_capabilities('compute', 'host1', host1_compute_capabs)
-        self.baremetal_host_manager.update_service_capabilities('compute', 'host2', host2_compute_capabs)
-        self.baremetal_host_manager.update_service_capabilities('compute', 'host3', host2_compute_capabs)
-        self.baremetal_host_manager.update_service_capabilities('compute', 'host4', host2_compute_capabs)
- 
-        host_states = self.baremetal_host_manager.get_all_host_states(context, topic)
-        
+
+        host1_compute_capabs = dict(free_memory=1234, host_memory=5678,
+                timestamp=1)
+        host2_compute_capabs = dict(free_memory=1234, host_memory=5678,
+                timestamp=1, type='baremetal')
+        self.baremetal_host_manager.update_service_capabilities('compute',
+                'host1', host1_compute_capabs)
+        self.baremetal_host_manager.update_service_capabilities('compute',
+                'host2', host2_compute_capabs)
+        self.baremetal_host_manager.update_service_capabilities('compute',
+                'host3', host2_compute_capabs)
+        self.baremetal_host_manager.update_service_capabilities('compute',
+                'host4', host2_compute_capabs)
+
+        host_states = self.baremetal_host_manager.get_all_host_states(context,
+                topic)
+
         num_bm_nodes = len(BAREMETAL_COMPUTE_NODES)
-        
+
         # not contains broken entry
         self.assertEqual(len(host_states), num_bm_nodes - 1)
         self.assertIn('host1', host_states)
         self.assertIn('host2', host_states)
         self.assertIn('host3', host_states)
         self.assertIn('host4', host_states)
-        
+
         # check returned value
-        # host1 : subtract total ram of BAREMETAL_INSTANCES from BAREMETAL_COMPUTE_NODES
+        # host1 : subtract total ram of BAREMETAL_INSTANCES
+        # from BAREMETAL_COMPUTE_NODES
         # host1 : total vcpu of BAREMETAL_INSTANCES
-        self.assertEqual(host_states['host1'].free_ram_mb + FLAGS.reserved_host_memory_mb, 8704)
+        self.assertEqual(host_states['host1'].free_ram_mb +\
+                FLAGS.reserved_host_memory_mb, 8704)
         self.assertEqual(host_states['host1'].vcpus_used, 5)
 
         # host2 : subtract BAREMETAL_INSTANCES from BAREMETAL_NODES_2

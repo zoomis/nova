@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2012 NTT DOCOMO, INC. 
+# Copyright (c) 2012 NTT DOCOMO, INC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,14 +15,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-""" start add by DOCOMO """
-
 import eventlet
 eventlet.monkey_patch()
 
 import os
-import sys
 import subprocess
+import sys
 import threading
 import time
 
@@ -39,11 +37,11 @@ import Queue
 from wsgiref import simple_server
 
 
-from nova.openstack.common import cfg
 from nova import context as nova_context
-from nova.virt.baremetal import bmdb
 from nova import flags
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
+from nova.virt.baremetal import bmdb
 
 
 deploy_server_opts = [
@@ -61,6 +59,7 @@ LOG = logging.getLogger('nova.virt.baremetal.deploy_server')
 
 QUEUE = Queue.Queue()
 
+
 def get_deployment(context, dep_id):
     return bmdb.bm_deployment_get(context, dep_id)
 
@@ -69,7 +68,8 @@ def delete_deployment(context, dep_id):
     return bmdb.bm_deployment_destroy(context, dep_id)
 
 
-def run_work(address, port, iqn, lun, image_path, pxe_config_path, root_mb, swap_mb):
+def run_work(address, port, iqn, lun, image_path, pxe_config_path, root_mb,
+             swap_mb):
     cmd = [FLAGS.baremetal_deploy_work,
            address,
            str(port),
@@ -83,7 +83,7 @@ def run_work(address, port, iqn, lun, image_path, pxe_config_path, root_mb, swap
     LOG.info(cmd)
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     LOG.info("pid: %d" % p.pid)
-    out,err = p.communicate()
+    out, err = p.communicate()
     LOG.info("returncode: %d" % p.returncode)
     LOG.info("out: %s" % out)
     LOG.info("err: %s" % err)
@@ -102,6 +102,7 @@ class Worker(threading.Thread):
             time.sleep(5)
             run_work(**params)
 
+
 class BareMetalDeploy(object):
 
     def __init__(self):
@@ -112,7 +113,8 @@ class BareMetalDeploy(object):
         if method == 'POST':
             return self.post(environ, start_response)
         else:
-            start_response('501 Not Implemented', [('Content-type', 'text/plain')])
+            start_response('501 Not Implemented',
+                           [('Content-type', 'text/plain')])
             return 'Not Implemented'
 
     def post(self, environ, start_response):
@@ -136,14 +138,14 @@ class BareMetalDeploy(object):
             pxe_config_path = d['pxe_config_path']
             root_mb = d['root_mb']
             swap_mb = d['swap_mb']
-            params = { 'address': address,
-                       'port': port,
-                       'iqn': iqn,
-                       'lun': lun,
-                       'image_path': image_path,
-                       'pxe_config_path': pxe_config_path,
-                       'root_mb': root_mb,
-                       'swap_mb': swap_mb,
+            params = {'address': address,
+                      'port': port,
+                      'iqn': iqn,
+                      'lun': lun,
+                      'image_path': image_path,
+                      'pxe_config_path': pxe_config_path,
+                      'root_mb': root_mb,
+                      'swap_mb': swap_mb,
                      }
             QUEUE.put(params)
             delete_deployment(context, deployment_id)
@@ -159,5 +161,3 @@ if __name__ == '__main__':
 
     srv = simple_server.make_server('', 10000, app)
     srv.serve_forever()
- 
-""" end add by DOCOMO """

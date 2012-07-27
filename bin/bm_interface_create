@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2012 NTT DOCOMO, INC. 
+# Copyright (c) 2012 NTT DOCOMO, INC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,11 +15,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-""" start add by NTT DOCOMO """
-
-import sys
 import getopt
 import os
+import sys
 
 POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
                                    os.pardir,
@@ -28,10 +26,11 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
 from nova import context
-from nova.virt.baremetal import bmdb
 from nova import flags
+from nova.virt.baremetal import bmdb
 
 FLAGS = flags.FLAGS
+
 
 def main():
     usage = """
@@ -44,11 +43,11 @@ usage:
     opts, args = getopt.getopt(
         sys.argv[1:],
         "",
-        [ 'flagfile=',
-          'bm_node_id=',
-          'mac_address=',
-          'datapath_id=',
-          'port_no=',
+        ['flagfile=',
+         'bm_node_id=',
+         'mac_address=',
+         'datapath_id=',
+         'port_no=',
         ])
 
     flagfile = None
@@ -61,7 +60,7 @@ usage:
 
     for o, a in opts:
         if o == '--flagfile':
-            flagfile = [ a ]
+            flagfile = [a]
             continue
         if o.startswith("--"):
             o = o[2:]
@@ -75,7 +74,7 @@ usage:
 
     ok = True
 
-    for k,v in values.items():
+    for k, v in values.items():
         if v is None:
             print "'%s' is not specified" % k
             ok = False
@@ -83,7 +82,7 @@ usage:
     if not ok:
         print usage
         sys.exit(1)
-    
+
     values['datapath_id'] = values['datapath_id'].lower()
     if not values['datapath_id'].startswith("0x"):
         values['datapath_id'] = "0x" + values['datapath_id']
@@ -97,7 +96,9 @@ usage:
         print >> sys.stderr, 'node_id %s is not found' % values['bm_node_id']
         sys.exit(1)
     if values['mac_address'].lower() == node_ref['prov_mac_address'].lower():
-        print >> sys.stderr, 'mac_address %s is already used as prov_mac_address' % values['mac_address']
+        print >> sys.stderr,\
+                 'mac_address %s is already used as prov_mac_address'\
+                  % values['mac_address']
         sys.exit(1)
 
     id = bmdb.bm_interface_create(
@@ -110,6 +111,3 @@ usage:
 
 if __name__ == "__main__":
     main()
-
-""" end add by NTT DOCOMO """
-
