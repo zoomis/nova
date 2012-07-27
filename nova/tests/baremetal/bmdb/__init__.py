@@ -15,8 +15,6 @@
 
 """Baremetal DB utils for test."""
 
-""" start add by NTT DOCOMO """
-
 from nova import flags
 from nova import test
 from nova import context as nova_context
@@ -56,6 +54,3 @@ class BMDBTestCase(test.TestCase):
         self.flags(baremetal_sql_connection='sqlite:///:memory:')
         clear_tables()
         self.context = nova_context.get_admin_context()
-    
-
-""" end add by NTT DOCOMO """

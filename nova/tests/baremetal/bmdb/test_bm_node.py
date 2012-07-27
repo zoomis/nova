@@ -17,8 +17,6 @@
 Baremetal DB testcase for PhyHost
 """
 
-""" start add by NTT DOCOMO """
-
 from nova.virt.baremetal import bmdb
 from nova.tests.baremetal.bmdb import BMDBTestCase, new_bm_node
 
@@ -95,5 +93,3 @@ class BareMetalNodesTestCase(BMDBTestCase):
 
         r = bmdb.bm_node_get_all(self.context)
         self.assertEquals(len(r), 2)
-
-""" end add by NTT DOCOMO """

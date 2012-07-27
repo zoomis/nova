@@ -17,8 +17,6 @@
 Tests for baremetal pxe driver
 """
 
-""" start add by NTT DOCOMO """
-
 import mox
 
 from nova import exception
@@ -55,6 +53,3 @@ class BaremetalPXETestCase(test.TestCase):
                 baremetal_deploy_ramdisk=None,
                 )
         self.assertRaises(exception.NovaException, pxe.PXE)
-
-
-""" end add by NTT DOCOMO """

@@ -17,8 +17,6 @@
 Tests for baremetal volume driver
 """
 
-""" start add by NTT DOCOMO """
-
 import mox
 
 from nova import utils

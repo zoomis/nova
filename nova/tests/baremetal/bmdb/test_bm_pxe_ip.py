@@ -17,8 +17,6 @@
 Baremetal DB testcase for PhyHost
 """
 
-""" start add by NTT DOCOMO """
-
 from nova import exception
 from nova.virt.baremetal import bmdb
 from nova.tests.baremetal.bmdb import BMDBTestCase, new_bm_node
@@ -73,5 +71,3 @@ class BareMetalPxeIpTestCase(BMDBTestCase):
         self.assertRaises(exception.NovaException,
                           bmdb.bm_pxe_ip_associate,
                           self.context, node_id)
-
-""" end add by NTT DOCOMO """

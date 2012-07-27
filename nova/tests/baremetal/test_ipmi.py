@@ -17,8 +17,6 @@
 Tests for baremetal impi driver
 """
 
-""" start add by NTT DOCOMO """
-
 import mox
 
 import os
@@ -98,6 +96,3 @@ class BaremetalIPMITestCase(test.TestCase):
         i = ipmi.Ipmi(address=H, user=U, password=P, interface=I)
         i._exec_ipmitool('A B C')
         self.mox.VerifyAll()
-
-
-""" end add by NTT DOCOMO """

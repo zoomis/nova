@@ -20,8 +20,6 @@ from nova.tests.baremetal.bmdb import new_bm_node
 Tests for baremetal connection
 """
 
-""" start add by NTT DOCOMO """
-
 import mox
 
 from nova import flags
@@ -267,5 +265,3 @@ class FindHostTestCase(test.TestCase):
         inst['vcpus'] = 4
         result = c._find_suitable_baremetal_node("context", inst)
         self.assertTrue(result is None)
-
-""" end add by NTT DOCOMO """
