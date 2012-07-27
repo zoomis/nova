@@ -89,7 +89,7 @@ class BaremetalConnectionTestCase(test.TestCase):
     def test_loading_baremetal_drivers(self):
         from nova.virt.baremetal import fake
         drv = c.BareMetalDriver()
-        self.assertTrue(isinstance(drv.baremetal_nodes, fake.BareMetalNodes))
+        self.assertTrue(isinstance(drv.baremetal_nodes, fake.Fake))
         self.assertTrue(isinstance(drv._vif_driver, FakeVifDriver))
         self.assertTrue(isinstance(drv._firewall_driver, FakeFirewallDriver))
         self.assertTrue(isinstance(drv._volume_driver, FakeVolumeDriver))
