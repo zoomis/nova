@@ -214,7 +214,7 @@ To verify the NIC registration, run 'bm_interface_list':
 
 
 Run Instance
-=====
+=======
 
 Run instance using the baremetal instance type.
 Make sure to use kernel and image that support baremetal hardware (i.e contain drivers for baremetal hardware ).
