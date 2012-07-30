@@ -456,7 +456,6 @@ class BareMetalDriver(driver.ComputeDriver):
 #          'host_uuid': 'cedb9b39-9388-41df-8891-c5c9a0c0fe5f',
           'host_name_label': FLAGS.host,
           'cpu_arch': self._extra_specs.get('cpu_arch'),
-          'type': 'baremetal',
           'instance_type_extra_specs': self._extra_specs,
           }
 
