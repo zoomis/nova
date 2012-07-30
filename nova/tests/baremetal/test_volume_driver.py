@@ -120,7 +120,7 @@ Target 1000001: iqn.2010-10.org.openstack.baremetal:1000001-dev.vdc
             Readonly: No
             Backing store type: rdwr
             Backing store path: /dev/disk/by-path/ip-172.17.12.10:3260-iscsi-\
-                               iqn.2010-10.org.openstack:volume-00000001-lun-1
+iqn.2010-10.org.openstack:volume-00000001-lun-1
             Backing store flags:
     Account information:
     ACL information:
