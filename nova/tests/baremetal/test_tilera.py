@@ -43,6 +43,6 @@ class BaremetalTILERATestCase(test.TestCase):
         tilera.TILERA()
 
         self.flags(
-                tile_monitor=None,
+                tile_monitor="",
                 )
         self.assertRaises(exception.NovaException, tilera.TILERA)
