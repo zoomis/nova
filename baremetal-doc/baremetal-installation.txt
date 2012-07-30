@@ -156,7 +156,7 @@ Example:
 
 Next, set baremetal extra_spec to the instance type
 
-	$ bm_flavor_set_baremetal --flavor=bm.small
+	$ bm_flavor_extra_specs_set --flavor=bm.small --key type --value baremetal
 
 How to choose the value for flavor:
 -----
