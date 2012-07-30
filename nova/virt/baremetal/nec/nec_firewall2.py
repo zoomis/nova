@@ -211,6 +211,10 @@ def _fullbuild(conn):
             LOG.debug("filter_bodys: %s", filter_bodys)
             _extend(ti.project_id, network_uuid, filter_bodys)
 
+        # Just to make lines short...
+        _sg_rules = db.security_group_rule_get_by_security_group
+        _build = _build_full_security_group_rule_filter
+
         # from other instances to the instance
         for f in hosts:
             LOG.debug('from.id=%s to.id=%s', f.id, t.id)
@@ -226,18 +230,16 @@ def _fullbuild(conn):
                 for (_, _, _, t_ips) in _from_bm_node(ti.id, ti.project_id):
                     for f_ip in f_ips:
                         for t_ip in t_ips:
-                            for sg in db.security_group_get_\
-                                                 by_instance(ctxt, ti.id):
-                                rules = db.security_group_rule_get_\
-                                                 by_security_group(ctxt, sg.id)
+                            for sg in db.security_group_get_by_instance(
+                                    ctxt, ti.id):
+                                rules = _sg_rules(ctxt, sg.id)
                                 for rule in rules:
                                     if rule.cidr and not _in_cidr(f_ip,
                                                                   rule.cidr):
                                         continue
-                                    rule_f = _build_full_security_group_\
-                                              rule_filter(in_port, mac,
-                                                          f_ip + "/32",
-                                                          t_ip + "/32", rule)
+                                    rule_f = _build(in_port, mac,
+                                                    f_ip + "/32",
+                                                    t_ip + "/32", rule)
                                     filter_bodys.extend(rule_f)
                             rule_f = _build_full_default_drop_filter(in_port,
                                              mac, f_ip + "/32", t_ip + "/32")
