@@ -137,4 +137,5 @@ class BaremetalVolumeTestCase(test.TestCase):
         self.assertEqual(len(l), 3)
         self.assertIn('/dev/nova-volumes/volume-00000001', l)
         self.assertIn('/dev/nova-volumes/volume-00000002', l)
-        self.assertIn('/dev/disk/by-path/ip-172.17.12.10:3260-iscsi-iqn.2010-10.org.openstack:volume-00000001-lun-1', l)
+        self.assertIn('/dev/disk/by-path/ip-172.17.12.10:3260-iscsi-\
+iqn.2010-10.org.openstack:volume-00000001-lun-1', l)

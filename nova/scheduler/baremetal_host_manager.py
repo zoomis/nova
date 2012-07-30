@@ -70,7 +70,8 @@ class BaremetalHostState(host_manager.HostState):
         self.available_nodes = []
         self.baremetal_compute = False
 
-        cap_extra_specs = self.capabilities.get('instance_type_extra_specs', {})
+        cap_extra_specs = self.capabilities.get('instance_type_extra_specs',
+                                                {})
         if cap_extra_specs.get('baremetal_driver'):
             self.baremetal_compute = True
         """end add by NTT DOCOMO."""

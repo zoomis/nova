@@ -38,7 +38,8 @@ def main():
     #logging.setup()
     ctx = context.get_admin_context()
 
-    fmt = "%-8s  %-12s  %-12s  %-6s  %-8s  %-8s  %-16s  %-16s  %-5s  %-18s  %-4s"
+    fmt = "%-8s  %-12s  %-12s  %-6s  %-8s  %-8s  %-16s  %-16s " + \
+          "%-5s  %-18s  %-4s"
     print fmt % (
                 _('ID'),
                 _('SERVICE_HOST'),

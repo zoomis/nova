@@ -276,8 +276,8 @@ class BaremetalHostManagerTestCase(test.TestCase):
         # Make sure original dictionary wasn't copied
         self.assertEqual(host1_compute_capabs['timestamp'], 1)
         self.assertEqual(
-            host1_compute_capabs['instance_type_extra_specs']\
-                                ['baremetal_driver'],
+            host1_compute_capabs['instance_type_extra_specs'][\
+            'baremetal_driver'],
             'test')
 
         host1_compute_capabs['timestamp'] = 31337

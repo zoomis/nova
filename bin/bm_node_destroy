@@ -40,13 +40,13 @@ def main():
     opts, args = getopt.getopt(
         sys.argv[1:],
         "",
-        ['flagfile=','id=', ]) 
+        ['flagfile=', 'id=', ])
 
     for o, a in opts:
         if o == '--id':
             id = a
         elif o == '--flagfile':
-            flagfile = [ a ]
+            flagfile = [a]
         else:
             print "unrecognized option '%s'" % o
             sys.exit(1)

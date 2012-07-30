@@ -32,7 +32,8 @@ FLAGS = flags.FLAGS
 
 nec_firewall_opts = [
     cfg.StrOpt('baremetal_quantum_filter_connection',
-               default='nova.virt.baremetal.nec.quantum_filter_connection.QuantumFilterClientConnection',
+               default='nova.virt.baremetal.nec.quantum_filter_connection.\
+QuantumFilterClientConnection',
                help='Filter connection class for baremetal instances'),
     ]
 
