@@ -95,7 +95,9 @@ def _from_bm_node(instance_id, tenant_id):
     for vif in db.virtual_interface_get_by_instance(ctx, instance_id):
         LOG.debug('vif=%s', vif.__dict__)
         mac = vif.address
-        network_ref = vif.network
+        network_ref = None
+        if vif['network_id']:
+            network_ref = db.network_get(ctx, vif['network_id'])
         if not network_ref:
             LOG.warn('vif.network is None')
             continue
@@ -104,7 +106,7 @@ def _from_bm_node(instance_id, tenant_id):
         if not network_uuid:
             LOG.warn('network_uuid is None')
             continue
-        vifinfo_uuid = _get_vifinfo_uuid(tenant_id, vif.uuid)
+        vifinfo_uuid = _get_vifinfo_uuid(tenant_id, network_uuid, vif.uuid)
         LOG.debug('vifinfo_uuid=%s', vifinfo_uuid)
         if not vifinfo_uuid:
             continue
@@ -164,6 +166,7 @@ def _build_full_default_drop_filter(in_port, src_mac, src_cidr, dst_cidr):
 
 
 def _fullbuild(conn):
+    LOG.debug('_fullbuild begin')
     tenants_networks_filters = {}
 
     def _extend(tenant_id, network_id, filter_bodys):
@@ -176,12 +179,10 @@ def _fullbuild(conn):
     ctxt = context.get_admin_context()
     hosts = bmdb.bm_node_get_all(ctxt)
     for t in hosts:
-        LOG.debug('to.id=%s', t.id)
-        LOG.debug('to=%s', t.__dict__)
         if not t.instance_id:
             continue
+        LOG.debug('to id=%s instance_id=%s', t.id, t.instance_id)
         ti = db.instance_get(ctxt, t.instance_id)
-        LOG.debug('to.instance=%s', ti.__dict__)
 
         # DHCP from the instance
         for (in_port, network_uuid, mac, _) \
@@ -189,6 +190,7 @@ def _fullbuild(conn):
             filter_bodys = []
             filter_bodys.extend(_build_allow_dhcp_client(in_port, mac))
             filter_bodys.extend(_build_deny_dhcp_server(in_port))
+            LOG.debug("filter_bodys: %s", filter_bodys)
             _extend(ti.project_id, network_uuid, filter_bodys)
 
         # from external host to the instance
@@ -206,6 +208,7 @@ def _fullbuild(conn):
                         filter_bodys.extend(rule_f)
                 rule_f = _build_default_drop_filter(t_ip + "/32")
                 filter_bodys.extend(rule_f)
+            LOG.debug("filter_bodys: %s", filter_bodys)
             _extend(ti.project_id, network_uuid, filter_bodys)
 
         # from other instances to the instance
@@ -216,7 +219,7 @@ def _fullbuild(conn):
             if not f.instance_id:
                 continue
             fi = db.instance_get(ctxt, f.instance_id)
-            LOG.debug('from.instance=%s', fi.__dict__)
+            LOG.debug('from id=%s instance_id=%s', f.id, f.instance_id)
             for (in_port, network_uuid, mac, f_ips) in _from_bm_node(fi.id,
                                                                 fi.project_id):
                 filter_bodys = []
@@ -239,6 +242,7 @@ def _fullbuild(conn):
                             rule_f = _build_full_default_drop_filter(in_port,
                                              mac, f_ip + "/32", t_ip + "/32")
                             filter_bodys.extend(rule_f)
+                LOG.debug("filter_bodys: %s", filter_bodys)
                 _extend(fi.project_id, network_uuid, filter_bodys)
 
     LOG.debug('begin update filters')
@@ -252,6 +256,7 @@ def _fullbuild(conn):
                       tenant_id, network_id, _pp(filter_bodys))
             _create_filters(conn, tenant_id, network_id, filter_bodys)
     LOG.debug('end update filters')
+    LOG.debug('_fullbuild end')
 
 
 def _delete_all(conn):

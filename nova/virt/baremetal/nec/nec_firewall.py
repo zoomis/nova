@@ -47,11 +47,11 @@ DEFAULT_DROP_PRIORITY = 10010
 DEFAULT_ACCEPT_PRIORITY = 10000
 
 
-def _get_vifinfo_uuid(tenant_id, vif_uuid):
+def _get_vifinfo_uuid(tenant_id, net_uuid, vif_uuid):
     try:
         qc = QuantumClientConnection()
-        network_uuid, vifinfo_uuid = qc.get_port_by_attachment(tenant_id,
-                                                               vif_uuid)
+        vifinfo_uuid = qc.get_port_by_attachment(tenant_id, net_uuid,
+                                                 vif_uuid)
         LOG.debug("vif_uuid:%s -> vifinfo_uuid:%s", vif_uuid, vifinfo_uuid)
         return vifinfo_uuid
     except exc.HTTPNotFound:
@@ -188,7 +188,7 @@ def _from_network_info(network, mapping, tenant_id):
     if not network_uuid:
         LOG.debug("network_uuid is None")
         return None
-    vifinfo_uuid = _get_vifinfo_uuid(tenant_id, vif_uuid)
+    vifinfo_uuid = _get_vifinfo_uuid(tenant_id, network_uuid, vif_uuid)
     if not vifinfo_uuid:
         LOG.debug("vifinfo_uuid is None")
         return None
