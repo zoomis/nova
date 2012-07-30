@@ -156,7 +156,7 @@ Example:
 
 Next, set baremetal extra_spec to the instance type
 
-	$ bm_flavor_extra_specs_set --flavor=bm.small --key type --value baremetal
+	$ bm_flavor_extra_specs_set --flavor=bm.small --key cpu_arch --value 's== x86_64'
 
 How to choose the value for flavor:
 -----
