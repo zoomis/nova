@@ -1303,8 +1303,10 @@ class CloudController(object):
         properties = image['properties']
         root_device_name = block_device.properties_root_device_name(properties)
         root_device_type = 'instance-store'
+
         for bdm in properties.get('block_device_mapping', []):
-            if (bdm.get('device_name') == root_device_name and
+            if (block_device.strip_dev(bdm.get('device_name')) ==
+                block_device.strip_dev(root_device_name) and
                 ('snapshot_id' in bdm or 'volume_id' in bdm) and
                 not bdm.get('no_device')):
                 root_device_type = 'ebs'
@@ -1387,10 +1389,26 @@ class CloudController(object):
             if result['rootDeviceName'] is None:
                 result['rootDeviceName'] = block_device.DEFAULT_ROOT_DEV_NAME
 
+        def _kernel_attribute(image, result):
+            kernel_id = image['properties'].get('kernel_id')
+            if kernel_id:
+                result['kernel'] = {
+                    'value': ec2utils.image_ec2_id(kernel_id, 'aki')
+                }
+
+        def _ramdisk_attribute(image, result):
+            ramdisk_id = image['properties'].get('ramdisk_id')
+            if ramdisk_id:
+                result['ramdisk'] = {
+                    'value': ec2utils.image_ec2_id(ramdisk_id, 'ari')
+                }
+
         supported_attributes = {
             'blockDeviceMapping': _block_device_mapping_attribute,
             'launchPermission': _launch_permission_attribute,
             'rootDeviceName': _root_device_name_attribute,
+            'kernel': _kernel_attribute,
+            'ramdisk': _ramdisk_attribute,
             }
 
         fn = supported_attributes.get(attribute)
@@ -1455,6 +1473,17 @@ class CloudController(object):
         instance_id = ec2utils.ec2_id_to_id(ec2_instance_id)
         instance = self.compute_api.get(context, instance_id)
 
+        bdms = self.compute_api.get_instance_bdms(context, instance)
+
+        # CreateImage only supported for the analogue of EBS-backed instances
+        if not self.compute_api.is_volume_backed_instance(context, instance,
+                                                          bdms):
+            root = instance['root_device_name']
+            msg = _("Invalid value '%(ec2_instance_id)s' for instanceId. "
+                    "Instance does not have a volume attached at root "
+                    "(%(root)s)") % locals()
+            raise exception.InvalidParameterValue(err=msg)
+
         # stop the instance if necessary
         restart_instance = False
         if not no_reboot:
@@ -1496,8 +1525,6 @@ class CloudController(object):
                              _('image of %(instance)s at %(now)s') % name_map)
 
         mapping = []
-        bdms = db.block_device_mapping_get_all_by_instance(context,
-                                                           instance['uuid'])
         for bdm in bdms:
             if bdm.no_device:
                 continue
@@ -1567,7 +1594,7 @@ class CloudController(object):
         ec2_id = ec2utils.glance_id_to_ec2_id(context, new_image['id'])
 
         if restart_instance:
-            self.compute_api.start(context, instance_id=instance_id)
+            self.compute_api.start(context, instance)
 
         return {'imageId': ec2_id}
 

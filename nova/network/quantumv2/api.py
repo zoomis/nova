@@ -25,6 +25,7 @@ from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 
+
 quantum_opts = [
     cfg.StrOpt('quantum_url',
                default='http://127.0.0.1:9696',
@@ -49,7 +50,6 @@ quantum_opts = [
 
 FLAGS = flags.FLAGS
 FLAGS.register_opts(quantum_opts)
-
 LOG = logging.getLogger(__name__)
 
 
@@ -71,6 +71,15 @@ class API(base.Base):
             msg = _('empty project id for instance %s')
             raise exception.InvalidInput(
                 reason=msg % instance['display_name'])
+
+        # If user has specified to attach instance only to specific
+        # networks, add them to **search_opts
+        # Tenant-only network only allowed so far
+        requested_networks = kwargs.get('requested_networks')
+        if requested_networks:
+            net_ids = [net_id for (net_id, _i) in requested_networks]
+            search_opts['id'] = net_ids
+
         data = quantumv2.get_client(context).list_networks(**search_opts)
         nets = data.get('networks', [])
         created_port_ids = []
@@ -230,10 +239,6 @@ class API(base.Base):
                                  affect_auto_assigned=False):
         """Disassociate a floating ip from the fixed ip
         it is associated with."""
-        raise NotImplementedError()
-
-    def add_network_to_project(self, context, project_id):
-        """Force add a network to the project."""
         raise NotImplementedError()
 
     def _build_network_info_model(self, context, instance, networks=None):

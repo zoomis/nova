@@ -20,7 +20,9 @@ Unit Tests for nova.compute.rpcapi
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
+from nova import db
 from nova import flags
+from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 from nova import test
 
@@ -31,19 +33,34 @@ FLAGS = flags.FLAGS
 class ComputeRpcAPITestCase(test.TestCase):
 
     def setUp(self):
-        self.fake_instance = {
-            'uuid': 'fake_uuid',
-            'host': 'fake_host',
-            'name': 'fake_name',
-            'id': 'fake_id',
-        }
+        self.context = context.get_admin_context()
+        inst = db.instance_create(self.context, {'host': 'fake_host',
+                                                 'instance_type_id': 1})
+        self.fake_instance = jsonutils.to_primitive(inst)
         super(ComputeRpcAPITestCase, self).setUp()
 
     def tearDown(self):
         super(ComputeRpcAPITestCase, self).tearDown()
 
+    def test_serialized_instance_has_name(self):
+        self.assertTrue('name' in self.fake_instance)
+
     def _test_compute_api(self, method, rpc_method, **kwargs):
         ctxt = context.RequestContext('fake_user', 'fake_project')
+
+        methods_with_instance = [
+            'add_fixed_ip_to_instance', 'attach_volume',
+            'check_can_live_migrate_destination',
+            'check_can_live_migrate_source', 'confirm_resize',
+            'detach_volume', 'finish_resize', 'finish_revert_resize',
+            'get_console_output', 'get_diagnostics', 'get_vnc_console',
+            'inject_file', 'inject_network_info', 'pause_instance',
+            'post_live_migration_at_destination', 'power_off_instance',
+            'power_on_instance', 'pre_live_migration', 'reboot_instance',
+            'start_instance', 'stop_instance', 'suspend_instance',
+            'unpause_instance'
+        ]
+
         if 'rpcapi_class' in kwargs:
             rpcapi_class = kwargs['rpcapi_class']
             del kwargs['rpcapi_class']
@@ -62,17 +79,13 @@ class ComputeRpcAPITestCase(test.TestCase):
             del expected_msg['args']['host']
         if 'destination' in expected_msg['args']:
             del expected_msg['args']['destination']
-        if 'instance' in expected_msg['args']:
+        if 'instance' in expected_msg['args'] and (method not in
+                                                   methods_with_instance):
             instance = expected_msg['args']['instance']
             del expected_msg['args']['instance']
             if method in ['rollback_live_migration_at_destination',
-                          'pre_live_migration', 'remove_volume_connection',
-                          'post_live_migration_at_destination',
-                          'check_can_live_migrate_destination',
-                          'check_can_live_migrate_source']:
+                          'remove_volume_connection']:
                 expected_msg['args']['instance_id'] = instance['id']
-            elif method == 'get_instance_disk_info':
-                expected_msg['args']['instance_name'] = instance['name']
             else:
                 expected_msg['args']['instance_uuid'] = instance['uuid']
         expected_msg['version'] = expected_version
@@ -112,46 +125,52 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_add_fixed_ip_to_instance(self):
         self._test_compute_api('add_fixed_ip_to_instance', 'cast',
-                instance=self.fake_instance, network_id='id')
+                instance=self.fake_instance, network_id='id', version='1.8')
 
     def test_attach_volume(self):
         self._test_compute_api('attach_volume', 'cast',
-                instance=self.fake_instance, volume_id='id', mountpoint='mp')
+                instance=self.fake_instance, volume_id='id', mountpoint='mp',
+                version='1.9')
 
     def test_check_can_live_migrate_destination(self):
         self._test_compute_api('check_can_live_migrate_destination', 'call',
-                version='1.2', instance=self.fake_instance, destination='dest',
-                block_migration=True, disk_over_commit=True)
+                version='1.10', instance=self.fake_instance,
+                destination='dest', block_migration=True,
+                disk_over_commit=True)
 
     def test_check_can_live_migrate_source(self):
         self._test_compute_api('check_can_live_migrate_source', 'call',
-                version='1.2', instance=self.fake_instance,
+                version='1.11', instance=self.fake_instance,
                 dest_check_data={"test": "data"})
 
     def test_confirm_resize_cast(self):
         self._test_compute_api('confirm_resize', 'cast',
-                instance=self.fake_instance, migration_id='id', host='host')
+                instance=self.fake_instance, migration_id='id', host='host',
+                version='1.12')
 
     def test_confirm_resize_call(self):
         self._test_compute_api('confirm_resize', 'call',
-                instance=self.fake_instance, migration_id='id', host='host')
+                instance=self.fake_instance, migration_id='id', host='host',
+                version='1.12')
 
     def test_detach_volume(self):
         self._test_compute_api('detach_volume', 'cast',
-                instance=self.fake_instance, volume_id='id')
+                instance=self.fake_instance, volume_id='id', version='1.13')
 
     def test_finish_resize(self):
         self._test_compute_api('finish_resize', 'cast',
                 instance=self.fake_instance, migration_id='id',
-                image='image', disk_info='disk_info', host='host')
+                image='image', disk_info='disk_info', host='host',
+                version='1.14')
 
     def test_finish_revert_resize(self):
         self._test_compute_api('finish_revert_resize', 'cast',
-                instance=self.fake_instance, migration_id='id', host='host')
+                instance=self.fake_instance, migration_id='id', host='host',
+                version='1.15')
 
     def test_get_console_output(self):
         self._test_compute_api('get_console_output', 'call',
-                instance=self.fake_instance, tail_length='tl')
+                instance=self.fake_instance, tail_length='tl', version='1.7')
 
     def test_get_console_pool_info(self):
         self._test_compute_api('get_console_pool_info', 'call',
@@ -162,15 +181,12 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_get_diagnostics(self):
         self._test_compute_api('get_diagnostics', 'call',
-                instance=self.fake_instance)
-
-    def test_get_instance_disk_info(self):
-        self._test_compute_api('get_instance_disk_info', 'call',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='1.16')
 
     def test_get_vnc_console(self):
         self._test_compute_api('get_vnc_console', 'call',
-                instance=self.fake_instance, console_type='type')
+                instance=self.fake_instance, console_type='type',
+                version='1.17')
 
     def test_host_maintenance_mode(self):
         self._test_compute_api('host_maintenance_mode', 'call',
@@ -182,41 +198,38 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_inject_file(self):
         self._test_compute_api('inject_file', 'cast',
-                instance=self.fake_instance, path='path', file_contents='fc')
+                instance=self.fake_instance, path='path', file_contents='fc',
+                version='1.18')
 
     def test_inject_network_info(self):
         self._test_compute_api('inject_network_info', 'cast',
-                instance=self.fake_instance)
-
-    def test_lock_instance(self):
-        self._test_compute_api('lock_instance', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='1.19')
 
     def test_post_live_migration_at_destination(self):
         self._test_compute_api('post_live_migration_at_destination', 'call',
                 instance=self.fake_instance, block_migration='block_migration',
-                host='host')
+                host='host', version='1.20')
 
     def test_pause_instance(self):
         self._test_compute_api('pause_instance', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='1.5')
 
     def test_power_off_instance(self):
         self._test_compute_api('power_off_instance', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='1.21')
 
     def test_power_on_instance(self):
         self._test_compute_api('power_on_instance', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='1.22')
 
     def test_pre_live_migration(self):
         self._test_compute_api('pre_live_migration', 'call',
                 instance=self.fake_instance, block_migration='block_migration',
-                disk='disk', host='host')
+                disk='disk', host='host', version='1.23')
 
     def test_reboot_instance(self):
         self._test_compute_api('reboot_instance', 'cast',
-                instance=self.fake_instance, reboot_type='type')
+                instance=self.fake_instance, reboot_type='type', version='1.4')
 
     def test_rebuild_instance(self):
         self._test_compute_api('rebuild_instance', 'cast',
@@ -293,32 +306,33 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_start_instance(self):
         self._test_compute_api('start_instance', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='1.22')
 
     def test_stop_instance_cast(self):
         self._test_compute_api('stop_instance', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='1.21')
 
     def test_stop_instance_call(self):
         self._test_compute_api('stop_instance', 'call',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='1.21')
 
     def test_suspend_instance(self):
         self._test_compute_api('suspend_instance', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='1.6')
 
     def test_terminate_instance(self):
         self._test_compute_api('terminate_instance', 'cast',
                 instance=self.fake_instance)
 
-    def test_unlock_instance(self):
-        self._test_compute_api('unlock_instance', 'cast',
-                instance=self.fake_instance)
-
     def test_unpause_instance(self):
         self._test_compute_api('unpause_instance', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='1.5')
 
     def test_unrescue_instance(self):
         self._test_compute_api('unrescue_instance', 'cast',
                 instance=self.fake_instance)
+
+    def test_change_instance_metadata(self):
+        self._test_compute_api('change_instance_metadata', 'cast',
+                instance=self.fake_instance, diff={},
+                version='1.3')

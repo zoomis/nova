@@ -47,6 +47,7 @@ import multiprocessing
 import os
 import shutil
 import sys
+import tempfile
 import uuid
 
 from eventlet import greenthread
@@ -57,6 +58,7 @@ from xml.dom import minidom
 from nova import block_device
 from nova.compute import instance_types
 from nova.compute import power_state
+from nova.compute import vm_mode
 from nova import context as nova_context
 from nova import db
 from nova import exception
@@ -551,7 +553,14 @@ class LibvirtDriver(driver.ComputeDriver):
         if FLAGS.libvirt_type == 'lxc':
             disk.destroy_container(self.container)
         if os.path.exists(target):
-            shutil.rmtree(target)
+            # If we fail to get rid of the directory
+            # tree, this shouldn't block deletion of
+            # the instance as whole.
+            try:
+                shutil.rmtree(target)
+            except OSError, e:
+                LOG.error(_("Failed to cleanup directory %(target)s: %(e)s") %
+                          locals())
 
         #NOTE(bfilippov): destroy all LVM disks for this instance
         self._cleanup_lvm(instance)
@@ -622,15 +631,18 @@ class LibvirtDriver(driver.ComputeDriver):
             try:
                 virt_dom.attachDevice(conf.to_xml())
             except Exception, ex:
-                self.volume_driver_method('disconnect_volume',
-                                           connection_info,
-                                           mount_device)
-
                 if isinstance(ex, libvirt.libvirtError):
                     errcode = ex.get_error_code()
                     if errcode == libvirt.VIR_ERR_OPERATION_FAILED:
+                        self.volume_driver_method('disconnect_volume',
+                                                  connection_info,
+                                                  mount_device)
                         raise exception.DeviceIsBusy(device=mount_device)
-                raise
+
+                with excutils.save_and_reraise_exception():
+                    self.volume_driver_method('disconnect_volume',
+                                               connection_info,
+                                               mount_device)
 
         # TODO(danms) once libvirt has support for LXC hotplug,
         # replace this re-define with use of the
@@ -1218,7 +1230,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         def image(fname, image_type=FLAGS.libvirt_images_type):
             return self.image_backend.image(instance['name'],
-                                            fname, suffix, image_type)
+                                            fname + suffix, image_type)
 
         def raw(fname):
             return image(fname, image_type='raw')
@@ -1543,6 +1555,135 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return cpu
 
+    def get_guest_storage_config(self, instance, image_meta,
+                                 rescue, block_device_info,
+                                 inst_type,
+                                 root_device_name, root_device):
+        devices = []
+
+        block_device_mapping = driver.block_device_info_get_mapping(
+            block_device_info)
+
+        if FLAGS.libvirt_type == "lxc":
+            fs = config.LibvirtConfigGuestFilesys()
+            fs.source_type = "mount"
+            fs.source_dir = os.path.join(FLAGS.instances_path,
+                                         instance['name'],
+                                         "rootfs")
+            devices.append(fs)
+        else:
+            if image_meta and image_meta.get('disk_format') == 'iso':
+                root_device_type = 'cdrom'
+                root_device = 'hda'
+            else:
+                root_device_type = 'disk'
+
+            if FLAGS.libvirt_type == "uml":
+                default_disk_bus = "uml"
+            elif FLAGS.libvirt_type == "xen":
+                default_disk_bus = "xen"
+            else:
+                default_disk_bus = "virtio"
+
+            def disk_info(name, disk_dev, disk_bus=default_disk_bus,
+                          device_type="disk"):
+                image = self.image_backend.image(instance['name'],
+                                                 name)
+                return image.libvirt_info(disk_bus,
+                                          disk_dev,
+                                          device_type,
+                                          self.disk_cachemode)
+
+            if rescue:
+                diskrescue = disk_info('disk.rescue',
+                                       self.default_root_device,
+                                       device_type=root_device_type)
+                devices.append(diskrescue)
+
+                diskos = disk_info('disk',
+                                   self.default_second_device)
+                devices.append(diskos)
+            else:
+                ebs_root = self._volume_in_mapping(self.default_root_device,
+                                                   block_device_info)
+
+                if not ebs_root:
+                    if root_device_type == "cdrom":
+                        bus = "ide"
+                    else:
+                        bus = default_disk_bus
+                    diskos = disk_info('disk',
+                                       root_device,
+                                       bus,
+                                       root_device_type)
+                    devices.append(diskos)
+
+                ephemeral_device = None
+                if not (self._volume_in_mapping(self.default_second_device,
+                                                block_device_info) or
+                        0 in [eph['num'] for eph in
+                              driver.block_device_info_get_ephemerals(
+                            block_device_info)]):
+                    if instance['ephemeral_gb'] > 0:
+                        ephemeral_device = self.default_second_device
+
+                if ephemeral_device is not None:
+                    disklocal = disk_info('disk.local', ephemeral_device)
+                    devices.append(disklocal)
+
+                if ephemeral_device is not None:
+                    swap_device = self.default_third_device
+                    db.instance_update(
+                        nova_context.get_admin_context(), instance['uuid'],
+                        {'default_ephemeral_device':
+                             '/dev/' + self.default_second_device})
+                else:
+                    swap_device = self.default_second_device
+
+                for eph in driver.block_device_info_get_ephemerals(
+                    block_device_info):
+                    diskeph = disk_info(_get_eph_disk(eph),
+                                        block_device.strip_dev(
+                            eph['device_name']))
+                    devices.append(diskeph)
+
+                swap = driver.block_device_info_get_swap(block_device_info)
+                if driver.swap_is_usable(swap):
+                    diskswap = disk_info('disk.swap',
+                                         block_device.strip_dev(
+                            swap['device_name']))
+                    devices.append(diskswap)
+                elif (inst_type['swap'] > 0 and
+                      not self._volume_in_mapping(swap_device,
+                                                  block_device_info)):
+                    diskswap = disk_info('disk.swap', swap_device)
+                    devices.append(diskswap)
+                    db.instance_update(
+                        nova_context.get_admin_context(), instance['uuid'],
+                        {'default_swap_device': '/dev/' + swap_device})
+
+                for vol in block_device_mapping:
+                    connection_info = vol['connection_info']
+                    mount_device = vol['mount_device'].rpartition("/")[2]
+                    cfg = self.volume_driver_method('connect_volume',
+                                                    connection_info,
+                                                    mount_device)
+                    devices.append(cfg)
+
+            if self._has_config_drive(instance):
+                diskconfig = config.LibvirtConfigGuestDisk()
+                diskconfig.source_type = "file"
+                diskconfig.driver_format = "raw"
+                diskconfig.driver_cache = self.disk_cachemode
+                diskconfig.source_path = os.path.join(FLAGS.instances_path,
+                                                      instance['name'],
+                                                      "disk.config")
+                diskconfig.target_dev = self.default_last_device
+                diskconfig.target_bus = default_disk_bus
+                devices.append(diskconfig)
+
+        return devices
+
     def get_guest_config(self, instance, network_info, image_meta, rescue=None,
                          block_device_info=None):
         """Get config data for parameters.
@@ -1551,11 +1692,6 @@ class LibvirtDriver(driver.ComputeDriver):
             'ramdisk_id' if a ramdisk is needed for the rescue image and
             'kernel_id' if a kernel is needed for the rescue image.
         """
-        block_device_mapping = driver.block_device_info_get_mapping(
-            block_device_info)
-
-        devs = []
-
         # FIXME(vish): stick this in db
         inst_type_id = instance['instance_type_id']
         inst_type = instance_types.get_instance_type(inst_type_id)
@@ -1580,20 +1716,34 @@ class LibvirtDriver(driver.ComputeDriver):
                 nova_context.get_admin_context(), instance['uuid'],
                 {'root_device_name': '/dev/' + self.default_root_device})
 
+        guest.os_type = vm_mode.get_from_instance(instance)
+
+        if guest.os_type is None:
+            if FLAGS.libvirt_type == "lxc":
+                guest.os_type = vm_mode.EXE
+            elif FLAGS.libvirt_type == "uml":
+                guest.os_type = vm_mode.UML
+            elif FLAGS.libvirt_type == "xen":
+                guest.os_type = vm_mode.XEN
+            else:
+                guest.os_type = vm_mode.HVM
+
+        if FLAGS.libvirt_type == "xen" and guest.os_type == vm_mode.HVM:
+            guest.os_loader = '/usr/lib/xen/boot/hvmloader'
+
         if FLAGS.libvirt_type == "lxc":
-            guest.os_type = "exe"
+            guest.os_type = vm_mode.EXE
             guest.os_init_path = "/sbin/init"
             guest.os_cmdline = "console=ttyS0"
         elif FLAGS.libvirt_type == "uml":
-            guest.os_type = "uml"
+            guest.os_type = vm_mode.UML
             guest.os_kernel = "/usr/bin/linux"
             guest.os_root = root_device_name or "/dev/ubda"
         else:
             if FLAGS.libvirt_type == "xen":
-                guest.os_type = "linux"
                 guest.os_root = root_device_name or "/dev/xvda"
             else:
-                guest.os_type = "hvm"
+                guest.os_type = vm_mode.HVM
 
             if rescue:
                 if rescue.get('kernel_id'):
@@ -1641,139 +1791,14 @@ class LibvirtDriver(driver.ComputeDriver):
             clk.add_timer(tmpit)
             clk.add_timer(tmrtc)
 
-        if FLAGS.libvirt_type == "lxc":
-            fs = config.LibvirtConfigGuestFilesys()
-            fs.source_type = "mount"
-            fs.source_dir = os.path.join(FLAGS.instances_path,
-                                         instance['name'],
-                                         "rootfs")
-            guest.add_device(fs)
-        else:
-            if image_meta and image_meta.get('disk_format') == 'iso':
-                root_device_type = 'cdrom'
-            else:
-                root_device_type = 'disk'
-
-            def disk_info(name, suffix=''):
-                image = self.image_backend.image(instance['name'],
-                                                 name, suffix)
-                return image.libvirt_info(root_device_type)
-
-            if FLAGS.libvirt_type == "uml":
-                ephemeral_disk_bus = "uml"
-            elif FLAGS.libvirt_type == "xen":
-                ephemeral_disk_bus = "xen"
-            else:
-                ephemeral_disk_bus = "virtio"
-
-            if rescue:
-                diskrescue = disk_info('disk', '.rescue')
-                diskrescue.driver_cache = self.disk_cachemode
-                diskrescue.target_dev = self.default_root_device
-                diskrescue.target_bus = ephemeral_disk_bus
-                guest.add_device(diskrescue)
-
-                diskos = disk_info('disk')
-                diskos.driver_cache = self.disk_cachemode
-                diskos.target_dev = self.default_second_device
-                diskos.target_bus = ephemeral_disk_bus
-                guest.add_device(diskos)
-            else:
-                ebs_root = self._volume_in_mapping(self.default_root_device,
-                                                   block_device_info)
-
-                if not ebs_root:
-                    diskos = disk_info('disk')
-                    diskos.driver_cache = self.disk_cachemode
-                    diskos.target_dev = root_device
-                    if root_device_type == "cdrom":
-                        diskos.target_bus = "ide"
-                        # NOTE(jk0): Only attach the ISO as a separate drive if
-                        # the appropriate metadata is set on the image.
-                        image_properties = image_meta.get("properties", {})
-                        if "separate_attach" in image_properties:
-                            separate_disk = disk_info("disk")
-                            separate_disk.driver_cache = self.disk_cachemode
-                            separate_disk.target_dev = self.default_root_device
-                            separate_disk.target_bus = ephemeral_disk_bus
-                            guest.add_device(separate_disk)
-                    else:
-                        diskos.target_bus = "virtio"
-                    guest.add_device(diskos)
-
-                ephemeral_device = None
-                if not (self._volume_in_mapping(self.default_second_device,
-                                                block_device_info) or
-                        0 in [eph['num'] for eph in
-                              driver.block_device_info_get_ephemerals(
-                            block_device_info)]):
-                    if instance['ephemeral_gb'] > 0:
-                        ephemeral_device = self.default_second_device
-
-                if ephemeral_device is not None:
-                    disklocal = disk_info('disk.local')
-                    disklocal.driver_cache = self.disk_cachemode
-                    disklocal.target_dev = ephemeral_device
-                    disklocal.target_bus = ephemeral_disk_bus
-                    guest.add_device(disklocal)
-
-                if ephemeral_device is not None:
-                    swap_device = self.default_third_device
-                    db.instance_update(
-                        nova_context.get_admin_context(), instance['uuid'],
-                        {'default_ephemeral_device':
-                             '/dev/' + self.default_second_device})
-                else:
-                    swap_device = self.default_second_device
-
-                for eph in driver.block_device_info_get_ephemerals(
-                    block_device_info):
-                    diskeph = disk_info(_get_eph_disk(eph))
-                    diskeph.driver_cache = self.disk_cachemode
-                    diskeph.target_dev = block_device.strip_dev(
-                        eph['device_name'])
-                    diskeph.target_bus = ephemeral_disk_bus
-                    guest.add_device(diskeph)
-
-                swap = driver.block_device_info_get_swap(block_device_info)
-                if driver.swap_is_usable(swap):
-                    diskswap = disk_info('disk.swap')
-                    diskswap.driver_cache = self.disk_cachemode
-                    diskswap.target_dev = block_device.strip_dev(
-                        swap['device_name'])
-                    diskswap.target_bus = ephemeral_disk_bus
-                    guest.add_device(diskswap)
-                elif (inst_type['swap'] > 0 and
-                      not self._volume_in_mapping(swap_device,
-                                                  block_device_info)):
-                    diskswap = disk_info('disk.swap')
-                    diskswap.driver_cache = self.disk_cachemode
-                    diskswap.target_dev = swap_device
-                    diskswap.target_bus = ephemeral_disk_bus
-                    guest.add_device(diskswap)
-                    db.instance_update(
-                        nova_context.get_admin_context(), instance['uuid'],
-                        {'default_swap_device': '/dev/' + swap_device})
-
-                for vol in block_device_mapping:
-                    connection_info = vol['connection_info']
-                    mount_device = vol['mount_device'].rpartition("/")[2]
-                    cfg = self.volume_driver_method('connect_volume',
-                                                    connection_info,
-                                                    mount_device)
-                    guest.add_device(cfg)
-
-            if self._has_config_drive(instance):
-                diskconfig = config.LibvirtConfigGuestDisk()
-                diskconfig.source_type = "file"
-                diskconfig.driver_format = "raw"
-                diskconfig.driver_cache = self.disk_cachemode
-                diskconfig.source_path = os.path.join(FLAGS.instances_path,
-                                                      instance['name'],
-                                                      "disk.config")
-                diskconfig.target_dev = self.default_last_device
-                diskconfig.target_bus = ephemeral_disk_bus
-                guest.add_device(diskconfig)
+        for cfg in self.get_guest_storage_config(instance,
+                                                 image_meta,
+                                                 rescue,
+                                                 block_device_info,
+                                                 inst_type,
+                                                 root_device_name,
+                                                 root_device):
+            guest.add_device(cfg)
 
         for (network, mapping) in network_info:
             cfg = self.vif_driver.plug(instance, (network, mapping))
@@ -1800,7 +1825,7 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.add_device(consolepty)
 
         if FLAGS.vnc_enabled and FLAGS.libvirt_type not in ('lxc', 'uml'):
-            if FLAGS.use_usb_tablet:
+            if FLAGS.use_usb_tablet and guest.os_type == vm_mode.HVM:
                 tablet = config.LibvirtConfigGuestInput()
                 tablet.type = "tablet"
                 tablet.bus = "usb"
@@ -2658,15 +2683,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
             disk_type = driver_nodes[cnt].get('type')
             if disk_type == "qcow2":
-                out, err = utils.execute('qemu-img', 'info', path)
-
-                # virtual size:
-                size = [i.split('(')[1].split()[0] for i in out.split('\n')
-                    if i.strip().find('virtual size') >= 0]
-                virt_size = int(size[0])
-
-                # backing file:(actual path:)
                 backing_file = libvirt_utils.get_disk_backing_file(path)
+                virt_size = disk.get_disk_size(path)
             else:
                 backing_file = ""
                 virt_size = 0
@@ -2763,7 +2781,6 @@ class LibvirtDriver(driver.ComputeDriver):
         self.power_off(instance)
 
         # copy disks to destination
-        # if disk type is qcow2, convert to raw then send to dest.
         # rename instance dir to +_resize at first for using
         # shared storage for instance dir (eg. NFS).
         same_host = (dest == self.get_host_ip_addr())
@@ -2772,28 +2789,29 @@ class LibvirtDriver(driver.ComputeDriver):
         try:
             utils.execute('mv', inst_base, inst_base_resize)
             if same_host:
+                dest = None
                 utils.execute('mkdir', '-p', inst_base)
             else:
                 utils.execute('ssh', dest, 'mkdir', '-p', inst_base)
             for info in disk_info:
                 # assume inst_base == dirname(info['path'])
-                to_path = "%s:%s" % (dest, info['path'])
-                fname = os.path.basename(info['path'])
+                img_path = info['path']
+                fname = os.path.basename(img_path)
                 from_path = os.path.join(inst_base_resize, fname)
-                if info['type'] == 'qcow2':
+                if info['type'] == 'qcow2' and info['backing_file']:
                     tmp_path = from_path + "_rbase"
+                    # merge backing file
                     utils.execute('qemu-img', 'convert', '-f', 'qcow2',
-                                  '-O', 'raw', from_path, tmp_path)
+                                  '-O', 'qcow2', from_path, tmp_path)
+
                     if same_host:
-                        utils.execute('mv', tmp_path, info['path'])
+                        utils.execute('mv', tmp_path, img_path)
                     else:
-                        utils.execute('scp', tmp_path, to_path)
+                        libvirt_utils.copy_image(tmp_path, img_path, host=dest)
                         utils.execute('rm', '-f', tmp_path)
-                else:  # raw
-                    if same_host:
-                        utils.execute('cp', from_path, info['path'])
-                    else:
-                        utils.execute('scp', from_path, to_path)
+
+                else:  # raw or qcow2 with no backing file
+                    libvirt_utils.copy_image(from_path, img_path, host=dest)
         except Exception, e:
             try:
                 if os.path.exists(inst_base_resize):
@@ -2828,12 +2846,28 @@ class LibvirtDriver(driver.ComputeDriver):
         for info in disk_info:
             fname = os.path.basename(info['path'])
             if fname == 'disk':
-                disk.extend(info['path'],
-                            instance['root_gb'] * 1024 * 1024 * 1024)
+                size = instance['root_gb']
             elif fname == 'disk.local':
-                disk.extend(info['path'],
-                            instance['ephemeral_gb'] * 1024 * 1024 * 1024)
-            if FLAGS.use_cow_images:
+                size = instance['ephemeral_gb']
+            else:
+                size = 0
+            size *= 1024 * 1024 * 1024
+
+            # If we have a non partitioned image that we can extend
+            # then ensure we're in 'raw' format so we can extend file system.
+            fmt = info['type']
+            if (size and fmt == 'qcow2' and
+                disk.can_resize_fs(info['path'], size, use_cow=True)):
+                path_raw = info['path'] + '_raw'
+                utils.execute('qemu-img', 'convert', '-f', 'qcow2',
+                              '-O', 'raw', info['path'], path_raw)
+                utils.execute('mv', path_raw, info['path'])
+                fmt = 'raw'
+
+            if size:
+                disk.extend(info['path'], size)
+
+            if fmt == 'raw' and FLAGS.use_cow_images:
                 # back to qcow2 (no backing_file though) so that snapshot
                 # will be available
                 path_qcow = info['path'] + '_qcow'
