@@ -34,9 +34,21 @@ class NECVIFDriver(vif_driver.BareMetalVIFDriver):
     def _after_plug(self, instance, network, mapping, pif):
         client = VIFINFOClient(FLAGS.quantum_connection_host,
                                FLAGS.quantum_connection_port)
-        client.create_vifinfo(mapping['vif_uuid'],
-                              pif['datapath_id'],
-                              pif['port_no'])
+        vi = client.show_vifinfo(mapping['vif_uuid'])
+        if not vi:
+            client.create_vifinfo(mapping['vif_uuid'],
+                                  pif['datapath_id'],
+                                  pif['port_no'])
+        else:
+            LOG.debug('vifinfo: %s', vi)
+            LOG.debug('pif: %s', pif.__dict__)
+            vi = vi.get('vifinfo', {})
+            ofsport = vi.get('ofs_port', {})
+            dpid = ofsport.get('datapath_id')
+            port_no = ofsport.get('port_no')
+            if dpid != pif['datapath_id'] or int(port_no) != pif['port_no']:
+                raise exception.NovaException("vif_uuid %s exists"
+                        % mapping['vif_uuid'])
 
     def _after_unplug(self, instance, network, mapping, pif):
         client = VIFINFOClient(FLAGS.quantum_connection_host,

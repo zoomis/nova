@@ -204,13 +204,7 @@ class BareMetalDriver(driver.ComputeDriver):
         var = self.baremetal_nodes.define_vars(instance, network_info,
                                                block_device_info)
 
-        # clear previous vif info
-        pifs = bmdb.bm_interface_get_all_by_bm_node_id(context, node['id'])
-        for pif in pifs:
-            if pif['vif_uuid']:
-                bmdb.bm_interface_set_vif_uuid(context, pif['id'], None)
-
-        self.plug_vifs(instance, network_info)
+        self.plug_vifs(instance, network_info, context=context)
 
         self._firewall_driver.setup_basic_filtering(instance, network_info)
         self._firewall_driver.prepare_instance_filter(instance, network_info)
@@ -467,9 +461,17 @@ class BareMetalDriver(driver.ComputeDriver):
         LOG.info(_("get_host_stats: refresh=%s") % (refresh))
         return self._get_host_stats()
 
-    def plug_vifs(self, instance, network_info):
+    def plug_vifs(self, instance, network_info, context=None):
         """Plugin VIFs into networks."""
         LOG.debug("plug_vifs: %s", locals())
+        if not context:
+            context = nova_context.get_admin_context()
+        node = _get_baremetal_node_by_instance_id(instance['id'])
+        if node:
+            pifs = bmdb.bm_interface_get_all_by_bm_node_id(context, node['id'])
+            for pif in pifs:
+                if pif['vif_uuid']:
+                    bmdb.bm_interface_set_vif_uuid(context, pif['id'], None)
         for (network, mapping) in network_info:
             self._vif_driver.plug(instance, (network, mapping))
 
