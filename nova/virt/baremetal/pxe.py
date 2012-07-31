@@ -402,7 +402,6 @@ class PXE:
         aki_id = str(instance['kernel_id'])
         ari_id = str(instance['ramdisk_id'])
 
-
         images = [(deploy_aki_id, 'deploy_kernel'),
                   (deploy_ari_id, 'deploy_ramdisk'),
                   (aki_id, 'kernel'),
