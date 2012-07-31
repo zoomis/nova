@@ -10,45 +10,45 @@ Packages
 
 * TFTP configuration::
 
-  $ cat /etc/xinetd.d/tftp 
-  # default: off
-  # description: The tftp server serves files using the trivial file transfer \
-  #       protocol.  The tftp protocol is often used to boot diskless \
-  #       workstations, download configuration files to network-aware printers,
-  #       \
-  #       and to start the installation process for some operating systems.
-  service tftp
-  {
-        socket_type             = dgram
-        protocol                = udp
-        wait                    = yes
-        user                    = root
-        server                  = /usr/sbin/in.tftpd
-        server_args             = -s /tftpboot
-        disable                 = no
-        per_source              = 11
-        cps                     = 100 2
-        flags                   = IPv4
-  }
-  $ /etc/init.d/xinetd restart
+    $ cat /etc/xinetd.d/tftp 
+    # default: off
+    # description: The tftp server serves files using the trivial file transfer \
+    #       protocol.  The tftp protocol is often used to boot diskless \
+    #       workstations, download configuration files to network-aware printers,
+    #       \
+    #       and to start the installation process for some operating systems.
+    service tftp
+    {
+          socket_type             = dgram
+          protocol                = udp
+          wait                    = yes
+          user                    = root
+          server                  = /usr/sbin/in.tftpd
+          server_args             = -s /tftpboot
+          disable                 = no
+          per_source              = 11
+          cps                     = 100 2
+          flags                   = IPv4
+    }
+    $ /etc/init.d/xinetd restart
 
 * NFS configuration::
 
-  $ mkdir /tftpboot
-  $ mkdir /tftpboot/fs_x (x: the id of tilera board)
-  $ cat /etc/exports
-  /tftpboot/fs_0 tilera0-eth0(sync,rw,no_root_squash,no_all_squash,no_subtree_check)
-  /tftpboot/fs_1 tilera1-eth0(sync,rw,no_root_squash,no_all_squash,no_subtree_check)
-  /tftpboot/fs_2 tilera2-eth0(sync,rw,no_root_squash,no_all_squash,no_subtree_check)
-  /tftpboot/fs_3 tilera3-eth0(sync,rw,no_root_squash,no_all_squash,no_subtree_check)
-  /tftpboot/fs_4 tilera4-eth0(sync,rw,no_root_squash,no_all_squash,no_subtree_check)
-  /tftpboot/fs_5 tilera5-eth0(sync,rw,no_root_squash,no_all_squash,no_subtree_check)
-  /tftpboot/fs_6 tilera6-eth0(sync,rw,no_root_squash,no_all_squash,no_subtree_check)
-  /tftpboot/fs_7 tilera7-eth0(sync,rw,no_root_squash,no_all_squash,no_subtree_check)
-  /tftpboot/fs_8 tilera8-eth0(sync,rw,no_root_squash,no_all_squash,no_subtree_check)
-  /tftpboot/fs_9 tilera9-eth0(sync,rw,no_root_squash,no_all_squash,no_subtree_check)
-  $ sudo /etc/init.d/nfs restart
-  $ sudo /usr/sbin/exportfs
+    $ mkdir /tftpboot
+    $ mkdir /tftpboot/fs_x (x: the id of tilera board)
+    $ cat /etc/exports
+    /tftpboot/fs_0 tilera0-eth0(sync,rw,no_root_squash,no_all_squash,no_subtree_check)
+    /tftpboot/fs_1 tilera1-eth0(sync,rw,no_root_squash,no_all_squash,no_subtree_check)
+    /tftpboot/fs_2 tilera2-eth0(sync,rw,no_root_squash,no_all_squash,no_subtree_check)
+    /tftpboot/fs_3 tilera3-eth0(sync,rw,no_root_squash,no_all_squash,no_subtree_check)
+    /tftpboot/fs_4 tilera4-eth0(sync,rw,no_root_squash,no_all_squash,no_subtree_check)
+    /tftpboot/fs_5 tilera5-eth0(sync,rw,no_root_squash,no_all_squash,no_subtree_check)
+    /tftpboot/fs_6 tilera6-eth0(sync,rw,no_root_squash,no_all_squash,no_subtree_check)
+    /tftpboot/fs_7 tilera7-eth0(sync,rw,no_root_squash,no_all_squash,no_subtree_check)
+    /tftpboot/fs_8 tilera8-eth0(sync,rw,no_root_squash,no_all_squash,no_subtree_check)
+    /tftpboot/fs_9 tilera9-eth0(sync,rw,no_root_squash,no_all_squash,no_subtree_check)
+    $ sudo /etc/init.d/nfs restart
+    $ sudo /usr/sbin/exportfs
 
 * TileraMDE install: TileraMDE-3.0.1.125620::
 
@@ -71,6 +71,7 @@ Nova Directories
 ======
 
 ::
+
 	$ sudo mkdir /var/lib/nova/baremetal
 	$ sudo mkdir /var/lib/nova/baremetal/console
 
@@ -154,6 +155,7 @@ Start Processes
 ======
 
 ::
+
 	(Currently, you might have trouble if run processes as a user other than the superuser...)
 	$ sudo nova-scheduler &
 	$ sudo nova-compute &
@@ -176,7 +178,7 @@ To register a baremetal node, use 'bm_node_create'.
 * --pm_user: username
 * --pm_password: password
 * --prov_mac: tilera node's MAC address
- * --terminal_port: TCP port for ShellInABox. Each node must use unique TCP port. If you do not need console access, use 0.
+* --terminal_port: TCP port for ShellInABox. Each node must use unique TCP port. If you do not need console access, use 0.
 
 Example::
 

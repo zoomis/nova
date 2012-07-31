@@ -15,13 +15,13 @@ Code changes
 Non-PXE (Tilera) Bare-metal Provisioning
 -----
 
-1. `tilera-bm-instance-creation.rst`_
+1. tilera-bm-instance-creation.rst
 
-2. `tilera-bm-installation.rst`_ 
+2. tilera-bm-installation.rst 
 
 PXE Bare-metal Provisioning
 -----
 
-1. `pxe-bm-instance-creation.rst`_
+1. pxe-bm-instance-creation.rst
 
-2. `pxe-bm-installation.rst`_
+2. pxe-bm-installation.rst
