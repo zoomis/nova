@@ -1,5 +1,9 @@
-Bare-metal Installation and Instance Creation
+General Bare-metal Provisioning README
 =====
+
+ :Authors: mkkang@isi.edu, dkang@isi.edu, openstack-contributor-ml@nttdocomo.com
+ :Date:   2012-08-01
+ :Version: 2012.8
 
 Code changes
 -----
@@ -25,3 +29,4 @@ PXE Bare-metal Provisioning
 1. pxe-bm-instance-creation.rst
 
 2. pxe-bm-installation.rst
+
