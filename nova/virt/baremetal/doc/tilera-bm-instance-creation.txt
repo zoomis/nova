@@ -8,6 +8,11 @@ e.g. euca-run-instances -t tp64.8x8 -k my.key ami-CCC
 
 2) nova-scheduler selects a baremetal nova-compute 
    with the following configuration.
+   Here we assume that 
+    - MySQL for baremetal DB runs at the machine whose IP address is 127.0.0.1.
+      It must be changed if a different IP address is used.
+    - $ID should be replaced by MySQL user id
+    - $Password should be replaced by MySQL password
 
 [nova.conf]
 baremetal_sql_connection=mysql://$ID:$Password@$127.0.0.1/nova_bm
