@@ -1,18 +1,27 @@
 Bare-metal Installation and Instance Creation
 =====
 
+Code changes
+-----
+
+::
+ 
+  nova/nova/virt/baremetal/*
+  nova/nova/tests/baremetal/*
+  nova/bin/bm*
+  nova/nova/scheduler/baremetal_host_manager.py
+  nova/nova/tests/scheduler/test_baremetal_host_manager.py
+
 Non-PXE (Tilera) Bare-metal Provisioning
 -----
 
-1. `Tilera-baremetal-instance-creation
-tilera-bm-instance-creation.rst`_
-2. `Tilera-baremetal-installation
-tilera-bm-installation.rst`_ 
+1. `tilera-bm-instance-creation.rst`_
+
+2. `tilera-bm-installation.rst`_ 
 
 PXE Bare-metal Provisioning
 -----
 
-1. `PXE-baremetal-instance-creation
-pxe-bm-instance-creation.rst`_
-2. `PXE-baremetal-installation
-pxe-bm-installation.rst`_
+1. `pxe-bm-instance-creation.rst`_
+
+2. `pxe-bm-installation.rst`_

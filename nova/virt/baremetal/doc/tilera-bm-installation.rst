@@ -4,15 +4,11 @@ Packages
 
 * This procedure is for RHEL. Reading 'tilera-bm-instance-creation.txt' may make this document easy to understand.
 
-* TFTP, NFS, EXPECT, and Telnet installation
-
- ::
+* TFTP, NFS, EXPECT, and Telnet installation::
 
   $ yum install nfs-utils.x86_64 expect.x86_64 tftp-server.x86_64 telnet
 
-* TFTP configuration
-
- ::
+* TFTP configuration::
 
   $ cat /etc/xinetd.d/tftp 
   # default: off
@@ -36,9 +32,7 @@ Packages
   }
   $ /etc/init.d/xinetd restart
 
-* NFS configuration
-
- ::
+* NFS configuration::
 
   $ mkdir /tftpboot
   $ mkdir /tftpboot/fs_x (x: the id of tilera board)
@@ -56,9 +50,7 @@ Packages
   $ sudo /etc/init.d/nfs restart
   $ sudo /usr/sbin/exportfs
 
-* TileraMDE install: TileraMDE-3.0.1.125620
-
- ::
+* TileraMDE install: TileraMDE-3.0.1.125620::
 
   $ cd /usr/local/
   $ tar -xvf tileramde-3.0.1.125620_tilepro.tar
@@ -69,18 +61,16 @@ Packages
   $ tar -xjvf tileramde-3.0.1.125620_tilepro_tile.tar.bz2
   $ ln -s /usr/local/TileraMDE-3.0.1.125620/tilepro/ /usr/local/TileraMDE
 
-* Installation for 32-bit libraries to execute TileraMDE
-
- ::
+* Installation for 32-bit libraries to execute TileraMDE::
 
   $ yum install glibc.i686 glibc-devel.i686
 
 
 
-Nova Directorys
+Nova Directories
 ======
 
- ::
+::
 	$ sudo mkdir /var/lib/nova/baremetal
 	$ sudo mkdir /var/lib/nova/baremetal/console
 
@@ -89,9 +79,7 @@ Nova Directorys
 Nova Flags 
 =====
 
-Set these flags in nova.conf
-
- ::
+Set these flags in nova.conf::
 
 	# baremetal database connection
 	# (The database will be created in the next section)
@@ -118,14 +106,14 @@ Nova Database
 
 Create the baremetal database. Grant all provileges to the user specified by the 'baremetal_sql_connection' flag.
 
- Example::
+Example::
 
 	$ mysql -p
 	mysql> create database nova_bm;
 	mysql> grant all privileges on nova_bm.* to '$ID'@'%' identified by '$Password';
 	mysql> exit
 
- Create tables::
+Create tables::
 
 	$ bm_db_sync
 
@@ -149,9 +137,8 @@ Next, set baremetal extra_spec to the instance type::
 How to choose the value for flavor.
 -----
 
-Run nova-manage instance_type list, find the maximum FlavorID in output. Use the maximum FlavorID+1 for new instance_type.
+Run nova-manage instance_type list, find the maximum FlavorID in output. Use the maximum FlavorID+1 for new instance_type::
 
- ::
 	$ nova-manage instance_type list
 	m1.medium: Memory: 4096MB, VCPUS: 2, Root: 10GB, Ephemeral: 40Gb, FlavorID: 3, Swap: 0MB, RXTX Factor: 1.0
 	m1.small: Memory: 2048MB, VCPUS: 1, Root: 10GB, Ephemeral: 20Gb, FlavorID: 2, Swap: 0MB, RXTX Factor: 1.0
@@ -166,7 +153,7 @@ In the example above, the maximum Flavor ID is 5, so use 6.
 Start Processes
 ======
 
- ::
+::
 	(Currently, you might have trouble if run processes as a user other than the superuser...)
 	$ sudo nova-scheduler &
 	$ sudo nova-compute &
@@ -181,14 +168,14 @@ First, register a baremetal node. Next, register the baremetal node's NICs.
 To register a baremetal node, use 'bm_node_create'.
 'bm_node_create' takes the parameters listed below.
 
- * --service_host: baremetal nova-compute's hostname
- * --cpus=: number of cores
- * --memory_mb: memory size in MegaBytes
- * --local_gb: local disk size in GigaBytes
- * --pm_address: tilera node's static IP address
- * --pm_user: username
- * --pm_password: password
- * --prov_mac: tilera node's MAC address
+* --service_host: baremetal nova-compute's hostname
+* --cpus=: number of cores
+* --memory_mb: memory size in MegaBytes
+* --local_gb: local disk size in GigaBytes
+* --pm_address: tilera node's static IP address
+* --pm_user: username
+* --pm_password: password
+* --prov_mac: tilera node's MAC address
  * --terminal_port: TCP port for ShellInABox. Each node must use unique TCP port. If you do not need console access, use 0.
 
 Example::
@@ -204,12 +191,12 @@ To verify the node registration, run 'bm_node_list'::
 To register NIC, use 'bm_interface_create'.
 'bm_interface_create' takes the parameters listed below.
 
- * --bm_node_id: ID of the baremetal node owns this NIC (the first column of 'bm_node_list')
- * --mac_address: this NIC's MAC address in the form of xx:xx:xx:xx:xx:xx
- * --datapath_id: datapath ID of OpenFlow switch this NIC is connected to
- * --port_no: OpenFlow port number this NIC is connected to
+* --bm_node_id: ID of the baremetal node owns this NIC (the first column of 'bm_node_list')
+* --mac_address: this NIC's MAC address in the form of xx:xx:xx:xx:xx:xx
+* --datapath_id: datapath ID of OpenFlow switch this NIC is connected to
+* --port_no: OpenFlow port number this NIC is connected to
 
- (--datapath_id and --port_no are used for network isolation. It is OK to put 0, if you do not have OpenFlow switch.)
+(--datapath_id and --port_no are used for network isolation. It is OK to put 0, if you do not have OpenFlow switch.)
 
 Example::
 

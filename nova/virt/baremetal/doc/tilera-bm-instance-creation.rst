@@ -3,14 +3,14 @@ Non-PXE (Tilera) Baremetal Instance Creation
 
 1) A user requests a baremetal instance using tilera instance type.
 
- ::
+::
 
   euca-run-instances -t tp64.8x8 -k my.key ami-CCC
 
 2) nova-scheduler selects a baremetal nova-compute 
    with the following configuration.
 
- ::
+::
 
    Here we assume that
    $IP
@@ -21,7 +21,7 @@ Non-PXE (Tilera) Baremetal Instance Creation
    $Password
      $Password should be replaced by MySQL password
 
- ::
+::
 
   [nova.conf]
   baremetal_sql_connection=mysql://$ID:$Password@$IP/nova_bm

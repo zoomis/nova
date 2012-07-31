@@ -3,13 +3,13 @@ PXE Baremetal Instance Creation
 
 1) A user requests a baremetal instance.
 
- ::
+::
 
   euca-run-instances -t baremetal.small --kernel aki-AAA --ramdisk ari-BBB ami-CCC
 
 2) nova-scheduler selects a baremetal nova-compute.
 
- ::
+::
 
   nova-compute with a special nova.conf
   compute_driver = nova.virt.baremetal.driver.BareMetalDriver
