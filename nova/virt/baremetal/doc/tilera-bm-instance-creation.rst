@@ -1,27 +1,36 @@
-
 Non-PXE (Tilera) Baremetal Instance Creation
 ======
 
 1) A user requests a baremetal instance using tilera instance type.
 
-e.g. euca-run-instances -t tp64.8x8 -k my.key ami-CCC
+ ::
+
+  euca-run-instances -t tp64.8x8 -k my.key ami-CCC
 
 2) nova-scheduler selects a baremetal nova-compute 
    with the following configuration.
-   Here we assume that 
-    - MySQL for baremetal DB runs at the machine whose IP address is 127.0.0.1.
-      It must be changed if a different IP address is used.
-    - $ID should be replaced by MySQL user id
-    - $Password should be replaced by MySQL password
 
-[nova.conf]
-baremetal_sql_connection=mysql://$ID:$Password@$127.0.0.1/nova_bm
-compute_driver=nova.virt.baremetal.driver.BareMetalDriver
-baremetal_driver=tilera
-power_manager=tilera_pdu
-instance_type_extra_specs=cpu_arch:tilepro64
-baremetal_tftp_root = /tftpboot
-scheduler_host_manager=nova.scheduler.baremetal_host_manager.BaremetalHostManager
+ ::
+
+   Here we assume that
+   $IP
+      MySQL for baremetal DB runs at the machine whose IP address is $IP(127.0.0.1).
+      It must be changed if a different IP address is used.
+   $ID
+     $ID should be replaced by MySQL user id
+   $Password
+     $Password should be replaced by MySQL password
+
+ ::
+
+  [nova.conf]
+  baremetal_sql_connection=mysql://$ID:$Password@$IP/nova_bm
+  compute_driver=nova.virt.baremetal.driver.BareMetalDriver
+  baremetal_driver=tilera
+  power_manager=tilera_pdu
+  instance_type_extra_specs=cpu_arch:tilepro64
+  baremetal_tftp_root = /tftpboot
+  scheduler_host_manager=nova.scheduler.baremetal_host_manager.BaremetalHostManager
 
 3) The bare-metal nova-compute selects a bare-metal node from its pool 
    based on hardware resources and the instance type (# of cpus, memory, HDDs).

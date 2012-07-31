@@ -1,24 +1,18 @@
 
-Reading 'baremetal-instance-creation.txt' may make this document easy to understand.
-
-
-INSTALLATION PROCEDURE
-
-This procedure is for Ubuntu 12.04 x86_64.
-
-
 Packages
 =====
 
-* dnsmasq (PXE server for baremetal hosts)
-* syslinux (bootloader for PXE)
-* ipmitool (operate IPMI)
-* qemu-kvm (only for qemu-img)
-* open-iscsi (connect to iSCSI target at berametal hosts)
-* busybox (used in deployment ramdisk)
-* tgt (used in deployment ramdisk)
+* This procedure is for Ubuntu 12.04 x86_64. Reading 'baremetal-instance-creation.txt' may make this document easy to understand.
 
-Example:
+ * dnsmasq (PXE server for baremetal hosts)
+ * syslinux (bootloader for PXE)
+ * ipmitool (operate IPMI)
+ * qemu-kvm (only for qemu-img)
+ * open-iscsi (connect to iSCSI target at berametal hosts)
+ * busybox (used in deployment ramdisk)
+ * tgt (used in deployment ramdisk)
+
+Example::
 
 	$ sudo apt-get install dnsmasq syslinux ipmitool qemu-kvm open-iscsi
 	$ sudo apt-get install busybox tgt
@@ -27,12 +21,12 @@ Example:
 Ramdisk for Deployment
 =====
 
-To create a deployment ramdisk, use 'baremetal-mkinitrd.sh' in [baremetal-initrd-builder](https://github.com/NTTdocomo-openstack/baremetal-initrd-builder).
+To create a deployment ramdisk, use 'baremetal-mkinitrd.sh' in [baremetal-initrd-builder](https://github.com/NTTdocomo-openstack/baremetal-initrd-builder)::
 
 	$ cd baremetal-initrd-builder
 	$ ./baremetal-mkinitrd.sh <ramdisk output path> <kernel version>
 
-Example:
+Example::
 
 	$ ./baremetal-mkinitrd.sh /tmp/deploy-ramdisk.img 3.2.0-26-generic
 	working in /tmp/baremetal-mkinitrd.9AciX98N
@@ -41,7 +35,7 @@ Example:
 
 Register the kernel and the ramdisk to Glance.
 
-Example:
+Example::
 
 	$ glance add name="baremetal deployment ramdisk" is_public=true container_format=ari disk_format=ari < /tmp/deploy-ramdisk.img
 	Uploading image 'baremetal deployment ramdisk'
@@ -58,7 +52,7 @@ ShellInABox
 =====
 Baremetal nova-compute uses [ShellInABox](http://code.google.com/p/shellinabox/) so that users can access baremetal host's console through web browsers.
 
-Build from source and install:
+Build from source and install::
 
 	$ sudo apt-get install gcc make
 	$ tar xzf shellinabox-2.14.tar.gz
@@ -70,14 +64,14 @@ Build from source and install:
 PXE Boot Server
 =====
 
-Prepare TFTP root directory.
+Prepare TFTP root directory::
 
 	$ sudo mkdir /tftpboot
 	$ sudo cp /usr/lib/syslinux/pxelinux.0 /tftpboot/
 	$ sudo mkdir /tftpboot/pxelinux.cfg
 
 Start dnsmasq.
-Example: start dnsmasq on eth1 with PXE and TFTP enabled.
+Example: start dnsmasq on eth1 with PXE and TFTP enabled::
 
 	$ sudo dnsmasq --conf-file= --port=0 --enable-tftp --tftp-root=/tftpboot --dhcp-boot=pxelinux.0 --bind-interfaces --pid-file=/dnsmasq.pid --interface=eth1 --dhcp-range=192.168.175.100,192.168.175.254
 
@@ -89,6 +83,8 @@ Example: start dnsmasq on eth1 with PXE and TFTP enabled.
 Nova Directorys
 ======
 
+ ::
+
 	$ sudo mkdir /var/lib/nova/baremetal
 	$ sudo mkdir /var/lib/nova/baremetal/console
 	$ sudo mkdir /var/lib/nova/baremetal/dnsmasq
@@ -97,7 +93,7 @@ Nova Directorys
 Nova Flags 
 =====
 
-Set these flags in nova.conf
+Set these flags in nova.conf::
 
 	# baremetal database connection
 	# (The database will be created in the next section)
@@ -129,14 +125,14 @@ Nova Database
 =====
 
 Create the baremetal database. Grant all provileges to the user specified by the 'baremetal_sql_connection' flag.
-Example:
+Example::
 
 	$ mysql -p
 	mysql> create database nova_bm;
 	mysql> grant all privileges on nova_bm.* to 'nova_bm'@'%' identified by 'password';
 	mysql> exit
 
-Create tables:
+Create tables::
 
 	$ bm_db_sync
 
@@ -146,7 +142,7 @@ Create Baremetal Instance Type
 
 First, create an instance type in the normal way.
 
-Example:
+Example::
 
 	$ nova-manage instance_type create --name=bm.small --cpu=2 --memory=4096 --root_gb=10 --ephemeral_gb=20 --flavor=6 --swap=1024 --rxtx_factor=1
 	(about --flavor, see 'How to choose the value for flavor' section below)
@@ -155,10 +151,12 @@ Next, set baremetal extra_spec to the instance type
 
 	$ bm_flavor_extra_specs_set --flavor=bm.small --key cpu_arch --value 's== x86_64'
 
-How to choose the value for flavor:
+How to choose the value for flavor.
 -----
 
 Run nova-manage instance_type list, find the maximum FlavorID in output. Use the maximum FlavorID+1 for new instance_type.
+
+ ::
 
 	$ nova-manage instance_type list
 	m1.medium: Memory: 4096MB, VCPUS: 2, Root: 10GB, Ephemeral: 40Gb, FlavorID: 3, Swap: 0MB, RXTX Factor: 1.0
@@ -173,6 +171,7 @@ In the example above, the maximum Flavor ID is 5, so use 6.
 Start Processes
 ======
 
+ ::
 	(Currently, you might have trouble if run processes as a user other than the superuser...)
 	$ sudo bm_deploy_server &
 	$ sudo nova-scheduler &
@@ -187,21 +186,21 @@ First, register a baremetal node. Next, register the baremetal node's NICs.
 To register a baremetal node, use 'bm_node_create'.
 'bm_node_create' takes the parameters listed below.
 
-* --service_host: baremetal nova-compute's hostname
-* --cpus=: number of CPU cores
-* --memory_mb: memory size in MegaBytes
-* --local_gb: local disk size in GigaBytes
-* --pm_address: IPMI address
-* --pm_user: IPMI username
-* --pm_password: IPMI password
-* --prov_mac: PXE NIC's MAC address
-* --terminal_port: TCP port for ShellInABox. Each node must use unique TCP port. If you do not need console access, use 0.
+ * --service_host: baremetal nova-compute's hostname
+ * --cpus=: number of CPU cores
+ * --memory_mb: memory size in MegaBytes
+ * --local_gb: local disk size in GigaBytes
+ * --pm_address: IPMI address
+ * --pm_user: IPMI username
+ * --pm_password: IPMI password
+ * --prov_mac: PXE NIC's MAC address
+ * --terminal_port: TCP port for ShellInABox. Each node must use unique TCP port. If you do not need console access, use 0.
 
-Example:
+Example::
 
 	$ bm_node_create --service_host=bm1 --cpus=4 --memory_mb=6144 --local_gb=64 --pm_address=172.27.2.116 --pm_user=test --pm_password=password --prov_mac=98:4b:e1:67:9a:4c --terminal_port=8000
 
-To verify the node registration, run 'bm_node_list':
+To verify the node registration, run 'bm_node_list'::
 
 	$ bm_node_list
 	ID        SERVICE_HOST  INSTANCE_ID   CPUS    Memory    Disk      PM_Address        PM_User           TERMINAL_PORT  PROV_MAC            PROV_VLAN
@@ -210,18 +209,18 @@ To verify the node registration, run 'bm_node_list':
 To register NIC, use 'bm_interface_create'.
 'bm_interface_create' takes the parameters listed below.
 
-* --bm_node_id: ID of the baremetal node owns this NIC (the first column of 'bm_node_list')
-* --mac_address: this NIC's MAC address in the form of xx:xx:xx:xx:xx:xx
-* --datapath_id: datapath ID of OpenFlow switch this NIC is connected to
-* --port_no: OpenFlow port number this NIC is connected to
+ * --bm_node_id: ID of the baremetal node owns this NIC (the first column of 'bm_node_list')
+ * --mac_address: this NIC's MAC address in the form of xx:xx:xx:xx:xx:xx
+ * --datapath_id: datapath ID of OpenFlow switch this NIC is connected to
+ * --port_no: OpenFlow port number this NIC is connected to
 
-(--datapath_id and --port_no are used for network isolation. It is OK to put 0, if you do not have OpenFlow switch.)
+ (--datapath_id and --port_no are used for network isolation. It is OK to put 0, if you do not have OpenFlow switch.)
 
-Example:
+Example::
 
 	$ bm_interface_create --bm_node_id=1 --mac_address=98:4b:e1:67:9a:4e --datapath_id=0x123abc --port_no=24
 
-To verify the NIC registration, run 'bm_interface_list':
+To verify the NIC registration, run 'bm_interface_list'::
 
 	$ bm_interface_list
 	ID        BM_NODE_ID        MAC_ADDRESS         DATAPATH_ID       PORT_NO
@@ -236,14 +235,15 @@ Make sure to use kernel, ramdisk and image that support baremetal hardware (i.e 
 
 Only partition images are currently supported. See 'How to create an image' section.
 
-Example:
+Example::
+
 	euca-run-instances -t bm.small --kernel aki-AAA --ramdisk ari-BBB ami-CCC
 
 
 How to create an image:
 -----
 	
-Example: create a partition image from ubuntu cloud images' Precise tarball
+Example: create a partition image from ubuntu cloud images' Precise tarball::
 
 	$ wget http://cloud-images.ubuntu.com/precise/current/precise-server-cloudimg-amd64-root.tar.gz
 	$ dd if=/dev/zero of=u.img bs=1M count=0 seek=1024

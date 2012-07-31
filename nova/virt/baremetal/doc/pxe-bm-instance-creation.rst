@@ -1,11 +1,20 @@
-PXE baremetal Instance Creation
+PXE Baremetal Instance Creation
 ======
 
 1) A user requests a baremetal instance.
-e.g. euca-run-instances -t baremetal.small --kernel aki-AAA --ramdisk ari-BBB ami-CCC
+
+ ::
+
+  euca-run-instances -t baremetal.small --kernel aki-AAA --ramdisk ari-BBB ami-CCC
 
 2) nova-scheduler selects a baremetal nova-compute.
-e.g. nova-compute with a special nova.conf (compute_driver = nova.virt.baremetal.driver.BareMetalDriver, baremetal_deploy_kernel = xxxxxxxxxx, baremetal_deploy_ramdisk = yyyyyyyy)
+
+ ::
+
+  nova-compute with a special nova.conf
+  compute_driver = nova.virt.baremetal.driver.BareMetalDriver
+  baremetal_deploy_kernel = xxxxxxxxxx
+  baremetal_deploy_ramdisk = yyyyyyyy
 
 3) The nova-compute selects a baremetal host from its pool based on hardware resources and the instance type (# of cpus, memory, HDDs).
 
@@ -20,5 +29,3 @@ e.g. nova-compute with a special nova.conf (compute_driver = nova.virt.baremetal
 8) Next, the host is booted up by the user specified kernel, ramdisk and its local disk.
 
 9) Done.
-
-
