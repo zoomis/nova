@@ -402,21 +402,23 @@ class PXE:
         aki_id = str(instance['kernel_id'])
         ari_id = str(instance['ramdisk_id'])
 
-        images = (deploy_aki_id, deploy_ari_id, aki_id, ari_id)
-        tftp_image_dir = None
-        if FLAGS.baremetal_pxe_vlan_per_host:
-            tftp_paths = images
-        else:
-            tftp_image_dir = os.path.join(tftp_root, str(instance['id']))
-            tftp_paths = [os.path.join(str(instance['id']), i) for i in images]
-        targets = [os.path.join(tftp_root, i) for i in tftp_paths]
 
-        LOG.debug("tftp_paths=%s", tftp_paths)
-        LOG.debug("targets=%s", targets)
+        images = [(deploy_aki_id, 'deploy_kernel'),
+                  (deploy_ari_id, 'deploy_ramdisk'),
+                  (aki_id, 'kernel'),
+                  (ari_id, 'ramdisk'),
+                  ]
 
         libvirt_utils.ensure_tree(tftp_root)
-        if tftp_image_dir:
-            libvirt_utils.ensure_tree(tftp_image_dir)
+        if FLAGS.baremetal_pxe_vlan_per_host:
+            tftp_paths = [i[1] for i in images]
+        else:
+            tftp_paths = [os.path.join(str(instance['id']), i[1])
+                    for i in images]
+            libvirt_utils.ensure_tree(
+                    os.path.join(tftp_root, str(instance['id'])))
+
+        LOG.debug("tftp_paths=%s", tftp_paths)
 
         def _cache_image_b(image_id, target):
             LOG.debug("fetching id=%s target=%s", image_id, target)
@@ -426,8 +428,9 @@ class PXE:
                            user_id=instance['user_id'],
                            project_id=instance['project_id'])
 
-        for image_id, target in zip(images, targets):
-            _cache_image_b(image_id, target)
+        for image, path in zip(images, tftp_paths):
+            target = os.path.join(tftp_root, path)
+            _cache_image_b(image[0], target)
 
         pxe_config_dir = os.path.join(tftp_root, 'pxelinux.cfg')
         pxe_config_path = os.path.join(pxe_config_dir,
