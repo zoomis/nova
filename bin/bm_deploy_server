@@ -19,7 +19,6 @@ import eventlet
 eventlet.monkey_patch()
 
 import os
-import subprocess
 import sys
 import threading
 import time
@@ -34,23 +33,18 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 
 import cgi
 import Queue
+import re
+import socket
+import stat
 from wsgiref import simple_server
-
 
 from nova import context as nova_context
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
+from nova import utils
 from nova.virt.baremetal import bmdb
 
-
-deploy_server_opts = [
-    cfg.StrOpt('baremetal_deploy_work',
-               default='bm_deploy_work'),
-]
-
-FLAGS = flags.FLAGS
-FLAGS.register_opts(deploy_server_opts)
 
 flags.parse_args(sys.argv)
 logging.setup("nova")
@@ -58,6 +52,130 @@ logging.setup("nova")
 LOG = logging.getLogger('nova.virt.baremetal.deploy_server')
 
 QUEUE = Queue.Queue()
+
+
+def discovery(portal_address, portal_port):
+    utils.execute('iscsiadm',
+                  '-m', 'discovery',
+                  '-t', 'st',
+                  '-p', '%s:%s' % (portal_address, portal_port),
+                  run_as_root=True,
+                  check_exit_code=[0])
+
+
+def login_iscsi(portal_address, portal_port, target_iqn):
+    utils.execute('iscsiadm',
+                  '-m', 'node',
+                  '-p', '%s:%s' % (portal_address, portal_port),
+                  '-T', target_iqn,
+                  '--login',
+                  run_as_root=True,
+                  check_exit_code=[0])
+    time.sleep(3)
+
+
+def logout_iscsi(portal_address, portal_port, target_iqn):
+    utils.execute('iscsiadm',
+                  '-m', 'node',
+                  '-p', '%s:%s' % (portal_address, portal_port),
+                  '-T', target_iqn,
+                  '--logout',
+                  run_as_root=True,
+                  check_exit_code=[0])
+
+
+def make_partitions(dev, root_mb, swap_mb):
+    commands = ['o,w',
+                'n,p,1,,+%dMB,t,1,82,w' % root_mb,
+                'n,p,2,,+%dMB,t,2,83,w' % swap_mb,
+                'a,1,w',
+                ]
+    for command in commands:
+        command = command.replace(',', '\n')
+        utils.execute('fdisk', dev,
+                      process_input=command,
+                      run_as_root=True,
+                      check_exit_code=[0])
+
+
+def is_block_device(dev):
+    s = os.stat(dev)
+    return stat.S_ISBLK(s.st_mode)
+
+
+def dd(src, dst):
+    utils.execute('dd',
+                  'if=%s' % src,
+                  'of=%s' % dst,
+                  'bs=1M',
+                  run_as_root=True,
+                  check_exit_code=[0])
+
+
+def mkswap(dev):
+    utils.execute('mkswap',
+                  '-L', 'swap1',
+                  dev,
+                  run_as_root=True,
+                  check_exit_code=[0])
+
+
+def block_uuid(dev):
+    out, _ = utils.execute('blkid', '-s', 'UUID', '-o', 'value', dev,
+                           run_as_root=True,
+                           check_exit_code=[0])
+    return out.strip()
+
+
+def switch_pxe_config(path, root_uuid):
+    with open(path) as f:
+        lines = f.readlines()
+    root = 'UUID=%s' % root_uuid
+    rre = re.compile(r'\$\{ROOT\}')
+    dre = re.compile('^default .*$')
+    with open(path, 'w') as f:
+        for line in lines:
+            line = rre.sub(root, line)
+            line = dre.sub('default boot', line)
+            f.write(line)
+
+
+def notify(address, port):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.connect((address, port))
+        s.send('done')
+    finally:
+        s.close()
+
+
+def deploy_work(address, port, iqn, lun, image_path, pxe_config_path, root_mb,
+                swap_mb):
+    dev = "/dev/disk/by-path/ip-%s:%s-iscsi-%s-lun-%s" \
+            % (address, port, iqn, lun)
+
+    root_part = "%s-part1" % dev
+    swap_part = "%s-part2" % dev
+
+    discovery(address, port)
+    login_iscsi(address, port, iqn)
+    try:
+        if not is_block_device(dev):
+            sys.exit(1)
+        make_partitions(dev, root_mb, swap_mb)
+        if not is_block_device(root_part):
+            LOG.warn("root device '%s' not found", root_part)
+            return
+        if not is_block_device(swap_part):
+            LOG.warn("swap device '%s' not found", swap_part)
+            return
+        dd(image_path, root_part)
+        mkswap(swap_part)
+        root_uuid = block_uuid(root_part)
+    finally:
+        logout_iscsi(address, port, iqn)
+    switch_pxe_config(pxe_config_path, root_uuid)
+    notify(address, 10000)
 
 
 def get_deployment(context, dep_id):
@@ -68,27 +186,6 @@ def delete_deployment(context, dep_id):
     return bmdb.bm_deployment_destroy(context, dep_id)
 
 
-def run_work(address, port, iqn, lun, image_path, pxe_config_path, root_mb,
-             swap_mb):
-    cmd = [FLAGS.baremetal_deploy_work,
-           address,
-           str(port),
-           iqn,
-           str(lun),
-           image_path,
-           pxe_config_path,
-           str(root_mb),
-           str(swap_mb),
-          ]
-    LOG.info(cmd)
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    LOG.info("pid: %d" % p.pid)
-    out, err = p.communicate()
-    LOG.info("returncode: %d" % p.returncode)
-    LOG.info("out: %s" % out)
-    LOG.info("err: %s" % err)
-
-
 class Worker(threading.Thread):
 
     def __init__(self):
@@ -97,10 +194,16 @@ class Worker(threading.Thread):
 
     def run(self):
         while True:
-            params = QUEUE.get()
-            LOG.info("new work: %s", params)
+            deployment_id, params = QUEUE.get()
+            LOG.info("new work: %s, %s", deployment_id, params)
             time.sleep(5)
-            run_work(**params)
+            try:
+                deploy_work(**params)
+            except Exception:
+                LOG.exception('deploy_work %s failed' % deployment_id)
+            context = nova_context.get_admin_context()
+            delete_deployment(context, deployment_id)
+            LOG.info("deployment %s done", deployment_id)
 
 
 class BareMetalDeploy(object):
@@ -136,8 +239,8 @@ class BareMetalDeploy(object):
         if d['key'] == deployment_key:
             image_path = d['image_path']
             pxe_config_path = d['pxe_config_path']
-            root_mb = d['root_mb']
-            swap_mb = d['swap_mb']
+            root_mb = int(d['root_mb'])
+            swap_mb = int(d['swap_mb'])
             params = {'address': address,
                       'port': port,
                       'iqn': iqn,
@@ -147,17 +250,13 @@ class BareMetalDeploy(object):
                       'root_mb': root_mb,
                       'swap_mb': swap_mb,
                      }
-            QUEUE.put(params)
-            delete_deployment(context, deployment_id)
+            QUEUE.put((deployment_id, params))
         start_response('200 OK', [('Content-type', 'text/plain')])
         return ''
 
 
-app = BareMetalDeploy()
-
-
 if __name__ == '__main__':
     Worker().start()
-
+    app = BareMetalDeploy()
     srv = simple_server.make_server('', 10000, app)
     srv.serve_forever()

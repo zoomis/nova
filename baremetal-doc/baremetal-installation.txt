@@ -117,9 +117,6 @@ Set these flags in nova.conf
 	# path to shellinaboxd
 	baremetal_term = /usr/local/bin/shellinaboxd
 
-	# path to bm_deploy_work
-	baremetal_deploy_work = /nova/bin/bm_deploy_work
-
 	# deployment kernel & ramdisk image id
 	baremetal_deploy_kernel = d76012fc-4055-485c-a978-f748679b89a9
 	baremetal_deploy_ramdisk = e99775cb-f78d-401e-9d14-acd86e2f36e3
