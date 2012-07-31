@@ -64,13 +64,12 @@ usage:
             continue
         if o.startswith("--"):
             o = o[2:]
-        if values.has_key(o):
+        if o in values:
             values[o] = a
         else:
             print "unrecognized option '%s'" % o
             print usage
             sys.exit(1)
-    print 'values=%s' % values
 
     ok = True
 
