@@ -56,7 +56,6 @@ def get_baremetal_nodes():
 
 
 def get_power_manager(node, **kwargs):
-    #TODO(NTTdocomo): specify power_manager per node
     d = FLAGS.power_manager
     if d == 'ipmi':
         return ipmi.get_power_manager(node, **kwargs)
