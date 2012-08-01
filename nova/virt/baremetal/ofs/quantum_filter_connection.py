@@ -18,7 +18,7 @@
 
 from nova import flags
 from nova.openstack.common import log as logging
-from nova.virt.baremetal.nec import filter_client as quantum_filter_client
+from nova.virt.baremetal.ofs import filter_client as quantum_filter_client
 
 
 LOG = logging.getLogger(__name__)

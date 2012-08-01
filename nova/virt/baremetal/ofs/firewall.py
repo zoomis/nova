@@ -30,14 +30,14 @@ from nova.virt import firewall
 LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
-nec_firewall_opts = [
+ofs_firewall_opts = [
     cfg.StrOpt('baremetal_quantum_filter_connection',
-               default='nova.virt.baremetal.nec.quantum_filter_connection.\
+               default='nova.virt.baremetal.ofs.quantum_filter_connection.\
 QuantumFilterClientConnection',
                help='Filter connection class for baremetal instances'),
     ]
 
-FLAGS.register_opts(nec_firewall_opts)
+FLAGS.register_opts(ofs_firewall_opts)
 
 DROP_DHCP_SERVER_PRIORITY = 10060
 ALLOW_DHCP_CLIENT_PRIORITY = 10050
@@ -101,7 +101,7 @@ def _build_deny_all(in_port):
     return [dict(filter=f)]
 
 
-def _build_security_group_rule_filter(dst_cidr, rule, priority):
+def _build_sg_rule_filter(dst_cidr, rule, priority):
     filter_bodys = []
     from_port = rule.from_port
     to_port = rule.to_port + 1
@@ -239,7 +239,7 @@ class QuantumFilterFirewall(firewall.FirewallDriver):
                     rules = db.security_group_rule_get_by_security_group(ctxt,
                                                                         sg.id)
                     for rule in rules:
-                        rule_f = _build_security_group_rule_filter(ip + "/32",
+                        rule_f = _build_sg_rule_filter(ip + "/32",
                                                 rule, SECURITY_GROUP_PRIORITY)
                         filter_bodys.extend(rule_f)
             #TODO(NTTdocomo) add duplicated id to list

@@ -26,13 +26,13 @@ from nova.openstack.common import log as logging
 from nova.virt.baremetal import bmdb
 from nova.virt import firewall
 
-from nec_firewall import _build_allow_dhcp_client
-from nec_firewall import _build_deny_dhcp_server
-from nec_firewall import _build_security_group_rule_filter
-from nec_firewall import _create_filters
-from nec_firewall import _delete_filters
-from nec_firewall import _get_vifinfo_uuid
-from nec_firewall import _list_filters
+from nova.virt.baremetal.ofs.firewall import _build_allow_dhcp_client
+from nova.virt.baremetal.ofs.firewall import _build_deny_dhcp_server
+from nova.virt.baremetal.ofs.firewall import _build_sg_rule_filter
+from nova.virt.baremetal.ofs.firewall import _create_filters
+from nova.virt.baremetal.ofs.firewall import _delete_filters
+from nova.virt.baremetal.ofs.firewall import _get_vifinfo_uuid
+from nova.virt.baremetal.ofs.firewall import _list_filters
 
 
 LOG = logging.getLogger(__name__)
@@ -121,8 +121,7 @@ def _from_bm_node(instance_id, tenant_id):
     return info
 
 
-def _build_full_security_group_rule_filter(in_port, src_mac, src_cidr,
-                                           dst_cidr, rule):
+def _build_full_sg_rule_filter(in_port, src_mac, src_cidr, dst_cidr, rule):
     filter_bodys = []
     from_port = rule.from_port
     to_port = rule.to_port + 1
@@ -202,7 +201,7 @@ def _fullbuild(conn):
                     rules = db.security_group_rule_get_by_security_group(
                             ctxt, sg.id)
                     for rule in rules:
-                        rule_f = _build_security_group_rule_filter(
+                        rule_f = _build_sg_rule_filter(
                                   t_ip + "/32", rule,
                                   EXTERNAL_SECURITY_GROUP_PRIORITY)
                         filter_bodys.extend(rule_f)
@@ -213,7 +212,7 @@ def _fullbuild(conn):
 
         # Just to make lines short...
         _sg_rules = db.security_group_rule_get_by_security_group
-        _build = _build_full_security_group_rule_filter
+        _build = _build_full_sg_rule_filter
 
         # from other instances to the instance
         for f in hosts:

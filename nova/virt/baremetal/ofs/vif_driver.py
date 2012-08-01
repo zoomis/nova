@@ -21,7 +21,7 @@ from nova import exception
 from nova import flags
 from nova.openstack.common import log as logging
 
-from nova.virt.baremetal.nec.vifinfo_client import VIFINFOClient
+from nova.virt.baremetal.ofs.vifinfo_client import VIFINFOClient
 from nova.virt.baremetal import vif_driver
 
 FLAGS = flags.FLAGS
@@ -29,7 +29,7 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 
 
-class NECVIFDriver(vif_driver.BareMetalVIFDriver):
+class OFSVIFDriver(vif_driver.BareMetalVIFDriver):
 
     def _after_plug(self, instance, network, mapping, pif):
         client = VIFINFOClient(FLAGS.quantum_connection_host,
