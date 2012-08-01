@@ -14,7 +14,7 @@
 #    under the License.
 
 """
-Tests for baremetal tilera driver
+Tests for baremetal tilera driver.
 """
 
 import mox

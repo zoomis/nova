@@ -15,6 +15,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+"""
+Class for TILERA bare-metal nodes.
+"""
+
 import os
 import shutil
 import subprocess

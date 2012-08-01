@@ -17,6 +17,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+"""
+A driver for Bare-metal platform.
+"""
+
 from nova.compute import power_state
 from nova import context as nova_context
 from nova import db

@@ -14,7 +14,7 @@
 #    under the License.
 
 """
-Tests for baremetal volume driver
+Tests for baremetal volume driver.
 """
 
 import mox

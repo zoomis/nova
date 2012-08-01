@@ -1,4 +1,5 @@
 # Copyright (c) 2012 NTT DOCOMO, INC.
+# Copyright (c) 2011 University of Southern California / ISI
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -13,24 +14,23 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.tests.baremetal.bmdb import new_bm_node
-from nova.virt.baremetal import bmdb
-from nova.virt.firewall import NoopFirewallDriver
-
 """
-Tests for baremetal connection
+Tests for baremetal connection.
 """
 
 import mox
 
 from nova import flags
 from nova import test
-from nova.tests import utils as test_utils
 
 from nova.tests.baremetal import bmdb as bmdb_utils
+from nova.tests.baremetal.bmdb import new_bm_node
 from nova.tests.image import fake as fake_image
+from nova.tests import utils as test_utils
 from nova.virt.baremetal import baremetal_states
+from nova.virt.baremetal import bmdb
 from nova.virt.baremetal import driver as c
+from nova.virt.firewall import NoopFirewallDriver
 
 
 flags.DECLARE('baremetal_driver', 'nova.virt.baremetal.nodes')
