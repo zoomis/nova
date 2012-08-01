@@ -34,7 +34,7 @@ opts = [
     cfg.StrOpt('baremetal_term_cert_dir',
                default=None,
                help='path to baremetal terminal SSL cert(PEM)'),
-    cfg.StrOpt('baremetal_console_pid_dir',
+    cfg.StrOpt('baremetal_term_pid_dir',
                default='/var/lib/nova/baremetal/console',
                help='path to directory stores pidfiles of baremetal_term'),
     ]
@@ -220,7 +220,7 @@ class Ipmi:
         _unlink_without_raise(self._console_pidfile(node_id))
 
     def _console_pidfile(self, node_id):
-        pidfile = "%s/%s.pid" % (FLAGS.baremetal_console_pid_dir, node_id)
+        pidfile = "%s/%s.pid" % (FLAGS.baremetal_term_pid_dir, node_id)
         return pidfile
 
     def _console_pid(self, node_id):

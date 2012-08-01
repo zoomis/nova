@@ -18,35 +18,19 @@
 Manage hosts in the current zone.
 """
 
+import operator
+
+from nova import context as ctx
 from nova import db
 from nova import flags
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
-
-"""start add by NTT DOCOMO."""
-import operator
-import pprint
-
-from nova import context as ctx
 from nova.scheduler import host_manager
 from nova.scheduler.host_manager import ReadOnlyDict
 from nova.virt.baremetal import bmdb
 
-PP = pprint.PrettyPrinter(indent=4)
-
-
-def _as_dict(o):
-    if isinstance(o, dict):
-        return o
-    else:
-        return o.__dict__
-
-"""end add by NTT DOCOMO."""
-
-host_manager_opts = []
 
 FLAGS = flags.FLAGS
-FLAGS.register_opts(host_manager_opts)
 LOG = logging.getLogger(__name__)
 
 
@@ -66,15 +50,11 @@ class BaremetalHostState(host_manager.HostState):
             capabilities = {}
         self.capabilities = ReadOnlyDict(capabilities.get(topic, None))
 
-        """start add by NTT DOCOMO."""
-        self.available_nodes = []
         self.baremetal_compute = False
-
         cap_extra_specs = self.capabilities.get('instance_type_extra_specs',
                                                 {})
         if cap_extra_specs.get('baremetal_driver'):
             self.baremetal_compute = True
-        """end add by NTT DOCOMO."""
 
         if service is None:
             service = {}
@@ -86,16 +66,14 @@ class BaremetalHostState(host_manager.HostState):
         self.vcpus_total = 0
         self.vcpus_used = 0
 
-    """start add by NTT DOCOMO."""
+        self.available_nodes = []
+
     def update_from_compute_node(self, compute, context=None):
         """Update information about a host from its compute_node info."""
         if self.baremetal_compute:
             service_host = compute['service']['host']
             bm_nodes = bmdb.bm_node_get_all_by_service_host(context,
                                                             service_host)
-            LOG.debug("point0.1: self=%s, bm_nodes=%s",
-                      str(self), PP.pformat(bm_nodes))
-
             for n in bm_nodes:
                 if not n['instance_id']:
                     self.available_nodes.append(n)
@@ -108,13 +86,8 @@ class BaremetalHostState(host_manager.HostState):
                                           key=operator.itemgetter('cpus'),
                                           reverse=True)
 
-            LOG.debug("point0.2: self=%s available_nodes=%s",
-                      str(self),
-                      PP.pformat(self.available_nodes))
-
             if len(self.available_nodes):
                 bm_node = self.available_nodes[0]
-                LOG.debug("point0.2.1: bm_node=%s", PP.pformat(bm_node))
             else:
                 bm_node = {}
                 bm_node['local_gb'] = 0
@@ -138,19 +111,9 @@ class BaremetalHostState(host_manager.HostState):
         self.free_disk_mb = all_disk_mb
         self.vcpus_total = vcpus_total
 
-        LOG.debug("point0.3: self=%s free_ram_mb=%f "
-                  "free_disk_mb=%f vcpus_total=%f",
-                  str(self), self.free_ram_mb, self.free_disk_mb,
-                  self.vcpus_total)
-
-        """end add by NTT DOCOMO."""
-
     def consume_from_instance(self, instance):
         """Update information about a host from instance info."""
-
-        """start add by NTT DOCOMO."""
         if self.baremetal_compute:
-            LOG.debug("instance=%s", str(instance))
             context = ctx.get_admin_context()
             instance_id = instance.get('id', None)
             if instance_id:
@@ -163,13 +126,10 @@ class BaremetalHostState(host_manager.HostState):
                 return
 
             if len(self.available_nodes):
-                consumed_node = self.available_nodes.pop(0)
-                LOG.debug("point1.0.1: self=%s consumed_host=%s",
-                          str(self), PP.pformat(_as_dict(consumed_node)))
+                self.available_nodes.pop(0)
+
             if len(self.available_nodes):
                 bm_node = self.available_nodes[0]
-                LOG.debug("point1.0.2: self=%s bm_node=%s",
-                          str(self), PP.pformat(_as_dict(bm_node)))
             else:
                 bm_node = {}
                 bm_node['local_gb'] = 0
@@ -188,12 +148,6 @@ class BaremetalHostState(host_manager.HostState):
             self.free_disk_mb -= disk_mb
             self.vcpus_used += vcpus
 
-        LOG.debug("point1.1: self=%s free_ram_mb=%f free_disk_mb=%f "
-                  "vcpus_total=%f",
-                  str(self), self.free_ram_mb, self.free_disk_mb,
-                  self.vcpus_total)
-        """end add by NTT DOCOMO."""
-
 
 class BaremetalHostManager(host_manager.HostManager):
     """Bare-Metal HostManager class."""
@@ -201,13 +155,11 @@ class BaremetalHostManager(host_manager.HostManager):
     # Can be overriden in a subclass
     host_state_cls = BaremetalHostState
 
-    """start add by NTT DOCOMO."""
     """Make HostManager to a singleton object."""
     def __new__(self):
         if not hasattr(self, "__instance__"):
             self.__instance__ = super(BaremetalHostManager, self).__new__(self)
         return self.__instance__
-    """end add by NTT DOCOMO."""
 
     def __init__(self):
         self.service_states = {}  # { <host> : { <service> : { cap k : v }}}
@@ -245,10 +197,8 @@ class BaremetalHostManager(host_manager.HostManager):
             host_state = self.host_state_cls(host, topic,
                     capabilities=capabilities,
                     service=dict(service.iteritems()))
-            """start add by DOCOMO."""
             # pass context to access DB
             host_state.update_from_compute_node(compute, context=context)
-            """end add by DOCOMO."""
             host_state_map[host] = host_state
 
         # "Consume" resources from the host the instance resides on.

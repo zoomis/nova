@@ -186,11 +186,7 @@ class BareMetalDriver(driver.ComputeDriver):
 
     def spawn(self, context, instance, image_meta,
               network_info=None, block_device_info=None):
-        LOG.debug("spawn:")
-        LOG.debug("instance=%s", instance.__dict__)
-        LOG.debug("image_meta=%s", image_meta)
-        LOG.debug("network_info=%s", network_info)
-        LOG.debug("block_device_info=%s", block_device_info)
+        LOG.debug("spawn: %s", locals())
 
         node = _find_suitable_baremetal_node(context, instance)
 
@@ -204,7 +200,7 @@ class BareMetalDriver(driver.ComputeDriver):
         var = self.baremetal_nodes.define_vars(instance, network_info,
                                                block_device_info)
 
-        self.plug_vifs(instance, network_info, context=context)
+        self._plug_vifs(instance, network_info, context=context)
 
         self._firewall_driver.setup_basic_filtering(instance, network_info)
         self._firewall_driver.prepare_instance_filter(instance, network_info)
@@ -244,9 +240,7 @@ class BareMetalDriver(driver.ComputeDriver):
         _update_baremetal_state(ctx, node, instance, state)
 
     def destroy(self, instance, network_info, block_device_info=None):
-        LOG.debug("destroy: instance=%s", instance.__dict__)
-        LOG.debug("destroy: network_info=%s", network_info)
-        LOG.debug("destroy: block_device_info=%s", block_device_info)
+        LOG.debug("destroy: %s", locals())
         ctx = nova_context.get_admin_context()
 
         node = _get_baremetal_node_by_instance_id(instance['id'])
@@ -261,7 +255,6 @@ class BareMetalDriver(driver.ComputeDriver):
 
         pm = nodes.get_power_manager(node)
 
-        ## stop console
         pm.stop_console(node['id'])
 
         ## power off the node
@@ -339,6 +332,10 @@ class BareMetalDriver(driver.ComputeDriver):
             vcpus += node['cpus']
             memory_mb += node['memory_mb']
             local_gb += node['local_gb']
+            if node['instance_id']:
+                vcpus_used += node['cpus']
+                memory_mb_used += node['memory_mb']
+                local_gb_used += node['local_gb']
 
         dic = {'vcpus': vcpus,
                'memory_mb': memory_mb,
@@ -362,7 +359,7 @@ class BareMetalDriver(driver.ComputeDriver):
                 continue
 
             # Put prioirty to memory size.
-            # You can use CPU and HDD, if you change the following line.
+            # You can use CPU and HDD, if you change the following lines.
             if max_node['memory_mb'] < node['memory_mb']:
                 max_node = node
             elif max_node['memory_mb'] == node['memory_mb']:
@@ -422,11 +419,6 @@ class BareMetalDriver(driver.ComputeDriver):
         self._firewall_driver.unfilter_instance(instance_ref,
                                                 network_info=network_info)
 
-    def test_remove_vm(self, instance_name):
-        """Removes the named VM, as if it crashed. For testing."""
-        LOG.info(_("test_remove_vm: instance_name=%s") % (instance_name))
-        raise exception.InstanceNotFound(instance_id=instance_name)
-
     def _get_host_stats(self):
         dic = self._max_baremetal_resources(nova_context.get_admin_context())
         memory_total = dic['memory_mb'] * 1024 * 1024
@@ -442,28 +434,29 @@ class BareMetalDriver(driver.ComputeDriver):
           'host_memory_free': memory_free,
           'host_memory_free_computed': memory_free,
           'host_other_config': {},
-#          'host_ip_address': '192.168.1.109',
-#          'host_cpu_info': {},
           'disk_available': disk_total - disk_used,
           'disk_total': disk_total,
           'disk_used': disk_used,
-#          'host_uuid': 'cedb9b39-9388-41df-8891-c5c9a0c0fe5f',
           'host_name_label': FLAGS.host,
           'cpu_arch': self._extra_specs.get('cpu_arch'),
           'instance_type_extra_specs': self._extra_specs,
           }
 
     def update_host_status(self):
-        LOG.info(_("update_host_status:"))
+        LOG.debug(_("update_host_status:"))
         return self._get_host_stats()
 
     def get_host_stats(self, refresh=False):
-        LOG.info(_("get_host_stats: refresh=%s") % (refresh))
+        LOG.debug(_("get_host_stats: refresh=%s") % (refresh))
         return self._get_host_stats()
 
-    def plug_vifs(self, instance, network_info, context=None):
+    def plug_vifs(self, instance, network_info):
         """Plugin VIFs into networks."""
         LOG.debug("plug_vifs: %s", locals())
+        self._plug_vifs(instance, network_info)
+
+    def _plug_vifs(self, instance, network_info, context=None):
+        LOG.debug("_plug_vifs: %s", locals())
         if not context:
             context = nova_context.get_admin_context()
         node = _get_baremetal_node_by_instance_id(instance['id'])
