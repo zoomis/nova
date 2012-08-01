@@ -302,7 +302,7 @@ class BaremetalHostManagerTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'instance_get_all')
         self.stubs.Set(timeutils, 'utcnow', lambda: 31337)
 
-        def _fake_bm_node_get_all_by_service_host(context, service_host):
+        def _fake_bm_node_get_all(context, service_host=None):
             if service_host == 'host1':
                 return BAREMETAL_NODES_1
             elif service_host == 'host2':
@@ -317,8 +317,7 @@ class BaremetalHostManagerTestCase(test.TestCase):
         def _fake_bm_node_get_by_instance_id(context, instance_id):
             return None
 
-        self.stubs.Set(bmdb, 'bm_node_get_all_by_service_host',
-                _fake_bm_node_get_all_by_service_host)
+        self.stubs.Set(bmdb, 'bm_node_get_all', _fake_bm_node_get_all)
         self.stubs.Set(bmdb, 'bm_node_get_by_instance_id',
                 _fake_bm_node_get_by_instance_id)
 

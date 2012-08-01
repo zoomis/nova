@@ -72,17 +72,17 @@ class BareMetalNodesTestCase(BMDBTestCase):
     def test_get_by_service_host(self):
         self._create_hosts()
 
-        r = bmdb.bm_node_get_all_by_service_host(self.context, "host1")
+        r = bmdb.bm_node_get_all(self.context, service_host="host1")
         self.assertEquals(len(r), 1)
         self.assertEquals(r[0]['id'], self.h1['id'])
 
-        r = bmdb.bm_node_get_all_by_service_host(self.context, "host2")
+        r = bmdb.bm_node_get_all(self.context, service_host="host2")
         self.assertEquals(len(r), 2)
         ids = [x['id'] for x in r]
         self.assertIn(self.h2['id'], ids)
         self.assertIn(self.h3['id'], ids)
 
-        r = bmdb.bm_node_get_all_by_service_host(self.context, "host3")
+        r = bmdb.bm_node_get_all(self.context, service_host="host3")
         self.assertEquals(r, [])
 
     def test_destroy(self):

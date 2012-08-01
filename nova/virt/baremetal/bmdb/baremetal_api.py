@@ -61,16 +61,14 @@ IMPL = utils.LazyPluggable(
         sqlalchemy='nova.virt.baremetal.bmdb.sqlalchemy.baremetal_api')
 
 
-def bm_node_get_all(context):
-    return IMPL.bm_node_get_all(context)
+def bm_node_get_all(context, service_host=None, session=None):
+    return IMPL.bm_node_get_all(context,
+                                service_host=service_host,
+                                session=session)
 
 
 def bm_node_get(context, bm_node_id, session=None):
     return IMPL.bm_node_get(context, bm_node_id)
-
-
-def bm_node_get_all_by_service_host(context, service_host, session=None):
-    return IMPL.bm_node_get_all_by_service_host(context, service_host)
 
 
 def bm_node_get_by_instance_id(context, instance_id, session=None):

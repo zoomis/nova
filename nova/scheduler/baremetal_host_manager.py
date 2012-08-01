@@ -72,8 +72,8 @@ class BaremetalHostState(host_manager.HostState):
         """Update information about a host from its compute_node info."""
         if self.baremetal_compute:
             service_host = compute['service']['host']
-            bm_nodes = bmdb.bm_node_get_all_by_service_host(context,
-                                                            service_host)
+            bm_nodes = bmdb.bm_node_get_all(context,
+                                            service_host=service_host)
             for n in bm_nodes:
                 if not n['instance_id']:
                     self.available_nodes.append(n)

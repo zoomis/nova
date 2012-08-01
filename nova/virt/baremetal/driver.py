@@ -57,30 +57,16 @@ class NoSuitableBareMetalNode(exception.NovaException):
 
 
 def _get_baremetal_nodes(context):
-    nodes = bmdb.bm_node_get_all_by_service_host(context, FLAGS.host)
+    nodes = bmdb.bm_node_get_all(context, service_host=FLAGS.host)
     return nodes
 
 
 def _get_baremetal_node_by_instance_id(instance_id):
     ctx = nova_context.get_admin_context()
-    for host in _get_baremetal_nodes(ctx):
-        if host['instance_id'] == instance_id:
-            return host
-    return None
-
-
-def _get_baremetal_node_by_instance_name(instance_name):
-    context = nova_context.get_admin_context()
-    for node in _get_baremetal_nodes(context):
-        if not node['instance_id']:
-            continue
-        try:
-            inst = db.instance_get(context, node['instance_id'])
-            if inst['name'] == instance_name:
-                return node
-        except exception.InstanceNotFound:
-            continue
-    return None
+    node = bmdb.bm_node_get_by_instance_id(ctx, instance_id)
+    if node['service_host'] != FLAGS.host:
+        return None
+    return node
 
 
 def _find_suitable_baremetal_node(context, instance):

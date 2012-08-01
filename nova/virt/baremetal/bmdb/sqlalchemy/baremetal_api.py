@@ -76,17 +76,11 @@ def model_query(context, *args, **kwargs):
 
 
 @require_admin_context
-def bm_node_get_all(context, session=None):
+def bm_node_get_all(context, service_host=None, session=None):
     query = model_query(context, baremetal_models.BareMetalNode,
                         read_deleted="no", session=session)
-    return query.all()
-
-
-@require_admin_context
-def bm_node_get_all_by_service_host(context, service_host, session=None):
-    query = model_query(context, baremetal_models.BareMetalNode,
-                        read_deleted="no", session=session).\
-                   filter_by(service_host=service_host)
+    if service_host:
+        query = query.filter_by(service_host=service_host)
     return query.all()
 
 

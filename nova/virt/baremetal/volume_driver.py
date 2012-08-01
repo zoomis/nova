@@ -17,6 +17,7 @@
 #    under the License.
 
 from nova import context as nova_context
+from nova import db
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
@@ -26,8 +27,6 @@ from nova import utils
 from nova.virt.baremetal import bmdb
 from nova.virt import driver
 from nova.virt.libvirt import utils as libvirt_utils
-
-from nova.virt.baremetal.driver import _get_baremetal_node_by_instance_name
 
 opts = [
     cfg.BoolOpt('baremetal_use_unsafe_iscsi',
@@ -48,6 +47,20 @@ FLAGS = flags.FLAGS
 FLAGS.register_opts(opts)
 
 LOG = logging.getLogger(__name__)
+
+
+def _get_baremetal_node_by_instance_name(instance_name):
+    context = nova_context.get_admin_context()
+    for node in bmdb.bm_node_get_all(context, service_host=FLAGS.host):
+        if not node['instance_id']:
+            continue
+        try:
+            inst = db.instance_get(context, node['instance_id'])
+            if inst['name'] == instance_name:
+                return node
+        except exception.InstanceNotFound:
+            continue
+    return None
 
 
 def _create_iscsi_export_tgtadm(path, tid, iqn):
