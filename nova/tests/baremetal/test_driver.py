@@ -62,10 +62,10 @@ def class_path(class_):
     return class_.__module__ + '.' + class_.__name__
 
 
-class BaremetalConnectionTestCase(test.TestCase):
+class BaremetalDriverTestCase(test.TestCase):
 
     def setUp(self):
-        super(BaremetalConnectionTestCase, self).setUp()
+        super(BaremetalDriverTestCase, self).setUp()
         self.flags(baremetal_sql_connection='sqlite:///:memory:',
                    host=NODE['service_host'],
                    baremetal_driver='fake',
@@ -88,7 +88,7 @@ class BaremetalConnectionTestCase(test.TestCase):
         fake_image.stub_out_image_service(self.stubs)
 
     def tearDown(self):
-        super(BaremetalConnectionTestCase, self).tearDown()
+        super(BaremetalDriverTestCase, self).tearDown()
 
     def test_loading_baremetal_drivers(self):
         from nova.virt.baremetal import fake
@@ -150,6 +150,7 @@ class BaremetalConnectionTestCase(test.TestCase):
         context = test_utils.get_test_admin_context()
         self.stubs.Set(c, '_get_baremetal_nodes', lambda ctx: ns)
         drv = c.BareMetalDriver()
+
         dic = drv._max_baremetal_resources(context)
         self.assertEqual(dic.get('vcpus'), 1)
         self.assertEqual(dic.get('memory_mb'), 2000)
@@ -157,6 +158,14 @@ class BaremetalConnectionTestCase(test.TestCase):
         self.assertEqual(dic.get('vcpus_used'), 0)
         self.assertEqual(dic.get('memory_mb_used'), 0)
         self.assertEqual(dic.get('local_gb_used'), 0)
+        dic = drv._sum_baremetal_resources(context)
+        self.assertEqual(dic.get('vcpus'), 13)
+        self.assertEqual(dic.get('memory_mb'), 5000)
+        self.assertEqual(dic.get('local_gb'), 70)
+        self.assertEqual(dic.get('vcpus_used'), 0)
+        self.assertEqual(dic.get('memory_mb_used'), 0)
+        self.assertEqual(dic.get('local_gb_used'), 0)
+
         N4['instance_id'] = 1
         dic = drv._max_baremetal_resources(context)
         self.assertEqual(dic.get('vcpus'), 10)
@@ -165,6 +174,14 @@ class BaremetalConnectionTestCase(test.TestCase):
         self.assertEqual(dic.get('vcpus_used'), 0)
         self.assertEqual(dic.get('memory_mb_used'), 0)
         self.assertEqual(dic.get('local_gb_used'), 0)
+        dic = drv._sum_baremetal_resources(context)
+        self.assertEqual(dic.get('vcpus'), 13)
+        self.assertEqual(dic.get('memory_mb'), 5000)
+        self.assertEqual(dic.get('local_gb'), 70)
+        self.assertEqual(dic.get('vcpus_used'), 1)
+        self.assertEqual(dic.get('memory_mb_used'), 2000)
+        self.assertEqual(dic.get('local_gb_used'), 20)
+
         N3['instance_id'] = 2
         dic = drv._max_baremetal_resources(context)
         self.assertEqual(dic.get('vcpus'), 1)
@@ -173,6 +190,14 @@ class BaremetalConnectionTestCase(test.TestCase):
         self.assertEqual(dic.get('vcpus_used'), 0)
         self.assertEqual(dic.get('memory_mb_used'), 0)
         self.assertEqual(dic.get('local_gb_used'), 0)
+        dic = drv._sum_baremetal_resources(context)
+        self.assertEqual(dic.get('vcpus'), 13)
+        self.assertEqual(dic.get('memory_mb'), 5000)
+        self.assertEqual(dic.get('local_gb'), 70)
+        self.assertEqual(dic.get('vcpus_used'), 11)
+        self.assertEqual(dic.get('memory_mb_used'), 3000)
+        self.assertEqual(dic.get('local_gb_used'), 40)
+
         N2['instance_id'] = 3
         dic = drv._max_baremetal_resources(context)
         self.assertEqual(dic.get('vcpus'), 1)
@@ -181,6 +206,14 @@ class BaremetalConnectionTestCase(test.TestCase):
         self.assertEqual(dic.get('vcpus_used'), 0)
         self.assertEqual(dic.get('memory_mb_used'), 0)
         self.assertEqual(dic.get('local_gb_used'), 0)
+        dic = drv._sum_baremetal_resources(context)
+        self.assertEqual(dic.get('vcpus'), 13)
+        self.assertEqual(dic.get('memory_mb'), 5000)
+        self.assertEqual(dic.get('local_gb'), 70)
+        self.assertEqual(dic.get('vcpus_used'), 12)
+        self.assertEqual(dic.get('memory_mb_used'), 4000)
+        self.assertEqual(dic.get('local_gb_used'), 60)
+
         N1['instance_id'] = 4
         dic = drv._max_baremetal_resources(context)
         self.assertEqual(dic.get('vcpus'), 0)
@@ -189,6 +222,13 @@ class BaremetalConnectionTestCase(test.TestCase):
         self.assertEqual(dic.get('vcpus_used'), 0)
         self.assertEqual(dic.get('memory_mb_used'), 0)
         self.assertEqual(dic.get('local_gb_used'), 0)
+        dic = drv._sum_baremetal_resources(context)
+        self.assertEqual(dic.get('vcpus'), 13)
+        self.assertEqual(dic.get('memory_mb'), 5000)
+        self.assertEqual(dic.get('local_gb'), 70)
+        self.assertEqual(dic.get('vcpus_used'), 13)
+        self.assertEqual(dic.get('memory_mb_used'), 5000)
+        self.assertEqual(dic.get('local_gb_used'), 70)
 
         N2['instance_id'] = None
         dic = drv._max_baremetal_resources(context)
@@ -198,6 +238,13 @@ class BaremetalConnectionTestCase(test.TestCase):
         self.assertEqual(dic.get('vcpus_used'), 0)
         self.assertEqual(dic.get('memory_mb_used'), 0)
         self.assertEqual(dic.get('local_gb_used'), 0)
+        dic = drv._sum_baremetal_resources(context)
+        self.assertEqual(dic.get('vcpus'), 13)
+        self.assertEqual(dic.get('memory_mb'), 5000)
+        self.assertEqual(dic.get('local_gb'), 70)
+        self.assertEqual(dic.get('vcpus_used'), 12)
+        self.assertEqual(dic.get('memory_mb_used'), 4000)
+        self.assertEqual(dic.get('local_gb_used'), 50)
 
 
 class FindHostTestCase(test.TestCase):
