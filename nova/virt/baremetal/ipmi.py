@@ -16,6 +16,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+"""
+Class for IPMI power manager.
+"""
+
 import os
 import stat
 import tempfile

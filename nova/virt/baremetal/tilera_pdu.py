@@ -15,14 +15,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+"""
+Class for PDU power manager.
+"""
+
+import subprocess
+import time
+
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.baremetal import baremetal_states
-
-import subprocess
-import time
 
 flags.DECLARE('tile_monitor', 'nova.virt.baremetal.tilera')
 

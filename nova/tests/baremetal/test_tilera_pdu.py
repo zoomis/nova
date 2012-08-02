@@ -14,13 +14,13 @@
 #    under the License.
 
 """
-Tests for baremetal tilera_pdu driver
+Tests for baremetal tilera_pdu driver.
 """
-
-import mox
 
 import os
 import stat
+
+import mox
 
 from nova import flags
 from nova import test

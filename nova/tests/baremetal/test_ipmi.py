@@ -14,13 +14,13 @@
 #    under the License.
 
 """
-Tests for baremetal ipmi driver
+Tests for baremetal ipmi driver.
 """
-
-import mox
 
 import os
 import stat
+
+import mox
 
 from nova import flags
 from nova import test

@@ -1,3 +1,4 @@
+# Copyright (c) 2012 NTT DOCOMO, INC.
 # Copyright (c) 2011 OpenStack, LLC
 # All Rights Reserved.
 #
@@ -13,7 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """
-Tests For BaremetalHostManager
+Tests For BaremetalHostManager.
 """
 
 import datetime

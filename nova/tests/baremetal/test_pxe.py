@@ -14,7 +14,7 @@
 #    under the License.
 
 """
-Tests for baremetal pxe driver
+Tests for baremetal pxe driver.
 """
 
 import mox

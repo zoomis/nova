@@ -16,7 +16,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Possible baremetal node states for instances.
+"""
+Possible baremetal node states for instances.
 
 Compute instance baremetal states represent the state of an instance as it
 pertains to a user or administrator. When combined with task states

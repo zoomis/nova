@@ -15,6 +15,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+"""
+Class for PXE bare-metal nodes.
+"""
+
 import os
 import shutil
 
