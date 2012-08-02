@@ -181,9 +181,6 @@ Start Processes
 Register Baremetal Host and NIC
 =====
 
-Register Baremetal Host and NIC
-=====
-
 First, register a baremetal node. In this step, one of the NICs must be specified as a PXE NIC.
 Ensure the NIC is PXE-enabled and the NIC is selected as a primary boot device in BIOS.
 
