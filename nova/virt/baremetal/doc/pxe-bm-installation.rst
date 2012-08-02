@@ -172,6 +172,7 @@ Start Processes
 ======
 
 ::
+
 	(Currently, you might have trouble if run processes as a user other than the superuser...)
 	$ sudo bm_deploy_server &
 	$ sudo nova-scheduler &
