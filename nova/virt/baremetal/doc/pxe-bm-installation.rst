@@ -181,7 +181,13 @@ Start Processes
 Register Baremetal Host and NIC
 =====
 
-First, register a baremetal node. Next, register the baremetal node's NICs.
+Register Baremetal Host and NIC
+=====
+
+First, register a baremetal node. In this step, one of the NICs must be specified as a PXE NIC.
+Ensure the NIC is PXE-enabled and the NIC is selected as a primary boot device in BIOS.
+
+Next, register all the NICs except the PXE NIC specified in the first step.
 
 To register a baremetal node, use 'bm_node_create'.
 'bm_node_create' takes the parameters listed below.
@@ -206,7 +212,7 @@ To verify the node registration, run 'bm_node_list'::
 	ID        SERVICE_HOST  INSTANCE_ID   CPUS    Memory    Disk      PM_Address        PM_User           TERMINAL_PORT  PROV_MAC            PROV_VLAN
 	1         bm1           None          4       6144      64        172.27.2.116      test              8000   98:4b:e1:67:9a:4c   None
 
-To register NIC, use 'bm_interface_create'.
+To register a common NIC, use 'bm_interface_create'.
 'bm_interface_create' takes the parameters listed below.
 
 * --bm_node_id: ID of the baremetal node owns this NIC (the first column of 'bm_node_list')
