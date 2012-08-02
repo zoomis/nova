@@ -1,8 +1,13 @@
 General Bare-metal Provisioning README
 =====
 
-:Authors: mkkang@isi.edu, dkang@isi.edu, openstack-contributor-ml@nttdocomo.com
-:Date:   2012-08-01
+:Authors: 
+  [USC/ISI] Mikyung Kang <mkkang@isi.edu>, David Kang <dkang@isi.edu>
+
+  [NTT DOCOMO] Ken Igarashi <igarashik@nttdocomo.co.jp>
+
+  [VirtualTech Japan Inc.] Arata Notsu <notsu@virtualtech.jp>
+:Date:   2012-08-02
 :Version: 2012.8
 :Wiki: http://wiki.openstack.org/GeneralBareMetalProvisioningFramework
 
