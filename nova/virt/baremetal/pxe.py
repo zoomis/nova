@@ -295,7 +295,7 @@ class PXE:
             key = None
         net = ""
         nets = []
-        ifc_template = open(FLAGS.injected_network_template).read()
+        ifc_template = open(FLAGS.baremetal_injected_network_template).read()
         ifc_num = -1
         have_injected_networks = False
         for (network_ref, mapping) in network_info:
