@@ -339,7 +339,11 @@ global_opts = [
                     'formatted with on creation.'),
     cfg.StrOpt('root_helper',
                default='sudo',
-               help='Command prefix to use for running commands as root'),
+               help='Deprecated: command to use for running commands as root'),
+    cfg.StrOpt('rootwrap_config',
+               default=None,
+               help='Path to the rootwrap configuration file to use for '
+                    'running commands as root'),
     cfg.StrOpt('network_driver',
                default='nova.network.linux_net',
                help='Driver to use for network creation'),
@@ -415,7 +419,13 @@ global_opts = [
                default='noauth',
                help='The strategy to use for auth: noauth or keystone.'),
     cfg.ListOpt('non_inheritable_image_properties',
-                default=['cache_in_nova'],
+                default=['cache_in_nova',
+                         'instance_uuid',
+                         'user_id',
+                         'image_type',
+                         'backup_type',
+                         'min_ram',
+                         'min_disk'],
                 help='These are image properties which a snapshot should not'
                      ' inherit from an instance'),
 ]

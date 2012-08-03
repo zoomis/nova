@@ -96,7 +96,7 @@ IMAGE_FIXTURES = {
 
 def set_image_fixtures():
     image_service = fake_image.FakeImageService()
-    image_service.delete_all()
+    image_service.images.clear()
     for image_id, image_meta in IMAGE_FIXTURES.items():
         image_meta = image_meta['image_meta']
         image_meta['id'] = image_id
@@ -287,6 +287,15 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             pass
         self.stubs.Set(vmops.VMOps, 'inject_instance_metadata',
                        fake_inject_instance_metadata)
+
+        def fake_safe_copy_vdi(session, sr_ref, instance, vdi_to_copy_ref):
+            name_label = "fakenamelabel"
+            disk_type = "fakedisktype"
+            virtual_size = 777
+            return vm_utils.create_vdi(
+                    session, sr_ref, instance, name_label, disk_type,
+                    virtual_size)
+        self.stubs.Set(vm_utils, '_safe_copy_vdi', fake_safe_copy_vdi)
 
     def tearDown(self):
         super(XenAPIVMTestCase, self).tearDown()
@@ -741,7 +750,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
         self.network.allocate_for_instance(ctxt,
                           instance_id=2,
-                          instance_uuid="00000000-0000-0000-0000-000000000000",
+                          instance_uuid='00000000-0000-0000-0000-000000000002',
                           host=FLAGS.host,
                           vpn=None,
                           rxtx_factor=3,
@@ -851,6 +860,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         """Creates and spawns a test instance."""
         instance_values = {
             'id': instance_id,
+            'uuid': '00000000-0000-0000-0000-00000000000%d' % instance_id,
             'project_id': self.project_id,
             'user_id': self.user_id,
             'image_ref': 1,

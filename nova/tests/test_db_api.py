@@ -1,4 +1,5 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
+# encoding=UTF8
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
@@ -31,27 +32,6 @@ from nova import utils
 FLAGS = flags.FLAGS
 
 
-def _setup_networking(instance_id, ip='1.2.3.4', flo_addr='1.2.1.2'):
-    ctxt = context.get_admin_context()
-    network_ref = db.project_get_networks(ctxt,
-                                           'fake',
-                                           associate=True)[0]
-    vif = {'address': '56:12:12:12:12:12',
-           'network_id': network_ref['id'],
-           'instance_id': instance_id}
-    vif_ref = db.virtual_interface_create(ctxt, vif)
-
-    fixed_ip = {'address': ip,
-                'network_id': network_ref['id'],
-                'virtual_interface_id': vif_ref['id'],
-                'allocated': True,
-                'instance_id': instance_id}
-    db.fixed_ip_create(ctxt, fixed_ip)
-    fix_ref = db.fixed_ip_get_by_address(ctxt, ip)
-    db.floating_ip_create(ctxt, {'address': flo_addr,
-                                 'fixed_ip_id': fix_ref['id']})
-
-
 class DbApiTestCase(test.TestCase):
     def setUp(self):
         super(DbApiTestCase, self).setUp()
@@ -59,20 +39,29 @@ class DbApiTestCase(test.TestCase):
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
 
+    def create_instances_with_args(self, **kwargs):
+        args = {'reservation_id': 'a', 'image_ref': 1, 'host': 'host1',
+                'project_id': self.project_id}
+        args.update(kwargs)
+        return db.instance_create(self.context, args)
+
     def test_instance_get_all_by_filters(self):
-        args = {'reservation_id': 'a', 'image_ref': 1, 'host': 'host1'}
-        db.instance_create(self.context, args)
-        db.instance_create(self.context, args)
+        self.create_instances_with_args()
+        self.create_instances_with_args()
         result = db.instance_get_all_by_filters(self.context, {})
-        self.assertTrue(2, len(result))
+        self.assertEqual(2, len(result))
+
+    def test_instance_get_all_by_filters_unicode_value(self):
+        self.create_instances_with_args(display_name=u'test♥')
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'display_name': u'test'})
+        self.assertEqual(1, len(result))
 
     def test_instance_get_all_by_filters_deleted(self):
-        args1 = {'reservation_id': 'a', 'image_ref': 1, 'host': 'host1'}
-        inst1 = db.instance_create(self.context, args1)
-        args2 = {'reservation_id': 'b', 'image_ref': 1, 'host': 'host1'}
-        inst2 = db.instance_create(self.context, args2)
-        db.instance_destroy(self.context.elevated(), inst1['uuid'])
-        result = db.instance_get_all_by_filters(self.context.elevated(), {})
+        inst1 = self.create_instances_with_args()
+        inst2 = self.create_instances_with_args(reservation_id='b')
+        db.instance_destroy(self.context, inst1['uuid'])
+        result = db.instance_get_all_by_filters(self.context, {})
         self.assertEqual(2, len(result))
         self.assertIn(inst1.id, [result[0].id, result[1].id])
         self.assertIn(inst2.id, [result[0].id, result[1].id])
@@ -81,26 +70,42 @@ class DbApiTestCase(test.TestCase):
         else:
             self.assertTrue(result[1].deleted)
 
-    def test_migration_get_all_unconfirmed(self):
+    def test_migration_get_unconfirmed_by_dest_compute(self):
         ctxt = context.get_admin_context()
 
         # Ensure no migrations are returned.
-        results = db.migration_get_all_unconfirmed(ctxt, 10)
+        results = db.migration_get_unconfirmed_by_dest_compute(ctxt, 10,
+                'fake_host')
+        self.assertEqual(0, len(results))
+
+        # Ensure no migrations are returned.
+        results = db.migration_get_unconfirmed_by_dest_compute(ctxt, 10,
+                'fake_host2')
+        self.assertEqual(0, len(results))
+
+        updated_at = datetime.datetime(2000, 01, 01, 12, 00, 00)
+        values = {"status": "finished", "updated_at": updated_at,
+                "dest_compute": "fake_host2"}
+        migration = db.migration_create(ctxt, values)
+
+        # Ensure different host is not returned
+        results = db.migration_get_unconfirmed_by_dest_compute(ctxt, 10,
+                'fake_host')
         self.assertEqual(0, len(results))
 
         # Ensure one migration older than 10 seconds is returned.
-        updated_at = datetime.datetime(2000, 01, 01, 12, 00, 00)
-        values = {"status": "finished", "updated_at": updated_at}
-        migration = db.migration_create(ctxt, values)
-        results = db.migration_get_all_unconfirmed(ctxt, 10)
+        results = db.migration_get_unconfirmed_by_dest_compute(ctxt, 10,
+                'fake_host2')
         self.assertEqual(1, len(results))
         db.migration_update(ctxt, migration.id, {"status": "CONFIRMED"})
 
         # Ensure the new migration is not returned.
         updated_at = timeutils.utcnow()
-        values = {"status": "finished", "updated_at": updated_at}
+        values = {"status": "finished", "updated_at": updated_at,
+                "dest_compute": "fake_host2"}
         migration = db.migration_create(ctxt, values)
-        results = db.migration_get_all_unconfirmed(ctxt, 10)
+        results = db.migration_get_unconfirmed_by_dest_compute(ctxt, 10,
+                "fake_host2")
         self.assertEqual(0, len(results))
         db.migration_update(ctxt, migration.id, {"status": "CONFIRMED"})
 
@@ -329,7 +334,7 @@ class DbApiTestCase(test.TestCase):
         ctxt = context.get_admin_context()
         values = {'host': 'foo', 'hostname': 'myname'}
         instance = db.instance_create(ctxt, values)
-        values = {'address': 'bar', 'instance_id': instance['id']}
+        values = {'address': 'bar', 'instance_uuid': instance['uuid']}
         vif = db.virtual_interface_create(ctxt, values)
         values = {'address': 'baz',
                   'network_id': 1,

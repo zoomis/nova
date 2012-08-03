@@ -73,7 +73,6 @@ class ServerActionsControllerTest(test.TestCase):
         nova.tests.image.fake.stub_out_image_service(self.stubs)
         service_class = 'nova.image.glance.GlanceImageService'
         self.service = importutils.import_object(service_class)
-        self.service.delete_all()
         self.sent_to_glance = {}
         fakes.stub_out_glance_add_image(self.stubs, self.sent_to_glance)
         self.flags(allow_instance_snapshots=True,
@@ -707,6 +706,18 @@ class ServerActionsControllerTest(test.TestCase):
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._action_create_image,
+                          req, FAKE_UUID, body)
+
+    def test_locked(self):
+        def fake_locked(context, instance_uuid):
+            return {"name": "foo",
+                    "uuid": FAKE_UUID,
+                    "locked": True}
+        self.stubs.Set(nova.db, 'instance_get_by_uuid', fake_locked)
+        body = dict(reboot=dict(type="HARD"))
+        req = fakes.HTTPRequest.blank(self.url)
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller._action_reboot,
                           req, FAKE_UUID, body)
 
 

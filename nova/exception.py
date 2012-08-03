@@ -1007,7 +1007,7 @@ class QuotaError(NovaException):
 
 class TooManyInstances(QuotaError):
     message = _("Quota exceeded for %(overs)s: Requested %(req)s,"
-                " but already used %(used)d of %(allowed)d instances")
+                " but already used %(used)d of %(allowed)d %(resource)s")
 
 
 class VolumeSizeTooLarge(QuotaError):
@@ -1085,6 +1085,12 @@ class InstanceTypeCreateFailed(NovaException):
     message = _("Unable to create instance type")
 
 
+class InstancePasswordSetFailed(NovaException):
+    message = _("Failed to set admin password on %(instance)s "
+                "because %(reason)s")
+    safe = True
+
+
 class SolidFireAPIException(NovaException):
     message = _("Bad response from SolidFire API")
 
@@ -1119,6 +1125,10 @@ class TaskAlreadyRunning(NovaException):
 
 class TaskNotRunning(NovaException):
     message = _("Task %(task_name) is not running on host %(host)")
+
+
+class InstanceIsLocked(InstanceInvalidState):
+    message = _("Instance %(instance_uuid)s is locked")
 
 
 def get_context_from_function_and_args(function, args, kwargs):

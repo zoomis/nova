@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os.path
 import string
 
 from nova import test
@@ -32,6 +33,8 @@ class TargetAdminTestCase(object):
         self.vol_id = 'blaa'
 
         self.script_template = None
+        self.stubs.Set(os.path, 'isfile', lambda _: True)
+        self.stubs.Set(os, 'unlink', lambda _: '')
 
     def get_script_params(self):
         return {'tid': self.tid,
@@ -85,9 +88,9 @@ class TgtAdmTestCase(test.TestCase, TargetAdminTestCase):
         self.flags(iscsi_helper='tgtadm')
         self.flags(volumes_dir="./")
         self.script_template = "\n".join([
-        "/usr/sbin/tgt-admin --conf ./blaa --update blaa",
+        "tgt-admin --execute --conf ./blaa --update blaa",
         "tgtadm --op show --lld=iscsi --mode=target --tid=1",
-        "/usr/bin/tgt-admin --conf ./blaa --delete blaa"])
+        "tgt-admin --delete iqn.2010-10.org.openstack:volume-blaa"])
 
 
 class IetAdmTestCase(test.TestCase, TargetAdminTestCase):

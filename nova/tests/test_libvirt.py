@@ -1422,6 +1422,15 @@ class LibvirtConnTestCase(test.TestCase):
                 check = (lambda t: t.find('./os/kernel'), None)
             check_list.append(check)
 
+            # Hypervisors that only support vm_mode.HVM should
+            # not produce configuration that results in kernel
+            # arguments
+            if not expect_kernel and hypervisor_type in ['qemu', 'kvm']:
+                check = (lambda t: t.find('./os/root'), None)
+                check_list.append(check)
+                check = (lambda t: t.find('./os/cmdline'), None)
+                check_list.append(check)
+
             if expect_ramdisk:
                 check = (lambda t: t.find('./os/initrd').text.split(
                     '/')[1], 'ramdisk' + suffix)
@@ -1989,7 +1998,7 @@ class LibvirtConnTestCase(test.TestCase):
                 return FakeVirtDomain(fake_dom_xml)
 
             def _fake_flush(self, fake_pty):
-                with open(fake_pty, 'r+') as fp:
+                with open(fake_pty, 'r') as fp:
                     return fp.read()
 
             self.create_fake_libvirt_mock()
@@ -3303,15 +3312,24 @@ disk size: 4.4M''', ''))
         self.mox.ReplayAll()
         libvirt_utils.chown('/some/path', 'soren')
 
-    def test_extract_snapshot(self):
+    def _do_test_extract_snapshot(self, dest_format='raw', out_format='raw'):
         self.mox.StubOutWithMock(utils, 'execute')
-        utils.execute('qemu-img', 'convert', '-f', 'qcow2', '-O', 'raw',
+        utils.execute('qemu-img', 'convert', '-f', 'qcow2', '-O', out_format,
                       '-s', 'snap1', '/path/to/disk/image', '/extracted/snap')
 
         # Start test
         self.mox.ReplayAll()
         libvirt_utils.extract_snapshot('/path/to/disk/image', 'qcow2',
-                                       'snap1', '/extracted/snap', 'raw')
+                                       'snap1', '/extracted/snap', dest_format)
+
+    def test_extract_snapshot_raw(self):
+        self._do_test_extract_snapshot()
+
+    def test_extract_snapshot_iso(self):
+        self._do_test_extract_snapshot(dest_format='iso')
+
+    def test_extract_snapshot_qcow2(self):
+        self._do_test_extract_snapshot(dest_format='qcow2', out_format='qcow2')
 
     def test_load_file(self):
         dst_fd, dst_path = tempfile.mkstemp()
