@@ -142,12 +142,6 @@ compute_opts = [
     cfg.BoolOpt('instance_usage_audit',
                default=False,
                help="Generate periodic compute.instance.exists notifications"),
-    cfg.ListOpt('instance_type_extra_specs',
-               default=[],
-               help='a list of additional capabilities corresponding to '
-               'instance_type_extra_specs for this compute '
-               'host to advertise. Valid entries are name=value, pairs '
-               'For example, "key1:val1, key2:val2"'),
     ]
 
 FLAGS = flags.FLAGS
