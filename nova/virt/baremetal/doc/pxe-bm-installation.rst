@@ -149,7 +149,7 @@ Example::
 
 Next, set baremetal extra_spec to the instance type::
 
-	$ nova-manage instance_type set_key --name=bm.small --key cpu_arch --value 's== x86_64'
+	$ nova-manage instance_type set_key --name=bm.small --key cpu_arch --value 'x86_64'
 
 How to choose the value for flavor.
 -----

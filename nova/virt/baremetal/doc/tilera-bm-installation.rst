@@ -132,7 +132,7 @@ Example::
 
 Next, set baremetal extra_spec to the instance type::
 
-	$ nova-manage instance_type set_key --name=tp64.8x8 --key cpu_arch --value 's== tilepro64'
+	$ nova-manage instance_type set_key --name=tp64.8x8 --key cpu_arch --value 'tilepro64'
 
 
 How to choose the value for flavor.
