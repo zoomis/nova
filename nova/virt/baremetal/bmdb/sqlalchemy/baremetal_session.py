@@ -32,8 +32,8 @@ from nova.openstack.common import log as logging
 
 from nova.db.sqlalchemy.session import get_maker
 from nova.db.sqlalchemy.session import is_db_connection_error
-from nova.db.sqlalchemy.session import MySQLPingListener
-from nova.db.sqlalchemy.session import SynchronousSwitchListener
+from nova.db.sqlalchemy.session import ping_listener
+from nova.db.sqlalchemy.session import synchronous_switch_listener
 
 opts = [
     cfg.StrOpt('baremetal_sql_connection',
@@ -90,14 +90,15 @@ def get_engine():
                 engine_args["poolclass"] = StaticPool
                 engine_args["connect_args"] = {'check_same_thread': False}
 
-            if not FLAGS.sqlite_synchronous:
-                engine_args["listeners"] = [SynchronousSwitchListener()]
-
-        if 'mysql' in connection_dict.drivername:
-            engine_args['listeners'] = [MySQLPingListener()]
-
         _ENGINE = sqlalchemy.create_engine(FLAGS.baremetal_sql_connection,
                                            **engine_args)
+
+        if 'mysql' in connection_dict.drivername:
+            sqlalchemy.event.listen(_ENGINE, 'checkout', ping_listener)
+        elif "sqlite" in connection_dict.drivername:
+            if not FLAGS.sqlite_synchronous:
+                sqlalchemy.event.listen(_ENGINE, 'connect',
+                                        synchronous_switch_listener)
 
         try:
             _ENGINE.connect()
