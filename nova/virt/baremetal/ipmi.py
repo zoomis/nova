@@ -85,7 +85,7 @@ class IpmiError(Exception):
         return "%s: %s" % (self.status, self.msg)
 
 
-class Ipmi:
+class Ipmi(object):
 
     def __init__(self, address=None, user=None, password=None,
                  interface="lanplus"):
@@ -235,7 +235,7 @@ class Ipmi:
         return None
 
 
-class DummyIpmi:
+class DummyIpmi(object):
 
     def __init__(self):
         pass

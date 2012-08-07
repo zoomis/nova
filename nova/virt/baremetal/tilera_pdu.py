@@ -50,7 +50,7 @@ class PduError(Exception):
         return "%s: %s" % (self.status, self.message)
 
 
-class Pdu:
+class Pdu(object):
 
     def __init__(self, address=None, node_id=None):
         if address == None:

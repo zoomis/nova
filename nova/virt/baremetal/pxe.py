@@ -238,7 +238,7 @@ def _stop_per_host_pxe_server(tftp_root, vlan_id):
     iptables.apply()
 
 
-class PXE:
+class PXE(object):
 
     def __init__(self):
         if not FLAGS.baremetal_deploy_kernel:
