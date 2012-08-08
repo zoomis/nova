@@ -10,7 +10,7 @@ Packages
 
 * TFTP configuration::
 
-    $ cat /etc/xinetd.d/tftp 
+    $ cat /etc/xinetd.d/tftp
     # default: off
     # description: The tftp server serves files using the trivial file transfer \
     #       protocol.  The tftp protocol is often used to boot diskless \
@@ -77,7 +77,7 @@ Nova Directories
 
 
 
-Nova Flags 
+Nova Flags
 =====
 
 Set these flags in nova.conf::
@@ -91,7 +91,7 @@ Set these flags in nova.conf::
 	baremetal_driver = tilera
 	power_manager = tilera_pdu
 
-	# instance_type_extra_specs this baremetal compute 
+	# instance_type_extra_specs this baremetal compute
 	instanse_type_extra_specs = cpu_arch:tilepro64
 
 	# TFTP root
@@ -102,7 +102,7 @@ Set these flags in nova.conf::
 
 
 
-Nova Database 
+Nova Database
 =====
 
 Create the baremetal database. Grant all provileges to the user specified by the 'baremetal_sql_connection' flag.
@@ -208,7 +208,7 @@ To verify the NIC registration, run 'bm_interface_list'::
 
 	$ bm_interface_list
 	ID        BM_NODE_ID        MAC_ADDRESS         DATAPATH_ID       PORT_NO
-	1         1                 98:4b:e1:67:9a:4e   0x0               0  
+	1         1                 98:4b:e1:67:9a:4e   0x0               0
 
 
 

@@ -7,7 +7,7 @@ Non-PXE (Tilera) Baremetal Instance Creation
 
   euca-run-instances -t tp64.8x8 -k my.key ami-CCC
 
-2) nova-scheduler selects a baremetal nova-compute 
+2) nova-scheduler selects a baremetal nova-compute
    with the following configuration.
 
 ::
@@ -32,7 +32,7 @@ Non-PXE (Tilera) Baremetal Instance Creation
   baremetal_tftp_root = /tftpboot
   scheduler_host_manager=nova.scheduler.baremetal_host_manager.BaremetalHostManager
 
-3) The bare-metal nova-compute selects a bare-metal node from its pool 
+3) The bare-metal nova-compute selects a bare-metal node from its pool
    based on hardware resources and the instance type (# of cpus, memory, HDDs).
 
 4) The key injected file system is prepared and then NFS directory is configured for the bare-metal nodes.
@@ -42,7 +42,7 @@ Non-PXE (Tilera) Baremetal Instance Creation
 
 5) The baremetal nova-compute powers on the baremetal node thorough PDU(Power Distribution Unit).
 
-6) The images are deployed to bare-metal nodes. 
+6) The images are deployed to bare-metal nodes.
    nova-compute mounts AMI into NFS directory based on the id of the selected tilera bare-metal node.
 
 7) The bare-metal node is configured for network, ssh, and iptables rule.
