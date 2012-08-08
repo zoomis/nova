@@ -52,10 +52,10 @@ LOG = logging.getLogger(__name__)
 def _get_baremetal_node_by_instance_name(instance_name):
     context = nova_context.get_admin_context()
     for node in bmdb.bm_node_get_all(context, service_host=FLAGS.host):
-        if not node['instance_id']:
+        if not node['instance_uuid']:
             continue
         try:
-            inst = db.instance_get(context, node['instance_id'])
+            inst = db.instance_get_by_uuid(context, node['instance_uuid'])
             if inst['name'] == instance_name:
                 return node
         except exception.InstanceNotFound:

@@ -38,12 +38,12 @@ def main():
     #logging.setup()
     ctx = context.get_admin_context()
 
-    fmt = "%-8s  %-12s  %-12s  %-6s  %-8s  %-8s  %-16s  %-16s " + \
+    fmt = "%-8s  %-12s  %-36s  %-6s  %-8s  %-8s  %-16s  %-16s " + \
           "%-5s  %-18s  %-4s"
     print fmt % (
                 _('ID'),
                 _('SERVICE_HOST'),
-                _('INSTANCE_ID'),
+                _('INSTANCE_UUID'),
                 _('CPUS'),
                 _('Memory'),
                 _('Disk'),
@@ -54,7 +54,7 @@ def main():
                 _('PROV_VLAN'))
     ctxt = context.get_admin_context()
     for ph in bmdb.bm_node_get_all(ctxt):
-        print fmt % (ph.id, ph.service_host, ph.instance_id,
+        print fmt % (ph.id, ph.service_host, ph.instance_uuid,
                      ph.cpus, ph.memory_mb, ph.local_gb,
                      ph.pm_address, ph.pm_user,
                      ph.terminal_port,
