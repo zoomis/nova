@@ -163,6 +163,7 @@ def deploy_work(address, port, iqn, lun, image_path, pxe_config_path, root_mb,
         if not is_block_device(dev):
             sys.exit(1)
         make_partitions(dev, root_mb, swap_mb)
+        time.sleep(3)
         if not is_block_device(root_part):
             LOG.warn("root device '%s' not found", root_part)
             return
