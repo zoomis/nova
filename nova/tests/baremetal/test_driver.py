@@ -101,7 +101,7 @@ class BaremetalDriverTestCase(test.TestCase):
     def test_spawn(self):
         context = test_utils.get_test_admin_context()
         instance = test_utils.get_test_instance()
-        instance['id'] = 12345
+        instance['uuid'] = '12345'
         network_info = test_utils.get_test_network_info()
         block_device_info = None
         image_meta = test_utils.get_test_image_info(None, instance)
@@ -120,7 +120,7 @@ class BaremetalDriverTestCase(test.TestCase):
         self.mox.VerifyAll()
 
         n = bmdb.bm_node_get(context, self.node_id)
-        self.assertEqual(n['instance_id'], instance['id'])
+        self.assertEqual(n['instance_uuid'], instance['uuid'])
         self.assertEqual(n['task_state'], baremetal_states.ACTIVE)
 
     def test_get_host_stats(self):
@@ -137,7 +137,7 @@ class BaremetalDriverTestCase(test.TestCase):
         self.assertEqual(es['baremetal_driver'], 'fake')
         self.assertEqual(len(es), 5)
 
-    def test_max_baremetal_resources(self):
+    def test_max_sum_baremetal_resources(self):
         N1 = new_bm_node(service_host="host1", cpus=1, memory_mb=1000,
                          local_gb=10)
         N2 = new_bm_node(service_host="host1", cpus=1, memory_mb=1000,
@@ -166,7 +166,7 @@ class BaremetalDriverTestCase(test.TestCase):
         self.assertEqual(dic.get('memory_mb_used'), 0)
         self.assertEqual(dic.get('local_gb_used'), 0)
 
-        N4['instance_id'] = 1
+        N4['instance_uuid'] = '1'
         dic = drv._max_baremetal_resources(context)
         self.assertEqual(dic.get('vcpus'), 10)
         self.assertEqual(dic.get('memory_mb'), 1000)
@@ -182,7 +182,7 @@ class BaremetalDriverTestCase(test.TestCase):
         self.assertEqual(dic.get('memory_mb_used'), 2000)
         self.assertEqual(dic.get('local_gb_used'), 20)
 
-        N3['instance_id'] = 2
+        N3['instance_uuid'] = '2'
         dic = drv._max_baremetal_resources(context)
         self.assertEqual(dic.get('vcpus'), 1)
         self.assertEqual(dic.get('memory_mb'), 1000)
@@ -198,7 +198,7 @@ class BaremetalDriverTestCase(test.TestCase):
         self.assertEqual(dic.get('memory_mb_used'), 3000)
         self.assertEqual(dic.get('local_gb_used'), 40)
 
-        N2['instance_id'] = 3
+        N2['instance_uuid'] = '3'
         dic = drv._max_baremetal_resources(context)
         self.assertEqual(dic.get('vcpus'), 1)
         self.assertEqual(dic.get('memory_mb'), 1000)
@@ -214,7 +214,7 @@ class BaremetalDriverTestCase(test.TestCase):
         self.assertEqual(dic.get('memory_mb_used'), 4000)
         self.assertEqual(dic.get('local_gb_used'), 60)
 
-        N1['instance_id'] = 4
+        N1['instance_uuid'] = '4'
         dic = drv._max_baremetal_resources(context)
         self.assertEqual(dic.get('vcpus'), 0)
         self.assertEqual(dic.get('memory_mb'), 0)
@@ -230,7 +230,7 @@ class BaremetalDriverTestCase(test.TestCase):
         self.assertEqual(dic.get('memory_mb_used'), 5000)
         self.assertEqual(dic.get('local_gb_used'), 70)
 
-        N2['instance_id'] = None
+        N2['instance_uuid'] = None
         dic = drv._max_baremetal_resources(context)
         self.assertEqual(dic.get('vcpus'), 1)
         self.assertEqual(dic.get('memory_mb'), 1000)

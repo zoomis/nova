@@ -74,9 +74,9 @@ def _get_baremetal_nodes(context):
     return nodes
 
 
-def _get_baremetal_node_by_instance_id(instance_id):
+def _get_baremetal_node_by_instance_uuid(instance_uuid):
     ctx = nova_context.get_admin_context()
-    node = bmdb.bm_node_get_by_instance_id(ctx, instance_id)
+    node = bmdb.bm_node_get_by_instance_uuid(ctx, instance_uuid)
     if node['service_host'] != FLAGS.host:
         return None
     return node
@@ -85,7 +85,7 @@ def _get_baremetal_node_by_instance_id(instance_id):
 def _find_suitable_baremetal_node(context, instance):
     result = None
     for node in _get_baremetal_nodes(context):
-        if node['instance_id']:
+        if node['instance_uuid']:
             continue
         if node['registration_status'] != 'done':
             continue
@@ -105,11 +105,11 @@ def _find_suitable_baremetal_node(context, instance):
 
 
 def _update_baremetal_state(context, node, instance, state):
-    instance_id = None
+    instance_uuid = None
     if instance:
-        instance_id = instance['id']
+        instance_uuid = instance['uuid']
     bmdb.bm_node_update(context, node['id'],
-        {'instance_id': instance_id,
+        {'instance_uuid': instance_uuid,
         'task_state': state,
         })
 
@@ -162,8 +162,8 @@ class BareMetalDriver(driver.ComputeDriver):
         l = []
         ctx = nova_context.get_admin_context()
         for node in _get_baremetal_nodes(ctx):
-            if node['instance_id']:
-                inst = db.instance_get(ctx, node['instance_id'])
+            if node['instance_uuid']:
+                inst = db.instance_get(ctx, node['instance_uuid'])
                 if inst:
                     l.append(inst['name'])
         return l
@@ -213,10 +213,10 @@ class BareMetalDriver(driver.ComputeDriver):
             pm.start_console(node['terminal_port'], node['id'])
 
     def reboot(self, instance, network_info):
-        node = _get_baremetal_node_by_instance_id(instance['id'])
+        node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
 
         if not node:
-            raise exception.InstanceNotFound(instance_id=instance['id'])
+            raise exception.InstanceNotFound(instance_id=instance['uuid'])
 
         ctx = nova_context.get_admin_context()
         pm = nodes.get_power_manager(node)
@@ -227,9 +227,9 @@ class BareMetalDriver(driver.ComputeDriver):
         LOG.debug("destroy: %s", locals())
         ctx = nova_context.get_admin_context()
 
-        node = _get_baremetal_node_by_instance_id(instance['id'])
+        node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
         if not node:
-            LOG.warning("Instance:id='%s' not found" % instance['id'])
+            LOG.warning("Instance:id='%s' not found" % instance['uuid'])
             return
 
         var = self.baremetal_nodes.define_vars(instance, network_info,
@@ -278,9 +278,9 @@ class BareMetalDriver(driver.ComputeDriver):
                                                  instance_name, mountpoint)
 
     def get_info(self, instance):
-        node = _get_baremetal_node_by_instance_id(instance['id'])
+        node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
         if not node:
-            raise exception.InstanceNotFound(instance_id=instance['id'])
+            raise exception.InstanceNotFound(instance_id=instance['uuid'])
         pm = nodes.get_power_manager(node)
         ps = power_state.SHUTDOWN
         if pm.is_power_on():
@@ -316,7 +316,7 @@ class BareMetalDriver(driver.ComputeDriver):
             vcpus += node['cpus']
             memory_mb += node['memory_mb']
             local_gb += node['local_gb']
-            if node['instance_id']:
+            if node['instance_uuid']:
                 vcpus_used += node['cpus']
                 memory_mb_used += node['memory_mb']
                 local_gb_used += node['local_gb']
@@ -339,7 +339,7 @@ class BareMetalDriver(driver.ComputeDriver):
         for node in _get_baremetal_nodes(ctxt):
             if node['registration_status'] != 'done':
                 continue
-            if node['instance_id']:
+            if node['instance_uuid']:
                 continue
 
             # Put prioirty to memory size.
@@ -443,7 +443,7 @@ class BareMetalDriver(driver.ComputeDriver):
         LOG.debug("_plug_vifs: %s", locals())
         if not context:
             context = nova_context.get_admin_context()
-        node = _get_baremetal_node_by_instance_id(instance['id'])
+        node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
         if node:
             pifs = bmdb.bm_interface_get_all_by_bm_node_id(context, node['id'])
             for pif in pifs:
@@ -462,5 +462,5 @@ class BareMetalDriver(driver.ComputeDriver):
         self._image_cache_manager.verify_base_images(context)
 
     def get_console_output(self, instance):
-        node = _get_baremetal_node_by_instance_id(instance['id'])
+        node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
         return self.baremetal_nodes.get_console_output(node, instance)

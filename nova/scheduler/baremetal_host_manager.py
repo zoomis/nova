@@ -75,7 +75,7 @@ class BaremetalHostState(host_manager.HostState):
             bm_nodes = bmdb.bm_node_get_all(context,
                                             service_host=service_host)
             for n in bm_nodes:
-                if not n['instance_id']:
+                if not n['instance_uuid']:
                     self.available_nodes.append(n)
 
             """those sorting should be decided by weight in a scheduler."""
@@ -115,10 +115,10 @@ class BaremetalHostState(host_manager.HostState):
         """Update information about a host from instance info."""
         if self.baremetal_compute:
             context = ctx.get_admin_context()
-            instance_id = instance.get('id', None)
-            if instance_id:
-                bm_node = bmdb.bm_node_get_by_instance_id(context,
-                                                          instance['id'])
+            instance_uuid = instance.get('uuid', None)
+            if instance_uuid:
+                bm_node = bmdb.bm_node_get_by_instance_uuid(context,
+                                                            instance['uuid'])
             else:
                 bm_node = None
 

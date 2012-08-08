@@ -71,8 +71,8 @@ def bm_node_get(context, bm_node_id, session=None):
     return IMPL.bm_node_get(context, bm_node_id)
 
 
-def bm_node_get_by_instance_id(context, instance_id, session=None):
-    return IMPL.bm_node_get_by_instance_id(context, instance_id)
+def bm_node_get_by_instance_uuid(context, instance_uuid, session=None):
+    return IMPL.bm_node_get_by_instance_uuid(context, instance_uuid)
 
 
 def bm_node_create(context, values):

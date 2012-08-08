@@ -75,82 +75,82 @@ BAREMETAL_INSTANCES = [
 ]
 
 BAREMETAL_NODES = [
-        dict(cpus=1, instance_id=None, ipmi_address='172.27.2.110',
+        dict(cpus=1, instance_uuid=None, ipmi_address='172.27.2.110',
                 memory_mb=512, local_gb=0),
-        dict(cpus=1, instance_id=None, ipmi_address='172.27.2.110',
+        dict(cpus=1, instance_uuid=None, ipmi_address='172.27.2.110',
                 memory_mb=2048, local_gb=0),
 ]
 
 BAREMETAL_NODES_1 = [
-        dict(cpus=1, instance_id=None, ipmi_address='172.27.2.111',
+        dict(cpus=1, instance_uuid=None, ipmi_address='172.27.2.111',
                 memory_mb=512, local_gb=0),
-        dict(cpus=1, instance_id=None, ipmi_address='172.27.2.111',
+        dict(cpus=1, instance_uuid=None, ipmi_address='172.27.2.111',
                 memory_mb=1024, local_gb=0),
-        dict(cpus=2, instance_id=None, ipmi_address='172.27.2.111',
+        dict(cpus=2, instance_uuid=None, ipmi_address='172.27.2.111',
                 memory_mb=2048, local_gb=0),
-        dict(cpus=2, instance_id=None, ipmi_address='172.27.2.111',
+        dict(cpus=2, instance_uuid=None, ipmi_address='172.27.2.111',
                 memory_mb=1024, local_gb=0),
-        dict(cpus=3, instance_id=None, ipmi_address='172.27.2.111',
+        dict(cpus=3, instance_uuid=None, ipmi_address='172.27.2.111',
                 memory_mb=4096, local_gb=0),
-        dict(cpus=3, instance_id=None, ipmi_address='172.27.2.111',
+        dict(cpus=3, instance_uuid=None, ipmi_address='172.27.2.111',
                 memory_mb=8192, local_gb=0),
         # No matching host
-        dict(cpus=1, instance_id=1, ipmi_address='172.27.2.111',
+        dict(cpus=1, instance_uuid='1', ipmi_address='172.27.2.111',
                 memory_mb=512, local_gb=0),
-        dict(cpus=4, instance_id=1, ipmi_address='172.27.2.111',
+        dict(cpus=4, instance_uuid='1', ipmi_address='172.27.2.111',
                 memory_mb=10240, local_gb=0),
 ]
 
 BAREMETAL_NODES_2 = [
-        dict(cpus=3, instance_id=None, ipmi_address='172.27.2.112',
+        dict(cpus=3, instance_uuid=None, ipmi_address='172.27.2.112',
                 memory_mb=2048, local_gb=0),
-        dict(cpus=4, instance_id=None, ipmi_address='172.27.2.112',
+        dict(cpus=4, instance_uuid=None, ipmi_address='172.27.2.112',
                 memory_mb=1024, local_gb=0),
-        dict(cpus=2, instance_id=None, ipmi_address='172.27.2.112',
+        dict(cpus=2, instance_uuid=None, ipmi_address='172.27.2.112',
                 memory_mb=512, local_gb=0),
-        dict(cpus=3, instance_id=None, ipmi_address='172.27.2.112',
+        dict(cpus=3, instance_uuid=None, ipmi_address='172.27.2.112',
                 memory_mb=8192, local_gb=0),
-        dict(cpus=4, instance_id=None, ipmi_address='172.27.2.112',
+        dict(cpus=4, instance_uuid=None, ipmi_address='172.27.2.112',
                 memory_mb=1024, local_gb=0),
-        dict(cpus=2, instance_id=None, ipmi_address='172.27.2.112',
+        dict(cpus=2, instance_uuid=None, ipmi_address='172.27.2.112',
                 memory_mb=4096, local_gb=0),
         # No matching host
-        dict(cpus=1, instance_id=2, ipmi_address='172.27.2.112',
+        dict(cpus=1, instance_uuid='2', ipmi_address='172.27.2.112',
                 memory_mb=512, local_gb=0),
-        dict(cpus=4, instance_id=2, ipmi_address='172.27.2.112',
+        dict(cpus=4, instance_uuid='2', ipmi_address='172.27.2.112',
                 memory_mb=10240, local_gb=0),
 ]
 
 BAREMETAL_NODES_3 = [
-        dict(cpus=4, instance_id=None, ipmi_address='172.27.2.113',
+        dict(cpus=4, instance_uuid=None, ipmi_address='172.27.2.113',
                 memory_mb=512, local_gb=0),
-        dict(cpus=4, instance_id=None, ipmi_address='172.27.2.113',
+        dict(cpus=4, instance_uuid=None, ipmi_address='172.27.2.113',
                 memory_mb=2048, local_gb=0),
-        dict(cpus=5, instance_id=None, ipmi_address='172.27.2.113',
+        dict(cpus=5, instance_uuid=None, ipmi_address='172.27.2.113',
                 memory_mb=8192, local_gb=0),
-        dict(cpus=5, instance_id=None, ipmi_address='172.27.2.113',
+        dict(cpus=5, instance_uuid=None, ipmi_address='172.27.2.113',
                 memory_mb=1024, local_gb=0),
         # No matching host
-        dict(cpus=1, instance_id=3, ipmi_address='172.27.2.113',
+        dict(cpus=1, instance_uuid='3', ipmi_address='172.27.2.113',
                 memory_mb=512, local_gb=0),
-        dict(cpus=4, instance_id=3, ipmi_address='172.27.2.113',
+        dict(cpus=4, instance_uuid='3', ipmi_address='172.27.2.113',
                 memory_mb=10240, local_gb=0),
 ]
 
 
 BAREMETAL_NODES_4 = [
-        dict(cpus=5, instance_id=None, ipmi_address='172.27.2.114',
+        dict(cpus=5, instance_uuid=None, ipmi_address='172.27.2.114',
                 memory_mb=512, local_gb=0),
-        dict(cpus=5, instance_id=None, ipmi_address='172.27.2.114',
+        dict(cpus=5, instance_uuid=None, ipmi_address='172.27.2.114',
                 memory_mb=8192, local_gb=0),
-        dict(cpus=6, instance_id=None, ipmi_address='172.27.2.114',
+        dict(cpus=6, instance_uuid=None, ipmi_address='172.27.2.114',
                 memory_mb=512, local_gb=0),
-        dict(cpus=6, instance_id=None, ipmi_address='172.27.2.114',
+        dict(cpus=6, instance_uuid=None, ipmi_address='172.27.2.114',
                 memory_mb=8192, local_gb=0),
         # No matching host
-        dict(cpus=1, instance_id=4, ipmi_address='172.27.2.114',
+        dict(cpus=1, instance_uuid='4', ipmi_address='172.27.2.114',
                 memory_mb=512, local_gb=0),
-        dict(cpus=4, instance_id=4, ipmi_address='172.27.2.114',
+        dict(cpus=4, instance_uuid='4', ipmi_address='172.27.2.114',
                 memory_mb=10240, local_gb=0),
 ]
 
@@ -315,12 +315,12 @@ class BaremetalHostManagerTestCase(test.TestCase):
             else:
                 return {}
 
-        def _fake_bm_node_get_by_instance_id(context, instance_id):
+        def _fake_bm_node_get_by_instance_uuid(context, instance_uuid):
             return None
 
         self.stubs.Set(bmdb, 'bm_node_get_all', _fake_bm_node_get_all)
-        self.stubs.Set(bmdb, 'bm_node_get_by_instance_id',
-                _fake_bm_node_get_by_instance_id)
+        self.stubs.Set(bmdb, 'bm_node_get_by_instance_uuid',
+                _fake_bm_node_get_by_instance_uuid)
 
         db.compute_node_get_all(context).AndReturn(BAREMETAL_COMPUTE_NODES)
 
