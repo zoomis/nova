@@ -168,21 +168,6 @@ class BareMetalDriver(driver.ComputeDriver):
                     l.append(inst['name'])
         return l
 
-    def list_instances_detail(self):
-        l = []
-        ctx = nova_context.get_admin_context()
-        for node in _get_baremetal_nodes(ctx):
-            if node['instance_id']:
-                pm = nodes.get_power_manager(node)
-                ps = power_state.SHUTDOWN
-                if pm.is_power_on():
-                    ps = power_state.RUNNING
-                inst = db.instance_get(ctx, node['instance_id'])
-                if inst:
-                    ii = driver.InstanceInfo(inst['name'], ps)
-                    l.append(ii)
-        return l
-
     def spawn(self, context, instance, image_meta,
               network_info=None, block_device_info=None):
         LOG.debug("spawn: %s", locals())

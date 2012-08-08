@@ -257,16 +257,18 @@ class PublishErrorsHandler(logging.Handler):
                             dict(error=record.msg))
 
 
-def handle_exception(type, value, tb):
-    extra = {}
-    if CONF.verbose:
-        extra['exc_info'] = (type, value, tb)
-    getLogger().critical(str(value), **extra)
+def _create_logging_excepthook(product_name):
+    def logging_excepthook(type, value, tb):
+        extra = {}
+        if CONF.verbose:
+            extra['exc_info'] = (type, value, tb)
+        getLogger(product_name).critical(str(value), **extra)
+    return logging_excepthook
 
 
 def setup(product_name):
     """Setup logging."""
-    sys.excepthook = handle_exception
+    sys.excepthook = _create_logging_excepthook(product_name)
 
     if CONF.log_config:
         try:
@@ -356,17 +358,6 @@ def _setup_logging_from_conf(product_name):
         logger.setLevel(level)
         for handler in log_root.handlers:
             logger.addHandler(handler)
-
-    # NOTE(jkoelker) Clear the handlers for the root logger that was setup
-    #                by basicConfig in nova/__init__.py and install the
-    #                NullHandler.
-    root = logging.getLogger()
-    for handler in root.handlers:
-        root.removeHandler(handler)
-    handler = NullHandler()
-    handler.setFormatter(logging.Formatter())
-    root.addHandler(handler)
-
 
 _loggers = {}
 

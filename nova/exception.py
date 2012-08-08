@@ -327,6 +327,10 @@ class InstanceNotInRescueMode(Invalid):
     message = _("Instance %(instance_id)s is not in rescue mode")
 
 
+class InstanceNotReady(Invalid):
+    message = _("Instance %(instance_id)s is not ready")
+
+
 class InstanceSuspendFailure(Invalid):
     message = _("Failed to suspend instance") + ": %(reason)s"
 
@@ -719,6 +723,11 @@ class QuotaNotFound(NotFound):
 
 class QuotaResourceUnknown(QuotaNotFound):
     message = _("Unknown quota resources %(unknown)s.")
+
+
+class UserQuotaNotFound(QuotaNotFound):
+    message = _("Quota for user %(user_id)s in project %(project_id)s "
+                "could not be found.")
 
 
 class ProjectQuotaNotFound(QuotaNotFound):

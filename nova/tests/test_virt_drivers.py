@@ -85,8 +85,16 @@ class _FakeDriverBackendTestCase(test.TestCase):
         def fake_extend(image, size):
             pass
 
+        def fake_migrateToURI(*a):
+            pass
+
         self.stubs.Set(nova.virt.libvirt.driver.disk,
                        'extend', fake_extend)
+
+        # Like the existing fakelibvirt.migrateToURI, do nothing,
+        # but don't fail for these tests.
+        self.stubs.Set(nova.virt.libvirt.driver.libvirt.Domain,
+                       'migrateToURI', fake_migrateToURI)
 
     def _teardown_fakelibvirt(self):
         # Restore libvirt
@@ -204,17 +212,13 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.connection.list_instances()
 
     @catch_notimplementederror
-    def test_list_instances_detail(self):
-        self.connection.list_instances_detail()
-
-    @catch_notimplementederror
     def test_spawn(self):
         instance_ref, network_info = self._get_running_instance()
         domains = self.connection.list_instances()
         self.assertIn(instance_ref['name'], domains)
 
-        domains_details = self.connection.list_instances_detail()
-        self.assertIn(instance_ref['name'], [i.name for i in domains_details])
+        num_instances = self.connection.get_num_instances()
+        self.assertEqual(1, num_instances)
 
     @catch_notimplementederror
     def test_snapshot_not_running(self):
@@ -466,7 +470,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     def test_live_migration(self):
         instance_ref, network_info = self._get_running_instance()
         self.connection.live_migration(self.ctxt, instance_ref, 'otherhost',
-                                       None, None)
+                                       lambda *a: None, lambda *a: None)
 
     @catch_notimplementederror
     def _check_host_status_fields(self, host_status):
