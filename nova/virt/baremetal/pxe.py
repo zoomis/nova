@@ -277,7 +277,7 @@ class PXE(object):
         nics_in_order.append(node['prov_mac_address'])
 
         # rename nics to be in the order in the DB
-        LOG.debug("injecting persisitent net")
+        LOG.debug("injecting persistent net")
         rules = ""
         i = 0
         for hwaddr in nics_in_order:

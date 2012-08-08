@@ -64,7 +64,6 @@ def _get_baremetal_node_by_instance_name(instance_name):
 
 
 def _create_iscsi_export_tgtadm(path, tid, iqn):
-    LOG.debug("_create_iscsi_export_tgtadm: %s", locals())
     utils.execute('tgtadm', '--lld', 'iscsi',
                   '--mode', 'target',
                   '--op', 'new',
@@ -81,7 +80,6 @@ def _create_iscsi_export_tgtadm(path, tid, iqn):
 
 
 def _allow_iscsi_tgtadm(tid, address):
-    LOG.debug("_allow_iscsi_tgtadm: %s", locals())
     utils.execute('tgtadm', '--lld', 'iscsi',
                   '--mode', 'target',
                   '--op', 'bind',
@@ -91,7 +89,6 @@ def _allow_iscsi_tgtadm(tid, address):
 
 
 def _delete_iscsi_export_tgtadm(tid):
-    LOG.debug("_delete_iscsi_export_tgtadm: %s", locals())
     try:
         utils.execute('tgtadm', '--lld', 'iscsi',
                   '--mode', 'logicalunit',
@@ -117,10 +114,10 @@ def _delete_iscsi_export_tgtadm(tid):
     # catch a ProcessExecutionError and test its exit_code is 22.
     try:
         utils.execute('tgtadm', '--lld', 'iscsi',
-            '--mode', 'target',
-            '--op', 'show',
-            '--tid', tid,
-            run_as_root=True)
+                      '--mode', 'target',
+                      '--op', 'show',
+                      '--tid', tid,
+                      run_as_root=True)
     except exception.ProcessExecutionError as e:
         if e.exit_code == 22:
             # OK, the tid is deleted
@@ -129,13 +126,12 @@ def _delete_iscsi_export_tgtadm(tid):
     raise exception.NovaException("tid %s is not deleted" % tid)
 
 
-# a rough work
 def _list_backingstore_path():
     import re
     out, _ = utils.execute('tgtadm', '--lld', 'iscsi',
-            '--mode', 'target',
-            '--op', 'show',
-            run_as_root=True)
+                           '--mode', 'target',
+                           '--op', 'show',
+                           run_as_root=True)
     l = []
     for line in out.split('\n'):
         m = re.search(r'Backing store path: (.*)$', line)
@@ -193,7 +189,6 @@ class LibvirtVolumeDriver(VolumeDriver):
         return method(connection_info, *args, **kwargs)
 
     def attach_volume(self, connection_info, instance_name, mountpoint):
-        LOG.info("attach_volume: %s", locals())
         node = _get_baremetal_node_by_instance_name(instance_name)
         if not node:
             raise exception.InstanceNotFound(instance_id=instance_name)
@@ -223,9 +218,6 @@ class LibvirtVolumeDriver(VolumeDriver):
 
     @exception.wrap_exception()
     def detach_volume(self, connection_info, instance_name, mountpoint):
-        LOG.info("detach_volume: connection_info=%s instance_name=%s "
-                 "mountpoint=%s",
-                 connection_info, instance_name, mountpoint)
         mount_device = mountpoint.rpartition("/")[2]
         try:
             volume_id = connection_info['data']['volume_id']

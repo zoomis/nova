@@ -118,7 +118,6 @@ class BareMetalDriver(driver.ComputeDriver):
     """BareMetal hypervisor driver."""
 
     def __init__(self):
-        LOG.info(_("BareMetal driver __init__"))
         super(BareMetalDriver, self).__init__()
 
         self.baremetal_nodes = nodes.get_baremetal_nodes()
@@ -170,8 +169,6 @@ class BareMetalDriver(driver.ComputeDriver):
 
     def spawn(self, context, instance, image_meta,
               network_info=None, block_device_info=None):
-        LOG.debug("spawn: %s", locals())
-
         node = _find_suitable_baremetal_node(context, instance)
 
         if not node:
@@ -224,7 +221,6 @@ class BareMetalDriver(driver.ComputeDriver):
         _update_baremetal_state(ctx, node, instance, state)
 
     def destroy(self, instance, network_info, block_device_info=None):
-        LOG.debug("destroy: %s", locals())
         ctx = nova_context.get_admin_context()
 
         node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
@@ -285,7 +281,6 @@ class BareMetalDriver(driver.ComputeDriver):
         ps = power_state.SHUTDOWN
         if pm.is_power_on():
             ps = power_state.RUNNING
-        LOG.debug("power_state=%s", ps)
         return {'state': ps,
                 'max_mem': node['memory_mb'],
                 'mem': node['memory_mb'],
@@ -427,20 +422,16 @@ class BareMetalDriver(driver.ComputeDriver):
           }
 
     def update_host_status(self):
-        LOG.debug(_("update_host_status:"))
         return self._get_host_stats()
 
     def get_host_stats(self, refresh=False):
-        LOG.debug(_("get_host_stats: refresh=%s") % (refresh))
         return self._get_host_stats()
 
     def plug_vifs(self, instance, network_info):
         """Plugin VIFs into networks."""
-        LOG.debug("plug_vifs: %s", locals())
         self._plug_vifs(instance, network_info)
 
     def _plug_vifs(self, instance, network_info, context=None):
-        LOG.debug("_plug_vifs: %s", locals())
         if not context:
             context = nova_context.get_admin_context()
         node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
@@ -453,7 +444,6 @@ class BareMetalDriver(driver.ComputeDriver):
             self._vif_driver.plug(instance, (network, mapping))
 
     def _unplug_vifs(self, instance, network_info):
-        LOG.debug("_unplug_vifs: %s", locals())
         for (network, mapping) in network_info:
             self._vif_driver.unplug(instance, (network, mapping))
 
