@@ -52,7 +52,7 @@ def get_baremetal_nodes():
     elif d == 'fake':
         return fake.get_baremetal_nodes()
     else:
-        raise exception.NovaException(_("Unknown baremetal driver %(d)s"))
+        raise exception.NovaException(_("Unknown baremetal driver %s" % d))
 
 
 def get_power_manager(node, **kwargs):
@@ -64,4 +64,4 @@ def get_power_manager(node, **kwargs):
     if d == 'dummy':
         return ipmi.get_power_manager_dummy(node, **kwargs)
     else:
-        raise exception.NovaException(_("Unknown power manager %(d)s"))
+        raise exception.NovaException(_("Unknown power manager %s" % d))
