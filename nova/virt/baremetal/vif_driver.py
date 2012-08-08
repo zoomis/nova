@@ -37,7 +37,7 @@ class BareMetalVIFDriver(VIFDriver):
         LOG.debug("plug: %s", locals())
         network, mapping = vif
         ctx = context.get_admin_context()
-        node = bmdb.bm_node_get_by_instance_id(ctx, instance['id'])
+        node = bmdb.bm_node_get_by_instance_uuid(ctx, instance['uuid'])
         if not node:
             return
         pifs = bmdb.bm_interface_get_all_by_bm_node_id(ctx, node['id'])
