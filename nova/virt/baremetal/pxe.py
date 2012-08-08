@@ -254,7 +254,7 @@ class PXE(object):
                                          instance['name'])
         if FLAGS.baremetal_pxe_vlan_per_host:
             var['tftp_root'] = os.path.join(FLAGS.baremetal_tftp_root,
-                                            str(instance['id']))
+                                            str(instance['uuid']))
         else:
             var['tftp_root'] = FLAGS.baremetal_tftp_root
         var['network_info'] = network_info
@@ -416,10 +416,10 @@ class PXE(object):
         if FLAGS.baremetal_pxe_vlan_per_host:
             tftp_paths = [i[1] for i in images]
         else:
-            tftp_paths = [os.path.join(str(instance['id']), i[1])
+            tftp_paths = [os.path.join(str(instance['uuid']), i[1])
                     for i in images]
             libvirt_utils.ensure_tree(
-                    os.path.join(tftp_root, str(instance['id'])))
+                    os.path.join(tftp_root, str(instance['uuid'])))
 
         LOG.debug("tftp_paths=%s", tftp_paths)
 
@@ -483,7 +483,7 @@ class PXE(object):
             bmdb.bm_pxe_ip_disassociate(context, node['id'])
             tftp_image_dir = tftp_root
         else:
-            tftp_image_dir = os.path.join(tftp_root, str(instance['id']))
+            tftp_image_dir = os.path.join(tftp_root, str(instance['uuid']))
         shutil.rmtree(tftp_image_dir, ignore_errors=True)
 
         pxe_config_path = os.path.join(tftp_root,
