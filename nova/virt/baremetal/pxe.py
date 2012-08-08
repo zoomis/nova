@@ -348,7 +348,7 @@ class PXE(object):
         if any((key, net, metadata, admin_password)):
             inst_name = inst['name']
 
-            img_id = inst.image_ref
+            img_id = inst['image_ref']
 
             for injection in ('metadata', 'key', 'net', 'admin_password'):
                 if locals()[injection]:
