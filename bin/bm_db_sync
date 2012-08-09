@@ -27,8 +27,6 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
 from nova import flags
 from nova.virt.baremetal.bmdb import migration
 
-FLAGS = flags.FLAGS
-
 
 def main():
     argv = flags.parse_args(sys.argv)
