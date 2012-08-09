@@ -169,7 +169,7 @@ flags.DECLARE('libvirt_volume_drivers', 'nova.virt.libvirt.driver')
 
 
 class LibvirtVolumeDriver(VolumeDriver):
-    """The VolumeDriver deligates nova.virt.libvirt.volume."""
+    """The VolumeDriver deligates to nova.virt.libvirt.volume."""
 
     def __init__(self):
         super(LibvirtVolumeDriver, self).__init__()
@@ -200,8 +200,8 @@ class LibvirtVolumeDriver(VolumeDriver):
                         "No fixed PXE IP is associated to %s" % instance_name)
         mount_device = mountpoint.rpartition("/")[2]
         conf = self._volume_driver_method('connect_volume',
-                                         connection_info,
-                                         mount_device)
+                                          connection_info,
+                                          mount_device)
         LOG.debug("conf=%s", conf)
         device_path = connection_info['data']['device_path']
         volume_id = connection_info['data']['volume_id']
@@ -225,8 +225,8 @@ class LibvirtVolumeDriver(VolumeDriver):
             _delete_iscsi_export_tgtadm(tid)
         finally:
             self._volume_driver_method('disconnect_volume',
-                                      connection_info,
-                                      mount_device)
+                                       connection_info,
+                                       mount_device)
 
     def get_all_block_devices(self):
         """

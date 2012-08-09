@@ -126,8 +126,8 @@ class Pdu(object):
         count = 1
         try:
             self._power_mgr(2)
-        except Exception as ex:
-            LOG.exception("power_off failed", ex)
+        except Exception:
+            LOG.exception("power_off failed")
             return baremetal_states.ERROR
         return baremetal_states.DELETED
 
