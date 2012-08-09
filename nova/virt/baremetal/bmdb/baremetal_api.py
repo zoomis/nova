@@ -68,11 +68,13 @@ def bm_node_get_all(context, service_host=None, session=None):
 
 
 def bm_node_get(context, bm_node_id, session=None):
-    return IMPL.bm_node_get(context, bm_node_id)
+    return IMPL.bm_node_get(context, bm_node_id, session=session)
 
 
 def bm_node_get_by_instance_uuid(context, instance_uuid, session=None):
-    return IMPL.bm_node_get_by_instance_uuid(context, instance_uuid)
+    return IMPL.bm_node_get_by_instance_uuid(context,
+                                             instance_uuid,
+                                             session=session)
 
 
 def bm_node_create(context, values):
