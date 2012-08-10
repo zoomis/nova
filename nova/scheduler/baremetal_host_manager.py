@@ -46,7 +46,7 @@ class BaremetalHostState(host_manager.HostState):
 
         if capabilities is None:
             capabilities = {}
-        self.capabilities = schedule.ReadOnlyDict(capabilities.get(topic,
+        self.capabilities = host_manager.ReadOnlyDict(capabilities.get(topic,
                                                                    None))
 
         self.baremetal_compute = False
@@ -57,7 +57,7 @@ class BaremetalHostState(host_manager.HostState):
 
         if service is None:
             service = {}
-        self.service = schedule.ReadOnlyDict(service)
+        self.service = host_manager.ReadOnlyDict(service)
         # Mutable available resources.
         # These will change as resources are virtually "consumed".
         self.free_ram_mb = 0
