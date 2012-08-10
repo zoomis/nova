@@ -26,13 +26,11 @@ from nova import flags
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
 from nova.scheduler import host_manager
-from nova.scheduler.host_manager import ReadOnlyDict
 from nova.virt.baremetal import bmdb
 
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
-
 
 class BaremetalHostState(host_manager.HostState):
     """Mutable and immutable information tracked for a host.
@@ -48,7 +46,8 @@ class BaremetalHostState(host_manager.HostState):
 
         if capabilities is None:
             capabilities = {}
-        self.capabilities = ReadOnlyDict(capabilities.get(topic, None))
+        self.capabilities = schedule.ReadOnlyDict(capabilities.get(topic,
+                                                                   None))
 
         self.baremetal_compute = False
         cap_extra_specs = self.capabilities.get('instance_type_extra_specs',
@@ -58,7 +57,7 @@ class BaremetalHostState(host_manager.HostState):
 
         if service is None:
             service = {}
-        self.service = ReadOnlyDict(service)
+        self.service = schedule.ReadOnlyDict(service)
         # Mutable available resources.
         # These will change as resources are virtually "consumed".
         self.free_ram_mb = 0
@@ -75,7 +74,7 @@ class BaremetalHostState(host_manager.HostState):
             bm_nodes = bmdb.bm_node_get_all(context,
                                             service_host=service_host)
             for n in bm_nodes:
-                if not n['instance_id']:
+                if not n['instance_uuid']:
                     self.available_nodes.append(n)
 
             """those sorting should be decided by weight in a scheduler."""
@@ -115,10 +114,10 @@ class BaremetalHostState(host_manager.HostState):
         """Update information about a host from instance info."""
         if self.baremetal_compute:
             context = ctx.get_admin_context()
-            instance_id = instance.get('id', None)
-            if instance_id:
-                bm_node = bmdb.bm_node_get_by_instance_id(context,
-                                                          instance['id'])
+            instance_uuid = instance.get('uuid', None)
+            if instance_uuid:
+                bm_node = bmdb.bm_node_get_by_instance_uuid(context,
+                                                            instance['uuid'])
             else:
                 bm_node = None
 
@@ -154,12 +153,6 @@ class BaremetalHostManager(host_manager.HostManager):
 
     # Can be overriden in a subclass
     host_state_cls = BaremetalHostState
-
-    """Make HostManager to a singleton object."""
-    def __new__(self):
-        if not hasattr(self, "__instance__"):
-            self.__instance__ = super(BaremetalHostManager, self).__new__(self)
-        return self.__instance__
 
     def __init__(self):
         self.service_states = {}  # { <host> : { <service> : { cap k : v }}}
