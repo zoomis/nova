@@ -125,7 +125,8 @@ class BaremetalDriverTestCase(test.TestCase):
         self.assertEqual(es['x'], '123')
         self.assertEqual(es['y'], '456')
         self.assertEqual(es['hypervisor_type'], 'baremetal')
-        self.assertEqual(es['baremetal_driver'], 'nova.virt.baremetal.fake.Fake')
+        self.assertEqual(es['baremetal_driver'],
+                         'nova.virt.baremetal.fake.Fake')
         self.assertEqual(len(es), 5)
 
     def test_max_sum_baremetal_resources(self):
