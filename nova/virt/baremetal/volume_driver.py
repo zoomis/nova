@@ -233,12 +233,3 @@ class LibvirtVolumeDriver(VolumeDriver):
         Return all block devices in use on this node.
         """
         return _list_backingstore_path()
-
-    def get_hypervisor_type(self):
-        """Get hypervisor type.
-
-        :returns: hypervisor type (ex. qemu)
-
-        """
-
-        return 'baremetal'
