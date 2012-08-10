@@ -148,7 +148,7 @@ class Pdu(object):
 
 class DummyPdu(object):
 
-    def __init__(self):
+    def __init__(self, node):
         pass
 
     def activate_node(self):

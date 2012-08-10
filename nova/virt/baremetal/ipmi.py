@@ -238,7 +238,7 @@ class Ipmi(object):
 
 class DummyIpmi(object):
 
-    def __init__(self):
+    def __init__(self, node):
         pass
 
     def activate_node(self):
