@@ -94,10 +94,10 @@ def bm_node_get(context, bm_node_id, session=None):
 
 
 @require_admin_context
-def bm_node_get_by_instance_id(context, instance_id, session=None):
+def bm_node_get_by_instance_uuid(context, instance_uuid, session=None):
     result = model_query(context, baremetal_models.BareMetalNode,
                          read_deleted="no", session=session).\
-                     filter_by(instance_id=instance_id).\
+                     filter_by(instance_uuid=instance_uuid).\
                      first()
     return result
 

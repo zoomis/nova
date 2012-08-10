@@ -238,7 +238,7 @@ def _stop_per_host_pxe_server(tftp_root, vlan_id):
     iptables.apply()
 
 
-class PXE:
+class PXE(object):
 
     def __init__(self):
         if not FLAGS.baremetal_deploy_kernel:
@@ -254,7 +254,7 @@ class PXE:
                                          instance['name'])
         if FLAGS.baremetal_pxe_vlan_per_host:
             var['tftp_root'] = os.path.join(FLAGS.baremetal_tftp_root,
-                                            str(instance['id']))
+                                            str(instance['uuid']))
         else:
             var['tftp_root'] = FLAGS.baremetal_tftp_root
         var['network_info'] = network_info
@@ -277,7 +277,7 @@ class PXE:
         nics_in_order.append(node['prov_mac_address'])
 
         # rename nics to be in the order in the DB
-        LOG.debug("injecting persisitent net")
+        LOG.debug("injecting persistent net")
         rules = ""
         i = 0
         for hwaddr in nics_in_order:
@@ -348,7 +348,7 @@ class PXE:
         if any((key, net, metadata, admin_password)):
             inst_name = inst['name']
 
-            img_id = inst.image_ref
+            img_id = inst['image_ref']
 
             for injection in ('metadata', 'key', 'net', 'admin_password'):
                 if locals()[injection]:
@@ -416,10 +416,10 @@ class PXE:
         if FLAGS.baremetal_pxe_vlan_per_host:
             tftp_paths = [i[1] for i in images]
         else:
-            tftp_paths = [os.path.join(str(instance['id']), i[1])
+            tftp_paths = [os.path.join(str(instance['uuid']), i[1])
                     for i in images]
             libvirt_utils.ensure_tree(
-                    os.path.join(tftp_root, str(instance['id'])))
+                    os.path.join(tftp_root, str(instance['uuid'])))
 
         LOG.debug("tftp_paths=%s", tftp_paths)
 
@@ -483,7 +483,7 @@ class PXE:
             bmdb.bm_pxe_ip_disassociate(context, node['id'])
             tftp_image_dir = tftp_root
         else:
-            tftp_image_dir = os.path.join(tftp_root, str(instance['id']))
+            tftp_image_dir = os.path.join(tftp_root, str(instance['uuid']))
         shutil.rmtree(tftp_image_dir, ignore_errors=True)
 
         pxe_config_path = os.path.join(tftp_root,

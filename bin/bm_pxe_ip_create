@@ -30,8 +30,6 @@ from nova import flags
 from nova import utils
 from nova.virt.baremetal import bmdb
 
-FLAGS = flags.FLAGS
-
 
 def main():
     opts, args = getopt.getopt(
@@ -64,9 +62,6 @@ def main():
 
     id = bmdb.bm_pxe_ip_create(ctx, address, server_address)
     print "id=%s" % id
-    ip_ref = bmdb.bm_pxe_ip_get(ctx, id)
-    print "address=%s" % ip_ref.address
-    print "server_address=%s" % ip_ref.server_address
 
 
 if __name__ == "__main__":

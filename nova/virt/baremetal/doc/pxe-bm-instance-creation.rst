@@ -22,7 +22,7 @@ PXE Baremetal Instance Creation
 
 5) The baremetal nova-compute powers on the baremetal host thorough IPMI.
 
-6) The host uses the deployment kernel and ramdisk, and the baremetal nova-copute writes AMI to the host's local disk via iSCSI. 
+6) The host uses the deployment kernel and ramdisk, and the baremetal nova-copute writes AMI to the host's local disk via iSCSI.
 
 7) The host is rebooted.
 

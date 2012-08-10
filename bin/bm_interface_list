@@ -46,8 +46,8 @@ def main():
                 _('DATAPATH_ID'),
                 _('PORT_NO'))
     for pif in bmdb.bm_interface_get_all(ctx):
-        print fmt % (pif.id, pif.bm_node_id,
-                     pif.address, pif.datapath_id, pif.port_no)
+        print fmt % (pif['id'], pif['bm_node_id'],
+                     pif['address'], pif['datapath_id'], pif['port_no'])
     print
 
 

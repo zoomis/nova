@@ -199,7 +199,7 @@ class SchedulerManagerTestCase(test.TestCase):
         # stuff a bit cleaner.
         self.manager._set_vm_state_and_notify('something',
                 {'vm_state': vm_states.ERROR}, self.context,
-                ex, *((self.context,) + self.fake_args), **self.fake_kwargs)
+                ex, request_spec)
 
         self.mox.ReplayAll()
 
@@ -220,17 +220,16 @@ class SchedulerManagerTestCase(test.TestCase):
 
         request_spec = {'instance_properties':
                 {'uuid': fake_instance_uuid}}
-        self.fake_kwargs['request_spec'] = request_spec
 
         self.manager.driver.schedule_run_instance(self.context,
-                *self.fake_args, **self.fake_kwargs).AndRaise(
+                request_spec, None, None, None, None, {}, None).AndRaise(
                         exception.NoValidHost(reason=""))
         db.instance_update_and_get_original(self.context, fake_instance_uuid,
                 {"vm_state": vm_states.ERROR}).AndReturn((inst, inst))
 
         self.mox.ReplayAll()
-        self.manager.run_instance(self.context, self.topic,
-                *self.fake_args, **self.fake_kwargs)
+        self.manager.run_instance(self.context, request_spec,
+                None, None, None, None, {}, None)
 
     def test_prep_resize_no_valid_host_back_in_active_state(self):
         """Test that a NoValidHost exception for prep_resize puts
@@ -245,18 +244,23 @@ class SchedulerManagerTestCase(test.TestCase):
 
         request_spec = {'instance_properties':
                 {'uuid': fake_instance_uuid}}
-        self.fake_kwargs['request_spec'] = request_spec
-
-        self.manager.driver.schedule_prep_resize(self.context,
-                *self.fake_args, **self.fake_kwargs).AndRaise(
-                        exception.NoValidHost(reason=""))
+        kwargs = {
+                'context': self.context,
+                'image': 'fake_image',
+                'update_db': True,
+                'request_spec': request_spec,
+                'filter_properties': 'fake_props',
+                'instance': 'fake_instance',
+                'instance_type': 'fake_type',
+        }
+        self.manager.driver.schedule_prep_resize(**kwargs).AndRaise(
+                exception.NoValidHost(reason=""))
         db.instance_update_and_get_original(self.context, fake_instance_uuid,
                 {"vm_state": vm_states.ACTIVE, "task_state": None}).AndReturn(
                         (inst, inst))
 
         self.mox.ReplayAll()
-        self.manager.prep_resize(self.context, self.topic,
-                *self.fake_args, **self.fake_kwargs)
+        self.manager.prep_resize(**kwargs)
 
     def test_prep_resize_exception_host_in_error_state_and_raise(self):
         """Test that a NoValidHost exception for prep_resize puts
@@ -270,10 +274,17 @@ class SchedulerManagerTestCase(test.TestCase):
 
         request_spec = {'instance_properties':
                 {'uuid': fake_instance_uuid}}
-        self.fake_kwargs['request_spec'] = request_spec
+        kwargs = {
+                'context': self.context,
+                'image': 'fake_image',
+                'update_db': True,
+                'request_spec': request_spec,
+                'filter_properties': 'fake_props',
+                'instance': 'fake_instance',
+                'instance_type': 'fake_type',
+        }
 
-        self.manager.driver.schedule_prep_resize(self.context,
-                *self.fake_args, **self.fake_kwargs).AndRaise(
+        self.manager.driver.schedule_prep_resize(**kwargs).AndRaise(
                 self.AnException('something happened'))
 
         inst = {
@@ -286,8 +297,7 @@ class SchedulerManagerTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         self.assertRaises(self.AnException, self.manager.prep_resize,
-                         self.context, self.topic,
-                         *self.fake_args, **self.fake_kwargs)
+                          **kwargs)
 
 
 class SchedulerTestCase(test.TestCase):
@@ -393,24 +403,21 @@ class SchedulerTestCase(test.TestCase):
 
     def test_live_migration_basic(self):
         """Test basic schedule_live_migration functionality"""
-        self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(self.driver, '_live_migration_dest_check')
         self.mox.StubOutWithMock(self.driver, '_live_migration_common_check')
         self.mox.StubOutWithMock(self.driver.compute_rpcapi,
                                  'check_can_live_migrate_destination')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
-        self.mox.StubOutWithMock(driver, 'cast_to_compute_host')
+        self.mox.StubOutWithMock(compute_rpcapi.ComputeAPI, 'live_migration')
         self.mox.StubOutWithMock(notifications, 'send_update')
 
         dest = 'fake_host2'
         block_migration = False
         disk_over_commit = False
-        instance = self._live_migration_instance()
+        instance = jsonutils.to_primitive(self._live_migration_instance())
         instance_id = instance['id']
         instance_uuid = instance['uuid']
-        db.instance_get(self.context,
-                        instance_id).AndReturn(instance)
 
         self.driver._live_migration_src_check(self.context, instance)
         self.driver._live_migration_dest_check(self.context, instance, dest)
@@ -424,28 +431,26 @@ class SchedulerTestCase(test.TestCase):
         notifications.send_update(self.context, instance, instance,
                                   service="scheduler")
 
-        driver.cast_to_compute_host(self.context, instance['host'],
-                'live_migration', update_db=False,
-                instance_id=instance['id'], dest=dest,
+        compute_rpcapi.ComputeAPI.live_migration(self.context,
+                host=instance['host'], instance=instance, dest=dest,
                 block_migration=block_migration)
 
         self.mox.ReplayAll()
         self.driver.schedule_live_migration(self.context,
-                instance_id=instance['id'], dest=dest,
+                instance=instance, dest=dest,
                 block_migration=block_migration,
                 disk_over_commit=disk_over_commit)
 
     def test_live_migration_all_checks_pass(self):
         """Test live migration when all checks pass."""
 
-        self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(utils, 'service_is_up')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
         self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
         self.mox.StubOutWithMock(rpc, 'call')
         self.mox.StubOutWithMock(rpc, 'cast')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
-        self.mox.StubOutWithMock(driver, 'cast_to_compute_host')
+        self.mox.StubOutWithMock(compute_rpcapi.ComputeAPI, 'live_migration')
 
         dest = 'fake_host2'
         block_migration = True
@@ -453,8 +458,6 @@ class SchedulerTestCase(test.TestCase):
         instance = jsonutils.to_primitive(self._live_migration_instance())
         instance_id = instance['id']
         instance_uuid = instance['uuid']
-        db.instance_get(self.context,
-                        instance_id).AndReturn(instance)
 
         # Source checks
         db.service_get_all_compute_by_host(self.context,
@@ -494,14 +497,13 @@ class SchedulerTestCase(test.TestCase):
                 {"task_state": task_states.MIGRATING}).AndReturn(
                         (instance, instance))
 
-        driver.cast_to_compute_host(self.context, instance['host'],
-                'live_migration', update_db=False,
-                instance_id=instance_id, dest=dest,
+        compute_rpcapi.ComputeAPI.live_migration(self.context,
+                host=instance['host'], instance=instance, dest=dest,
                 block_migration=block_migration)
 
         self.mox.ReplayAll()
         result = self.driver.schedule_live_migration(self.context,
-                instance_id=instance_id, dest=dest,
+                instance=instance, dest=dest,
                 block_migration=block_migration,
                 disk_over_commit=disk_over_commit)
         self.assertEqual(result, None)
@@ -761,8 +763,8 @@ class SchedulerDriverBaseTestCase(SchedulerTestCase):
 
         self.assertRaises(NotImplementedError,
                          self.driver.schedule_run_instance,
-                         self.context, fake_request_spec,
-                         *fake_args, **fake_kwargs)
+                         self.context, fake_request_spec, None, None, None,
+                         None, None, None)
 
     def test_unimplemented_schedule_prep_resize(self):
         fake_args = (1, 2, 3)
@@ -772,8 +774,8 @@ class SchedulerDriverBaseTestCase(SchedulerTestCase):
 
         self.assertRaises(NotImplementedError,
                          self.driver.schedule_prep_resize,
-                         self.context, fake_request_spec,
-                         *fake_args, **fake_kwargs)
+                         self.context, {}, False,
+                         fake_request_spec, {}, {}, {})
 
 
 class SchedulerDriverModuleTestCase(test.TestCase):
@@ -843,10 +845,10 @@ class SchedulerDriverModuleTestCase(test.TestCase):
         driver.cast_to_volume_host(self.context, host, method,
                 update_db=False, **fake_kwargs)
 
-    def test_cast_to_compute_host_update_db_with_instance_id(self):
+    def test_cast_to_compute_host_update_db_with_instance_uuid(self):
         host = 'fake_host1'
         method = 'fake_method'
-        fake_kwargs = {'instance_id': 31337,
+        fake_kwargs = {'instance_uuid': 'fake_uuid',
                        'extra_arg': 'meow'}
         queue = 'fake_queue'
 
@@ -856,7 +858,7 @@ class SchedulerDriverModuleTestCase(test.TestCase):
         self.mox.StubOutWithMock(rpc, 'cast')
 
         timeutils.utcnow().AndReturn('fake-now')
-        db.instance_update(self.context, 31337,
+        db.instance_update(self.context, 'fake_uuid',
                 {'host': host, 'scheduled_at': 'fake-now'})
         rpc.queue_get_for(self.context, 'compute', host).AndReturn(queue)
         rpc.cast(self.context, queue,
@@ -867,7 +869,7 @@ class SchedulerDriverModuleTestCase(test.TestCase):
         driver.cast_to_compute_host(self.context, host, method,
                 update_db=True, **fake_kwargs)
 
-    def test_cast_to_compute_host_update_db_without_instance_id(self):
+    def test_cast_to_compute_host_update_db_without_instance_uuid(self):
         host = 'fake_host1'
         method = 'fake_method'
         fake_kwargs = {'extra_arg': 'meow'}

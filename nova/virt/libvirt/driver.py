@@ -48,6 +48,7 @@ import os
 import shutil
 import sys
 import tempfile
+import time
 import uuid
 
 from eventlet import greenthread
@@ -271,7 +272,6 @@ class LibvirtDriver(driver.ComputeDriver):
         self._host_state = None
         self._initiator = None
         self._wrapped_conn = None
-        self.container = None
         self.read_only = read_only
         if FLAGS.firewall_driver not in firewall.drivers:
             FLAGS.set_default('firewall_driver', firewall.drivers[0])
@@ -409,35 +409,17 @@ class LibvirtDriver(driver.ComputeDriver):
         return self._conn.listDomainsID()
 
     def list_instances(self):
-        return [self._conn.lookupByID(x).name()
-                for x in self.list_instance_ids()
-                if x != 0]  # We skip domains with ID 0 (hypervisors).
-
-    @staticmethod
-    def _map_to_instance_info(domain):
-        """Gets info from a virsh domain object into an InstanceInfo"""
-
-        # domain.info() returns a list of:
-        #    state:       one of the state values (virDomainState)
-        #    maxMemory:   the maximum memory used by the domain
-        #    memory:      the current amount of memory used by the domain
-        #    nbVirtCPU:   the number of virtual CPU
-        #    puTime:      the time used by the domain in nanoseconds
-
-        (state, _max_mem, _mem, _num_cpu, _cpu_time) = domain.info()
-        state = LIBVIRT_POWER_STATE[state]
-
-        name = domain.name()
-
-        return driver.InstanceInfo(name, state)
-
-    def list_instances_detail(self):
-        infos = []
+        names = []
         for domain_id in self.list_instance_ids():
-            domain = self._conn.lookupByID(domain_id)
-            info = self._map_to_instance_info(domain)
-            infos.append(info)
-        return infos
+            try:
+                # We skip domains with ID 0 (hypervisors).
+                if domain_id != 0:
+                    domain = self._conn.lookupByID(domain_id)
+                    names.append(domain.name())
+            except libvirt.libvirtError:
+                # Instance was deleted while listing... ignore it
+                pass
+        return names
 
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""
@@ -551,7 +533,10 @@ class LibvirtDriver(driver.ComputeDriver):
         LOG.info(_('Deleting instance files %(target)s') % locals(),
                  instance=instance)
         if FLAGS.libvirt_type == 'lxc':
-            disk.destroy_container(self.container)
+            container_dir = os.path.join(FLAGS.instances_path,
+                                         instance['name'],
+                                         'rootfs')
+            disk.destroy_container(container_dir=container_dir)
         if os.path.exists(target):
             # If we fail to get rid of the directory
             # tree, this shouldn't block deletion of
@@ -1242,7 +1227,9 @@ class LibvirtDriver(driver.ComputeDriver):
         libvirt_utils.write_to_file(basepath('libvirt.xml'), libvirt_xml)
 
         if FLAGS.libvirt_type == 'lxc':
-            container_dir = '%s/rootfs' % basepath(suffix='')
+            container_dir = os.path.join(FLAGS.instances_path,
+                                         instance['name'],
+                                         'rootfs')
             libvirt_utils.ensure_tree(container_dir)
 
         # NOTE(dprince): for rescue console.log may already exist... chown it.
@@ -1419,7 +1406,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 img_id = 'config-drive'
             else:
                 injection_path = image('disk').path
-                img_id = instance.image_ref
+                img_id = instance['image_ref']
 
             for injection in ('metadata', 'key', 'net', 'admin_pass', 'files'):
                 if locals()[injection]:
@@ -1438,9 +1425,9 @@ class LibvirtDriver(driver.ComputeDriver):
                          instance=instance)
 
         if FLAGS.libvirt_type == 'lxc':
-            self.container = disk.setup_container(basepath('disk'),
-                                                  container_dir=container_dir,
-                                                  use_cow=FLAGS.use_cow_images)
+            disk.setup_container(basepath('disk'),
+                                 container_dir=container_dir,
+                                 use_cow=FLAGS.use_cow_images)
 
         if FLAGS.libvirt_type == 'uml':
             libvirt_utils.chown(basepath('disk'), 'root')
@@ -1569,7 +1556,7 @@ class LibvirtDriver(driver.ComputeDriver):
             fs.source_type = "mount"
             fs.source_dir = os.path.join(FLAGS.instances_path,
                                          instance['name'],
-                                         "rootfs")
+                                         'rootfs')
             devices.append(fs)
         else:
             if image_meta and image_meta.get('disk_format') == 'iso':

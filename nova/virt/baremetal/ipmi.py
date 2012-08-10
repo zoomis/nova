@@ -85,7 +85,7 @@ class IpmiError(Exception):
         return "%s: %s" % (self.status, self.msg)
 
 
-class Ipmi:
+class Ipmi(object):
 
     def __init__(self, address=None, user=None, password=None,
                  interface="lanplus"):
@@ -145,8 +145,8 @@ class Ipmi:
                 return baremetal_states.ERROR
             try:
                 self._exec_ipmitool("power on")
-            except Exception as ex:
-                LOG.exception("power_on failed", ex)
+            except Exception:
+                LOG.exception("power_on failed")
             time.sleep(5)
         return baremetal_states.ACTIVE
 
@@ -158,8 +158,8 @@ class Ipmi:
                 return baremetal_states.ERROR
             try:
                 self._exec_ipmitool("power off")
-            except Exception as ex:
-                LOG.exception("power_off failed", ex)
+            except Exception:
+                LOG.exception("power_off failed")
             time.sleep(5)
         return baremetal_states.DELETED
 
@@ -224,8 +224,9 @@ class Ipmi:
         _unlink_without_raise(self._console_pidfile(node_id))
 
     def _console_pidfile(self, node_id):
-        pidfile = "%s/%s.pid" % (FLAGS.baremetal_term_pid_dir, node_id)
-        return pidfile
+        name = "%s.pid" % node_id
+        path = os.path.join(FLAGS.baremetal_term_pid_dir, name)
+        return path
 
     def _console_pid(self, node_id):
         pidfile = self._console_pidfile(node_id)
@@ -235,9 +236,9 @@ class Ipmi:
         return None
 
 
-class DummyIpmi:
+class DummyIpmi(object):
 
-    def __init__(self):
+    def __init__(self, node):
         pass
 
     def activate_node(self):

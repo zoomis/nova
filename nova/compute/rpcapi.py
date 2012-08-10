@@ -113,6 +113,12 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                change_instance_metadata()
         1.37 - Remove instance_uuid, add instance argument to
                terminate_instance()
+        1.38 - Changes to prep_resize():
+                - remove instance_uuid, add instance
+                - remove instance_type_id, add instance_type
+                - remove topic, it was unused
+        1.39 - Remove instance_uuid, add instance argument to run_instance()
+        1.40 - Remove instance_id, add instance argument to live_migration()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -270,6 +276,13 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=_compute_topic(self.topic, ctxt, None, instance),
                 version='1.19')
 
+    def live_migration(self, ctxt, instance, dest, block_migration, host):
+        instance_p = jsonutils.to_primitive(instance)
+        self.cast(ctxt, self.make_msg('live_migration', instance=instance_p,
+                dest=dest, block_migration=block_migration),
+                topic=_compute_topic(self.topic, ctxt, host, None),
+                version='1.40')
+
     def pause_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('pause_instance',
@@ -307,6 +320,14 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 instance=instance_p, block_migration=block_migration,
                 disk=disk), _compute_topic(self.topic, ctxt, host, None),
                 version='1.23')
+
+    def prep_resize(self, ctxt, image, instance, instance_type, host):
+        instance_p = jsonutils.to_primitive(instance)
+        instance_type_p = jsonutils.to_primitive(instance_type)
+        self.cast(ctxt, self.make_msg('prep_resize',
+                instance=instance_p, instance_type=instance_type_p,
+                image=image), _compute_topic(self.topic, ctxt, host, None),
+                version='1.38')
 
     def reboot_instance(self, ctxt, instance, reboot_type):
         instance_p = jsonutils.to_primitive(instance)
@@ -409,6 +430,19 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
             instance=instance_p),
             topic=_compute_topic(self.topic, ctxt, host, None),
             version='1.32')
+
+    def run_instance(self, ctxt, instance, host, request_spec,
+                     filter_properties, requested_networks,
+                     injected_files, admin_password,
+                     is_first_time):
+        instance_p = jsonutils.to_primitive(instance)
+        self.cast(ctxt, self.make_msg('run_instance', instance=instance_p,
+                request_spec=request_spec, filter_properties=filter_properties,
+                requested_networks=requested_networks,
+                injected_files=injected_files, admin_password=admin_password,
+                is_first_time=is_first_time),
+                topic=_compute_topic(self.topic, ctxt, host, None),
+                version='1.39')
 
     def set_admin_password(self, ctxt, instance, new_pass):
         instance_p = jsonutils.to_primitive(instance)

@@ -2,7 +2,7 @@
 Packages
 =====
 
-* This procedure is for Ubuntu 12.04 x86_64. Reading 'baremetal-instance-creation.txt' may make this document easy to understand.
+* This procedure is for Ubuntu 12.04 x86_64. Reading 'pxe-bm-instance-creation.txt' may make this document easy to understand.
 
 * dnsmasq (PXE server for baremetal hosts)
 * syslinux (bootloader for PXE)
@@ -90,7 +90,7 @@ Nova Directories
 	$ sudo mkdir /var/lib/nova/baremetal/dnsmasq
 
 
-Nova Flags 
+Nova Flags
 =====
 
 Set these flags in nova.conf::
@@ -104,7 +104,7 @@ Set these flags in nova.conf::
 	baremetal_driver = pxe
 	power_manager = ipmi
 
-	# instance_type_extra_specs this baremetal compute 
+	# instance_type_extra_specs this baremetal compute
 	instanse_type_extra_specs = cpu_arch:x86_64
 
 	# TFTP root
@@ -121,7 +121,7 @@ Set these flags in nova.conf::
 	scheduler_host_manager = nova.scheduler.baremetal_host_manager.BaremetalHostManager
 
 
-Nova Database 
+Nova Database
 =====
 
 Create the baremetal database. Grant all provileges to the user specified by the 'baremetal_sql_connection' flag.
@@ -228,7 +228,7 @@ To verify the NIC registration, run 'bm_interface_list'::
 
 	$ bm_interface_list
 	ID        BM_NODE_ID        MAC_ADDRESS         DATAPATH_ID       PORT_NO
-	1         1                 98:4b:e1:67:9a:4e   0x123abc          24  
+	1         1                 98:4b:e1:67:9a:4e   0x123abc          24
 
 
 Run Instance
@@ -246,7 +246,7 @@ Example::
 
 How to create an image:
 -----
-	
+
 Example: create a partition image from ubuntu cloud images' Precise tarball::
 
 	$ wget http://cloud-images.ubuntu.com/precise/current/precise-server-cloudimg-amd64-root.tar.gz

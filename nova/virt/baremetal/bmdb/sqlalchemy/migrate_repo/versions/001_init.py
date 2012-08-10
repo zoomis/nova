@@ -45,7 +45,7 @@ def upgrade(migrate_engine):
         Column('pm_password', String(length=255)),
         Column('service_host', String(length=255)),
         Column('prov_mac_address', String(length=255)),
-        Column('instance_id', Integer),
+        Column('instance_uuid', String(length=36)),
         Column('registration_status', String(length=16)),
         Column('task_state', String(length=255)),
         Column('prov_vlan_id', Integer),

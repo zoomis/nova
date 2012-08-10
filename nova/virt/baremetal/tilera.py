@@ -67,7 +67,7 @@ def _cache_image_x(context, target, image_id, user_id, project_id):
                                   user_id, project_id)
 
 
-class TILERA:
+class TILERA(object):
 
     def __init__(self):
         if not FLAGS.tile_monitor:
@@ -144,7 +144,7 @@ class TILERA:
         if any((key, net, metadata, admin_password)):
             inst_name = inst['name']
 
-            img_id = inst.image_ref
+            img_id = inst['image_ref']
 
             for injection in ('metadata', 'key', 'net', 'admin_password'):
                 if locals()[injection]:

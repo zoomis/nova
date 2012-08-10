@@ -41,6 +41,10 @@ def get_power_manager(node, **kwargs):
     return pm
 
 
+def get_power_manager_dummy(node, **kwargs):
+    return DummyPdu()
+
+
 class PduError(Exception):
     def __init__(self, status, message):
         self.status = status
@@ -50,7 +54,7 @@ class PduError(Exception):
         return "%s: %s" % (self.status, self.message)
 
 
-class Pdu:
+class Pdu(object):
 
     def __init__(self, address=None, node_id=None):
         if address == None:
@@ -122,8 +126,8 @@ class Pdu:
         count = 1
         try:
             self._power_mgr(2)
-        except Exception as ex:
-            LOG.exception("power_off failed", ex)
+        except Exception:
+            LOG.exception("power_off failed")
             return baremetal_states.ERROR
         return baremetal_states.DELETED
 
@@ -134,6 +138,30 @@ class Pdu:
     def is_power_on(self):
         r = self._exec_status()
         return (r == -1)
+
+    def start_console(self, port, node_id):
+        pass
+
+    def stop_console(self, node_id):
+        pass
+
+
+class DummyPdu(object):
+
+    def __init__(self, node):
+        pass
+
+    def activate_node(self):
+        return baremetal_states.ACTIVE
+
+    def reboot_node(self):
+        return baremetal_states.ACTIVE
+
+    def deactivate_node(self):
+        return baremetal_states.DELETED
+
+    def is_power_on(self):
+        return True
 
     def start_console(self, port, node_id):
         pass

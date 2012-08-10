@@ -30,6 +30,7 @@ import netaddr
 from nova.compute import api as compute
 from nova.compute import power_state
 from nova.compute import vm_mode
+from nova.compute import vm_states
 from nova import context as nova_context
 from nova import db
 from nova import exception
@@ -167,21 +168,6 @@ class VMOps(object):
             name_labels.append(vm_rec["name_label"])
 
         return name_labels
-
-    def list_instances_detail(self):
-        """List VM instances, returning InstanceInfo objects."""
-        details = []
-        for vm_ref, vm_rec in vm_utils.list_vms(self._session):
-            name = vm_rec["name_label"]
-
-            # TODO(justinsb): This a roundabout way to map the state
-            openstack_format = vm_utils.compile_info(vm_rec)
-            state = openstack_format['state']
-
-            instance_info = driver.InstanceInfo(name, state)
-            details.append(instance_info)
-
-        return details
 
     def confirm_migration(self, migration, instance, network_info):
         name_label = self._get_orig_vm_name_label(instance)
@@ -867,8 +853,8 @@ class VMOps(object):
         """Inject instance metadata into xenstore."""
         def store_meta(topdir, data_list):
             for item in data_list:
-                key = self._sanitize_xenstore_key(item.key)
-                value = item.value or ''
+                key = self._sanitize_xenstore_key(item['key'])
+                value = item['value'] or ''
                 self._add_to_param_xenstore(vm_ref, '%s/%s' % (topdir, key),
                                             jsonutils.dumps(value))
 
@@ -1245,7 +1231,21 @@ class VMOps(object):
 
     def get_vnc_console(self, instance):
         """Return connection info for a vnc console."""
-        vm_ref = self._get_vm_opaque_ref(instance)
+        # NOTE(johannes): This can fail if the VM object hasn't been created
+        # yet on the dom0. Since that step happens fairly late in the build
+        # process, there's a potential for a race condition here. Until the
+        # VM object is created, return back a 409 error instead of a 404
+        # error.
+        try:
+            vm_ref = self._get_vm_opaque_ref(instance)
+        except exception.NotFound:
+            if instance['vm_state'] != vm_states.BUILDING:
+                raise
+
+            LOG.info(_('Fetching VM ref while BUILDING failed'),
+                     instance=instance)
+            raise exception.InstanceNotReady(instance_id=instance['uuid'])
+
         session_id = self._session.get_session_id()
         path = "/console?ref=%s&session_id=%s" % (str(vm_ref), session_id)
 

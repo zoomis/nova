@@ -226,7 +226,7 @@ class ComputeTestCase(BaseTestCase):
         def did_it_add_fault(*args):
             called['fault_added'] = True
 
-        self.stubs.Set(self.compute, 'add_instance_fault_from_exc',
+        self.stubs.Set(self.compute, '_add_instance_fault_from_exc',
                        did_it_add_fault)
 
         @nova.compute.manager.wrap_instance_fault
@@ -234,7 +234,7 @@ class ComputeTestCase(BaseTestCase):
             raise NotImplementedError()
 
         self.assertRaises(NotImplementedError, failer,
-                          self.compute, self.context, inst_uuid)
+                          self.compute, self.context, instance_uuid=inst_uuid)
 
         self.assertTrue(called['fault_added'])
 
@@ -246,7 +246,7 @@ class ComputeTestCase(BaseTestCase):
         def did_it_add_fault(*args):
             called['fault_added'] = True
 
-        self.stubs.Set(self.compute, 'add_instance_fault_from_exc',
+        self.stubs.Set(self.compute, '_add_instance_fault_from_exc',
                        did_it_add_fault)
 
         @nova.compute.manager.wrap_instance_fault
@@ -261,11 +261,11 @@ class ComputeTestCase(BaseTestCase):
     def test_create_instance_with_img_ref_associates_config_drive(self):
         """Make sure create associates a config drive."""
 
-        instance = self._create_fake_instance(
-                        params={'config_drive': '1234', })
+        instance = jsonutils.to_primitive(self._create_fake_instance(
+                        params={'config_drive': '1234', }))
 
         try:
-            self.compute.run_instance(self.context, instance['uuid'])
+            self.compute.run_instance(self.context, instance=instance)
             instances = db.instance_get_all(context.get_admin_context())
             instance = instances[0]
 
@@ -276,11 +276,11 @@ class ComputeTestCase(BaseTestCase):
     def test_create_instance_associates_config_drive(self):
         """Make sure create associates a config drive."""
 
-        instance = self._create_fake_instance(
-                        params={'config_drive': '1234', })
+        instance = jsonutils.to_primitive(self._create_fake_instance(
+                        params={'config_drive': '1234', }))
 
         try:
-            self.compute.run_instance(self.context, instance['uuid'])
+            self.compute.run_instance(self.context, instance=instance)
             instances = db.instance_get_all(context.get_admin_context())
             instance = instances[0]
 
@@ -290,10 +290,10 @@ class ComputeTestCase(BaseTestCase):
 
     def test_default_access_ip(self):
         self.flags(default_access_ip_network_name='test1', stub_network=False)
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
 
         try:
-            self.compute.run_instance(self.context, instance['uuid'],
+            self.compute.run_instance(self.context, instance=instance,
                     is_first_time=True)
             instances = db.instance_get_all(context.get_admin_context())
             instance = instances[0]
@@ -304,10 +304,10 @@ class ComputeTestCase(BaseTestCase):
             db.instance_destroy(self.context, instance['uuid'])
 
     def test_no_default_access_ip(self):
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
 
         try:
-            self.compute.run_instance(self.context, instance['uuid'],
+            self.compute.run_instance(self.context, instance=instance,
                     is_first_time=True)
             instances = db.instance_get_all(context.get_admin_context())
             instance = instances[0]
@@ -338,7 +338,7 @@ class ComputeTestCase(BaseTestCase):
                        '_setup_block_device_mapping', fake)
         instance_uuid = self._create_instance()
         self.assertRaises(test.TestingException, self.compute.run_instance,
-                          self.context, instance_uuid)
+                          self.context, instance_uuid=instance_uuid)
         #check state is failed even after the periodic poll
         self._assert_state({'vm_state': vm_states.ERROR,
                             'task_state': task_states.BLOCK_DEVICE_MAPPING})
@@ -356,7 +356,7 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.driver, 'spawn', fake)
         instance_uuid = self._create_instance()
         self.assertRaises(test.TestingException, self.compute.run_instance,
-                          self.context, instance_uuid)
+                          self.context, instance_uuid=instance_uuid)
         #check state is failed even after the periodic poll
         self._assert_state({'vm_state': vm_states.ERROR,
                             'task_state': task_states.SPAWNING})
@@ -380,11 +380,34 @@ class ComputeTestCase(BaseTestCase):
         """Make sure it is possible to  run and terminate instance"""
         instance = jsonutils.to_primitive(self._create_fake_instance())
 
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context, instance=instance)
 
         instances = db.instance_get_all(context.get_admin_context())
         LOG.info(_("Running instances: %s"), instances)
         self.assertEqual(len(instances), 1)
+
+        self.compute.terminate_instance(self.context, instance=instance)
+
+        instances = db.instance_get_all(context.get_admin_context())
+        LOG.info(_("After terminating instances: %s"), instances)
+        self.assertEqual(len(instances), 0)
+
+    def test_terminate_no_network(self):
+        # This is as reported in LP bug 1008875
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+
+        self.compute.run_instance(self.context, instance=instance)
+
+        instances = db.instance_get_all(context.get_admin_context())
+        LOG.info(_("Running instances: %s"), instances)
+        self.assertEqual(len(instances), 1)
+
+        # Make it look like this is no instance
+        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
+        self.compute._get_instance_nw_info(
+                mox.IgnoreArg(),
+                mox.IgnoreArg()).AndRaise(exception.NetworkNotFound())
+        self.mox.ReplayAll()
 
         self.compute.terminate_instance(self.context, instance=instance)
 
@@ -398,7 +421,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(instance['launched_at'], None)
         self.assertEqual(instance['deleted_at'], None)
         launch = timeutils.utcnow()
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context, instance=instance)
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assert_(instance['launched_at'] > launch)
         self.assertEqual(instance['deleted_at'], None)
@@ -412,16 +435,14 @@ class ComputeTestCase(BaseTestCase):
     def test_stop(self):
         """Ensure instance can be stopped"""
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
         self.compute.stop_instance(self.context, instance=instance)
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_start(self):
         """Ensure instance can be started"""
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
         self.compute.stop_instance(self.context, instance=instance)
         self.compute.start_instance(self.context, instance=instance)
         self.compute.terminate_instance(self.context, instance=instance)
@@ -445,7 +466,7 @@ class ComputeTestCase(BaseTestCase):
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
 
         # Make sure these methods work with both instance and instance_uuid
 
@@ -474,8 +495,7 @@ class ComputeTestCase(BaseTestCase):
                        fake_driver_power_on)
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
         self.compute.power_on_instance(self.context, instance=instance)
         self.assertTrue(called['power_on'])
         self.compute.terminate_instance(self.context, instance=instance)
@@ -492,28 +512,23 @@ class ComputeTestCase(BaseTestCase):
                        fake_driver_power_off)
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
         self.compute.power_off_instance(self.context, instance=instance)
         self.assertTrue(called['power_off'])
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_pause(self):
         """Ensure instance can be paused and unpaused"""
-        instance = self._create_fake_instance()
-        instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
-        self.compute.pause_instance(self.context,
-                instance=jsonutils.to_primitive(instance))
-        self.compute.unpause_instance(self.context,
-                instance=jsonutils.to_primitive(instance))
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=instance)
+        self.compute.pause_instance(self.context, instance=instance)
+        self.compute.unpause_instance(self.context, instance=instance)
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_suspend(self):
         """ensure instance can be suspended and resumed"""
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
         self.compute.suspend_instance(self.context, instance=instance)
         self.compute.resume_instance(self.context, instance=instance)
         self.compute.terminate_instance(self.context, instance=instance)
@@ -524,13 +539,13 @@ class ComputeTestCase(BaseTestCase):
             raise test.TestingException()
         self.stubs.Set(self.compute.driver, 'suspend', fake)
 
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
         self.assertRaises(test.TestingException,
                           self.compute.suspend_instance,
                           self.context,
-                          instance=jsonutils.to_primitive(instance))
+                          instance=instance)
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['vm_state'], vm_states.ERROR)
         self.compute.terminate_instance(self.context, instance=instance)
@@ -538,10 +553,9 @@ class ComputeTestCase(BaseTestCase):
     def test_rebuild(self):
         """Ensure instance can be rebuilt"""
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance_uuid = instance['uuid']
         image_ref = instance['image_ref']
 
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
         self.compute.rebuild_instance(self.context, image_ref, image_ref,
                 instance=instance)
         self.compute.terminate_instance(self.context, instance=instance)
@@ -555,7 +569,7 @@ class ComputeTestCase(BaseTestCase):
         instance_uuid = instance['uuid']
         image_ref = instance['image_ref']
 
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
         timeutils.set_time_override(cur_time)
         self.compute.rebuild_instance(self.context, image_ref, image_ref,
                 instance=instance)
@@ -566,14 +580,14 @@ class ComputeTestCase(BaseTestCase):
 
     def test_reboot_soft(self):
         """Ensure instance can be soft rebooted"""
-        instance = self._create_fake_instance()
-        self.compute.run_instance(self.context, instance['uuid'])
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'],
                            {'task_state': task_states.REBOOTING})
 
         reboot_type = "SOFT"
         self.compute.reboot_instance(self.context,
-                                     instance=jsonutils.to_primitive(instance),
+                                     instance=instance,
                                      reboot_type=reboot_type)
 
         inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
@@ -585,14 +599,13 @@ class ComputeTestCase(BaseTestCase):
 
     def test_reboot_hard(self):
         """Ensure instance can be hard rebooted"""
-        instance = self._create_fake_instance()
-        self.compute.run_instance(self.context, instance['uuid'])
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'],
                            {'task_state': task_states.REBOOTING_HARD})
 
         reboot_type = "HARD"
-        self.compute.reboot_instance(self.context,
-                                     instance=jsonutils.to_primitive(instance),
+        self.compute.reboot_instance(self.context, instance=instance,
                                      reboot_type=reboot_type)
 
         inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
@@ -605,7 +618,7 @@ class ComputeTestCase(BaseTestCase):
     def test_set_admin_password(self):
         """Ensure instance can have its admin password set"""
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'],
                            {'task_state': task_states.UPDATING_PASSWORD})
 
@@ -624,8 +637,8 @@ class ComputeTestCase(BaseTestCase):
 
     def test_set_admin_password_bad_state(self):
         """Test setting password while instance is rebuilding."""
-        instance = self._create_fake_instance()
-        self.compute.run_instance(self.context, instance['uuid'])
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'], {
             "power_state": power_state.NOSTATE,
         })
@@ -665,8 +678,8 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.virt.fake.FakeDriver, 'set_admin_password',
                        fake_driver_set_pass)
 
-        instance = self._create_fake_instance()
-        self.compute.run_instance(self.context, instance['uuid'])
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'],
                            {'task_state': task_states.UPDATING_PASSWORD})
 
@@ -721,7 +734,7 @@ class ComputeTestCase(BaseTestCase):
                        fake_driver_inject_file)
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context, instance=instance)
         self.compute.inject_file(self.context, "/tmp/test",
                 "File Contents", instance=instance)
         self.assertTrue(called['inject'])
@@ -738,8 +751,7 @@ class ComputeTestCase(BaseTestCase):
                        fake_driver_inject_network)
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
         self.compute.inject_network_info(self.context, instance=instance)
         self.assertTrue(called['inject'])
         self.compute.terminate_instance(self.context, instance=instance)
@@ -756,7 +768,7 @@ class ComputeTestCase(BaseTestCase):
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
 
         # Make sure it works with both an instance and instance_uuid
         self.compute.reset_network(self.context, instance=instance)
@@ -771,7 +783,7 @@ class ComputeTestCase(BaseTestCase):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
         name = "myfakesnapshot"
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
         self.compute.snapshot_instance(self.context, name, instance=instance)
         self.compute.terminate_instance(self.context, instance=instance)
 
@@ -783,7 +795,7 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.driver, 'snapshot', fake_snapshot)
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context, instance=instance)
         self.assertRaises(test.TestingException,
                           self.compute.snapshot_instance,
                           self.context, "failing_snapshot", instance=instance)
@@ -807,7 +819,7 @@ class ComputeTestCase(BaseTestCase):
     def test_console_output(self):
         """Make sure we can get console output from instance"""
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context, instance=instance)
 
         output = self.compute.get_console_output(self.context,
                 instance=instance)
@@ -817,7 +829,7 @@ class ComputeTestCase(BaseTestCase):
     def test_console_output_tail(self):
         """Make sure we can get console output from instance"""
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context, instance=instance)
 
         output = self.compute.get_console_output(self.context,
                 instance=instance, tail_length=2)
@@ -827,7 +839,7 @@ class ComputeTestCase(BaseTestCase):
     def test_novnc_vnc_console(self):
         """Make sure we can a vnc console for an instance."""
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context, instance=instance)
 
         # Try with the full instance
         console = self.compute.get_vnc_console(self.context, 'novnc',
@@ -844,7 +856,7 @@ class ComputeTestCase(BaseTestCase):
     def test_xvpvnc_vnc_console(self):
         """Make sure we can a vnc console for an instance."""
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context, instance=instance)
 
         console = self.compute.get_vnc_console(self.context, 'xvpvnc',
                                                instance=instance)
@@ -854,7 +866,7 @@ class ComputeTestCase(BaseTestCase):
     def test_invalid_vnc_console_type(self):
         """Raise useful error if console type is an unrecognised string"""
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context, instance=instance)
 
         self.assertRaises(exception.ConsoleTypeInvalid,
                           self.compute.get_vnc_console,
@@ -864,7 +876,7 @@ class ComputeTestCase(BaseTestCase):
     def test_missing_vnc_console_type(self):
         """Raise useful error is console type is None"""
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context, instance=instance)
 
         self.assertRaises(exception.ConsoleTypeInvalid,
                           self.compute.get_vnc_console,
@@ -874,7 +886,7 @@ class ComputeTestCase(BaseTestCase):
     def test_diagnostics(self):
         """Make sure we can get diagnostics for an instance."""
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context, instance=instance)
 
         diagnostics = self.compute.get_diagnostics(self.context,
                 instance_uuid=instance['uuid'])
@@ -929,9 +941,9 @@ class ComputeTestCase(BaseTestCase):
 
     def test_run_instance_usage_notification(self):
         """Ensure run instance generates appropriate usage notification"""
-        inst_ref = self._create_fake_instance()
-        instance_uuid = inst_ref['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance_uuid = instance['uuid']
+        self.compute.run_instance(self.context, instance=instance)
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
         inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
         msg = test_notifier.NOTIFICATIONS[0]
@@ -965,12 +977,11 @@ class ComputeTestCase(BaseTestCase):
         cur_time = datetime.datetime(2012, 12, 21, 12, 21)
         timeutils.set_time_override(old_time)
 
-        inst_ref = self._create_fake_instance()
-        self.compute.run_instance(self.context, inst_ref['uuid'])
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=instance)
         test_notifier.NOTIFICATIONS = []
         timeutils.set_time_override(cur_time)
-        self.compute.terminate_instance(self.context,
-                instance=jsonutils.to_primitive(inst_ref))
+        self.compute.terminate_instance(self.context, instance=instance)
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 4)
 
@@ -987,7 +998,7 @@ class ComputeTestCase(BaseTestCase):
         payload = msg1['payload']
         self.assertEquals(payload['tenant_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)
-        self.assertEquals(payload['instance_id'], inst_ref.uuid)
+        self.assertEquals(payload['instance_id'], instance['uuid'])
         self.assertEquals(payload['instance_type'], 'm1.tiny')
         type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
@@ -1002,17 +1013,16 @@ class ComputeTestCase(BaseTestCase):
     def test_run_instance_existing(self):
         """Ensure failure when running an instance that already exists"""
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context, instance=instance)
         self.assertRaises(exception.Invalid,
                           self.compute.run_instance,
                           self.context,
-                          instance['uuid'])
+                          instance=instance)
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_instance_set_to_error_on_uncaught_exception(self):
         """Test that instance is set to error state when exception is raised"""
-        instance = self._create_fake_instance()
-        instance_uuid = instance['uuid']
+        instance = jsonutils.to_primitive(self._create_fake_instance())
 
         self.mox.StubOutWithMock(self.compute.network_api,
                                  "allocate_for_instance")
@@ -1029,10 +1039,10 @@ class ComputeTestCase(BaseTestCase):
         self.assertRaises(rpc_common.RemoteError,
                           self.compute.run_instance,
                           self.context,
-                          instance_uuid)
+                          instance=instance)
 
         instance = db.instance_get_by_uuid(context.get_admin_context(),
-                                           instance_uuid)
+                                           instance['uuid'])
         self.assertEqual(vm_states.ERROR, instance['vm_state'])
 
         self.compute.terminate_instance(self.context,
@@ -1057,7 +1067,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_network_is_deallocated_on_spawn_failure(self):
         """When a spawn fails the network must be deallocated"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
 
         self.mox.StubOutWithMock(self.compute, "_setup_block_device_mapping")
         self.compute._setup_block_device_mapping(
@@ -1068,11 +1078,9 @@ class ComputeTestCase(BaseTestCase):
 
         self.assertRaises(rpc.common.RemoteError,
                           self.compute.run_instance,
-                          self.context,
-                          instance['uuid'])
+                          self.context, instance=instance)
 
-        self.compute.terminate_instance(self.context,
-                instance=jsonutils.to_primitive(instance))
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_get_lock(self):
         instance = jsonutils.to_primitive(self._create_fake_instance())
@@ -1083,9 +1091,9 @@ class ComputeTestCase(BaseTestCase):
 
     def test_lock(self):
         """ensure locked instance cannot be changed"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
 
         non_admin_context = context.RequestContext(None,
                                                    None,
@@ -1095,17 +1103,19 @@ class ComputeTestCase(BaseTestCase):
             instance = db.instance_get_by_uuid(self.context, instance_uuid)
             self.assertEqual(instance['task_state'], task_state)
 
-        db.instance_update(self.context, instance_uuid,
-                           {'task_state': task_states.REBOOTING})
+        instance = db.instance_update(self.context, instance_uuid,
+                                      {'task_state': task_states.REBOOTING})
 
         # should fail with locked nonadmin context, task_state won't be cleared
         self.compute_api.lock(self.context, instance)
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.compute.reboot_instance(non_admin_context,
                 instance=jsonutils.to_primitive(instance))
         check_task_state(task_states.REBOOTING)
 
         # should succeed with unlocked nonadmin context, task_state cleared
         self.compute_api.unlock(self.context, instance)
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.compute.reboot_instance(non_admin_context,
                 instance=jsonutils.to_primitive(instance))
         check_task_state(None)
@@ -1123,8 +1133,8 @@ class ComputeTestCase(BaseTestCase):
 
         context = self.context.elevated()
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.prep_resize(context, instance['uuid'], 1, {},
-                                 filter_properties={})
+        self.compute.prep_resize(context, instance=instance, instance_type={},
+                                 image={})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance['uuid'], 'pre-migrating')
         self.compute.finish_resize(context,
@@ -1145,8 +1155,8 @@ class ComputeTestCase(BaseTestCase):
 
         context = self.context.elevated()
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.prep_resize(context, instance['uuid'], 1, {},
-                                 filter_properties={})
+        self.compute.prep_resize(context, instance=instance, instance_type={},
+                                 image={})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance['uuid'], 'pre-migrating')
 
@@ -1164,8 +1174,8 @@ class ComputeTestCase(BaseTestCase):
         old_time = datetime.datetime(2012, 4, 1)
         cur_time = datetime.datetime(2012, 12, 21, 12, 21)
         timeutils.set_time_override(old_time)
-        inst_ref = self._create_fake_instance()
-        self.compute.run_instance(self.context, inst_ref['uuid'])
+        inst_ref = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=inst_ref)
         timeutils.set_time_override(cur_time)
 
         test_notifier.NOTIFICATIONS = []
@@ -1229,13 +1239,14 @@ class ComputeTestCase(BaseTestCase):
         context = self.context.elevated()
         old_type_id = instance_types.get_instance_type_by_name(
                                                 'm1.tiny')['id']
-        new_type_id = instance_types.get_instance_type_by_name(
-                                                'm1.small')['id']
-        self.compute.run_instance(self.context, instance['uuid'])
+        new_type = instance_types.get_instance_type_by_name('m1.small')
+        new_type = jsonutils.to_primitive(new_type)
+        new_type_id = new_type['id']
+        self.compute.run_instance(self.context, instance=instance)
 
         db.instance_update(self.context, instance['uuid'], {'host': 'foo'})
-        self.compute.prep_resize(context, instance['uuid'], new_type_id, {},
-                                 filter_properties={})
+        self.compute.prep_resize(context, instance=instance,
+                instance_type=new_type, image={})
         migration_ref = db.migration_get_by_instance_and_status(context,
                                                 instance['uuid'],
                                                 'pre-migrating')
@@ -1276,16 +1287,16 @@ class ComputeTestCase(BaseTestCase):
         old_time = datetime.datetime(2012, 4, 1)
         cur_time = datetime.datetime(2012, 12, 21, 12, 21)
         timeutils.set_time_override(old_time)
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         context = self.context.elevated()
 
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context, instance=instance)
         timeutils.set_time_override(cur_time)
         test_notifier.NOTIFICATIONS = []
 
         db.instance_update(self.context, instance['uuid'], {'host': 'foo'})
-        self.compute.prep_resize(context, instance['uuid'], 1, {},
-                                 filter_properties={})
+        self.compute.prep_resize(context, instance=instance,
+                instance_type={}, image={})
         db.migration_get_by_instance_and_status(context,
                                                 instance['uuid'],
                                                 'pre-migrating')
@@ -1313,23 +1324,24 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue('launched_at' in payload)
         image_ref_url = utils.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
-        self.compute.terminate_instance(context,
-            instance=jsonutils.to_primitive(instance))
+        self.compute.terminate_instance(context, instance=instance)
 
     def test_prep_resize_instance_migration_error(self):
         """Ensure prep_resize raise a migration error"""
         self.flags(host="foo", allow_resize_to_same_host=False)
 
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         context = self.context.elevated()
 
-        self.compute.run_instance(self.context, instance['uuid'])
-        db.instance_update(self.context, instance['uuid'], {'host': 'foo'})
+        self.compute.run_instance(self.context, instance=instance)
+        new_instance = db.instance_update(self.context, instance['uuid'],
+                                          {'host': 'foo'})
+        new_instance = jsonutils.to_primitive(new_instance)
 
         self.assertRaises(exception.MigrationError, self.compute.prep_resize,
-                          context, instance['uuid'], 1, {})
-        self.compute.terminate_instance(context,
-            instance=jsonutils.to_primitive(instance))
+                          context, instance=new_instance,
+                          instance_type={}, image={})
+        self.compute.terminate_instance(context, instance=new_instance)
 
     def test_resize_instance_driver_error(self):
         """Ensure instance status set to Error on resize error"""
@@ -1343,10 +1355,10 @@ class ComputeTestCase(BaseTestCase):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         context = self.context.elevated()
 
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'], {'host': 'foo'})
-        self.compute.prep_resize(context, instance['uuid'], 1, {},
-                                 filter_properties={})
+        self.compute.prep_resize(context, instance=instance,
+                                 instance_type={}, image={})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance['uuid'], 'pre-migrating')
 
@@ -1364,11 +1376,11 @@ class ComputeTestCase(BaseTestCase):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         context = self.context.elevated()
 
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'],
                            {'host': 'foo'})
-        self.compute.prep_resize(context, instance['uuid'], 1, {},
-                                 filter_properties={})
+        self.compute.prep_resize(context, instance=instance,
+                instance_type={}, image={})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance['uuid'], 'pre-migrating')
         self.compute.resize_instance(context, migration_ref['id'], {},
@@ -1385,10 +1397,10 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.driver, 'finish_revert_migration', fake)
 
         context = self.context.elevated()
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
 
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context, instance=instance)
 
         # Confirm the instance size before the resize starts
         inst_ref = db.instance_get_by_uuid(context, instance['uuid'])
@@ -1396,12 +1408,14 @@ class ComputeTestCase(BaseTestCase):
                 inst_ref['instance_type_id'])
         self.assertEqual(instance_type_ref['flavorid'], '1')
 
-        db.instance_update(self.context, instance['uuid'], {'host': 'foo'})
+        new_inst_ref = db.instance_update(self.context, instance['uuid'],
+                                          {'host': 'foo'})
 
         new_instance_type_ref = db.instance_type_get_by_flavor_id(context, 3)
-        self.compute.prep_resize(context, inst_ref['uuid'],
-                                 new_instance_type_ref['id'], {},
-                                 filter_properties={})
+        self.compute.prep_resize(context,
+                instance=jsonutils.to_primitive(new_inst_ref),
+                instance_type=jsonutils.to_primitive(new_instance_type_ref),
+                image={})
 
         migration_ref = db.migration_get_by_instance_and_status(context,
                 inst_ref['uuid'], 'pre-migrating')
@@ -1445,11 +1459,12 @@ class ComputeTestCase(BaseTestCase):
     def test_resize_same_source_fails(self):
         """Ensure instance fails to migrate when source and destination are
         the same host"""
-        instance = self._create_fake_instance()
-        self.compute.run_instance(self.context, instance['uuid'])
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=instance)
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertRaises(exception.MigrationError, self.compute.prep_resize,
-                self.context, instance['uuid'], 1, {})
+                self.context, instance=instance,
+                instance_type={}, image={})
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
 
@@ -1464,10 +1479,10 @@ class ComputeTestCase(BaseTestCase):
         inst_ref = jsonutils.to_primitive(self._create_fake_instance())
         context = self.context.elevated()
 
-        self.compute.run_instance(self.context, inst_ref['uuid'])
+        self.compute.run_instance(self.context, instance=inst_ref)
         db.instance_update(self.context, inst_ref['uuid'], {'host': 'foo'})
-        self.compute.prep_resize(context, inst_ref['uuid'], 1, {},
-                                 filter_properties={})
+        self.compute.prep_resize(context, instance=inst_ref, instance_type={},
+                                 image={})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 inst_ref['uuid'], 'pre-migrating')
         self.assertRaises(test.TestingException, self.compute.resize_instance,
@@ -1650,7 +1665,7 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
                                  'pre_live_migration')
         self.compute.compute_rpcapi.pre_live_migration(c,
-                mox.IsA(instance_ref), True, None, instance['host']).AndRaise(
+                mox.IsA(instance), True, None, instance['host']).AndRaise(
                                         rpc.common.RemoteError('', '', ''))
 
         # mocks for rollback
@@ -1674,7 +1689,8 @@ class ComputeTestCase(BaseTestCase):
         self.mox.ReplayAll()
         self.assertRaises(rpc_common.RemoteError,
                           self.compute.live_migration,
-                          c, inst_id, instance['host'], True)
+                          c, dest=instance['host'], block_migration=True,
+                          instance=rpcinst)
 
         # cleanup
         for bdms in db.block_device_mapping_get_all_by_instance(
@@ -1706,7 +1722,8 @@ class ComputeTestCase(BaseTestCase):
 
         # start test
         self.mox.ReplayAll()
-        ret = self.compute.live_migration(c, inst_id, instance['host'])
+        ret = self.compute.live_migration(c, dest=instance['host'],
+                instance=instance)
         self.assertEqual(ret, None)
 
         # cleanup
@@ -1752,7 +1769,7 @@ class ComputeTestCase(BaseTestCase):
 
         # start test
         self.mox.ReplayAll()
-        self.compute.post_live_migration(c, inst_ref, dest)
+        self.compute._post_live_migration(c, inst_ref, dest)
 
         # make sure floating ips are rewritten to destinatioin hostname.
         flo_refs = db.floating_ip_get_all_by_host(c, dest)
@@ -1769,9 +1786,9 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(compute_manager.ComputeManager,
                 '_report_driver_status', nop_report_driver_status)
 
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
 
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context, instance=instance)
 
         instances = db.instance_get_all(context.get_admin_context())
         LOG.info(_("Running instances: %s"), instances)
@@ -1813,9 +1830,9 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
-        self.compute.add_instance_fault_from_exc(ctxt, instance_uuid,
-                                                 NotImplementedError('test'),
-                                                 exc_info)
+        self.compute._add_instance_fault_from_exc(ctxt, instance_uuid,
+                                                  NotImplementedError('test'),
+                                                  exc_info)
 
     def test_add_instance_fault_user_error(self):
         exc_info = None
@@ -1841,7 +1858,7 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
-        self.compute.add_instance_fault_from_exc(ctxt, instance_uuid,
+        self.compute._add_instance_fault_from_exc(ctxt, instance_uuid,
             user_exc, exc_info)
 
     def test_add_instance_fault_no_exc_info(self):
@@ -1859,8 +1876,8 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
-        self.compute.add_instance_fault_from_exc(ctxt, instance_uuid,
-                                                 NotImplementedError('test'))
+        self.compute._add_instance_fault_from_exc(ctxt, instance_uuid,
+                                                  NotImplementedError('test'))
 
     def test_cleanup_running_deleted_instances(self):
         admin_context = context.get_admin_context()
@@ -2202,9 +2219,9 @@ class ComputeAPITestCase(BaseTestCase):
         }
 
     def _run_instance(self):
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['task_state'], None)
@@ -2407,7 +2424,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_start(self):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
 
         self.compute.stop_instance(self.context, instance=instance)
 
@@ -2422,9 +2439,9 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, instance['uuid'])
 
     def test_stop(self):
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['task_state'], None)
@@ -2449,8 +2466,8 @@ class ComputeAPITestCase(BaseTestCase):
             self.compute_api.start(self.context, instance)
             check_state(instance_uuid, power_state_, vm_state_, task_state_)
 
-        instance = self._create_fake_instance()
-        self.compute.run_instance(self.context, instance['uuid'])
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=instance)
 
         check_state(instance['uuid'], power_state.RUNNING, vm_states.ACTIVE,
                     None)
@@ -2530,9 +2547,9 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_force_delete(self):
         """Ensure instance can be deleted after a soft delete"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.compute_api.soft_delete(self.context, instance)
@@ -2552,9 +2569,9 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_suspend(self):
         """Ensure instance can be suspended"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
 
         self.assertEqual(instance['task_state'], None)
 
@@ -2567,8 +2584,8 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_resume(self):
         """Ensure instance can be resumed (if suspended)"""
-        instance = self._create_fake_instance()
-        self.compute.run_instance(self.context, instance['uuid'])
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'],
                            {'vm_state': vm_states.SUSPENDED})
         instance = db.instance_get(self.context, instance['id'])
@@ -2584,9 +2601,9 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_pause(self):
         """Ensure instance can be paused"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
 
         self.assertEqual(instance['task_state'], None)
 
@@ -2599,14 +2616,13 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_unpause(self):
         """Ensure instance can be unpaused"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
 
         self.assertEqual(instance['task_state'], None)
 
-        self.compute.pause_instance(self.context,
-                instance=jsonutils.to_primitive(instance))
+        self.compute.pause_instance(self.context, instance=instance)
         # set the state that the instance gets when pause finishes
         instance = db.instance_update(self.context, instance['uuid'],
                                       {'vm_state': vm_states.PAUSED})
@@ -2620,9 +2636,9 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_restore(self):
         """Ensure instance can be restored from a soft delete"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.compute_api.soft_delete(self.context, instance)
@@ -2643,9 +2659,9 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, instance['uuid'])
 
     def test_rebuild(self):
-        inst_ref = self._create_fake_instance()
-        instance_uuid = inst_ref['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance_uuid = instance['uuid']
+        self.compute.run_instance(self.context, instance=instance)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['task_state'], None)
@@ -2689,10 +2705,10 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_reboot_soft(self):
         """Ensure instance can be soft rebooted"""
-        inst_ref = self._create_fake_instance()
-        self.compute.run_instance(self.context, inst_ref['uuid'])
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=instance)
 
-        inst_ref = db.instance_get_by_uuid(self.context, inst_ref['uuid'])
+        inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(inst_ref['task_state'], None)
 
         reboot_type = "SOFT"
@@ -2705,10 +2721,10 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_reboot_hard(self):
         """Ensure instance can be hard rebooted"""
-        inst_ref = self._create_fake_instance()
-        self.compute.run_instance(self.context, inst_ref['uuid'])
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=instance)
 
-        inst_ref = db.instance_get_by_uuid(self.context, inst_ref['uuid'])
+        inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(inst_ref['task_state'], None)
 
         reboot_type = "HARD"
@@ -2731,9 +2747,9 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_set_admin_password(self):
         """Ensure instance can have its admin password set"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
 
         inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
@@ -2755,9 +2771,9 @@ class ComputeAPITestCase(BaseTestCase):
                 instance=jsonutils.to_primitive(inst_ref))
 
     def test_rescue_unrescue(self):
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance_uuid)
+        self.compute.run_instance(self.context, instance=instance)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['vm_state'], vm_states.ACTIVE)
@@ -2969,9 +2985,9 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, instance['uuid'])
 
     def test_resize_confirm_through_api(self):
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         context = self.context.elevated()
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context, instance=instance)
         instance = db.instance_get_by_uuid(context, instance['uuid'])
         self.compute_api.resize(context, instance, '4')
 
@@ -2989,10 +3005,10 @@ class ComputeAPITestCase(BaseTestCase):
             instance=jsonutils.to_primitive(instance))
 
     def test_resize_revert_through_api(self):
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         context = self.context.elevated()
         instance = db.instance_get_by_uuid(context, instance['uuid'])
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context, instance=instance)
 
         self.compute_api.resize(context, instance, '4')
 
@@ -3019,37 +3035,37 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self._create_fake_instance()
         context = self.context.elevated()
         instance = db.instance_get_by_uuid(context, instance['uuid'])
-        self.compute.run_instance(self.context, instance['uuid'])
+        instance = jsonutils.to_primitive(instance)
+        self.compute.run_instance(self.context, instance=instance)
 
         self.assertRaises(exception.NotFound, self.compute_api.resize,
                 context, instance, 200)
 
-        self.compute.terminate_instance(context,
-                instance=jsonutils.to_primitive(instance))
+        self.compute.terminate_instance(context, instance=instance)
 
     def test_resize_same_size_fails(self):
         """Ensure invalid flavors raise"""
         context = self.context.elevated()
         instance = self._create_fake_instance()
         instance = db.instance_get_by_uuid(context, instance['uuid'])
+        instance = jsonutils.to_primitive(instance)
 
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context, instance=instance)
 
         self.assertRaises(exception.CannotResizeToSameSize,
                           self.compute_api.resize, context, instance, 1)
 
-        self.compute.terminate_instance(context,
-                instance=jsonutils.to_primitive(instance))
+        self.compute.terminate_instance(context, instance=instance)
 
     def test_migrate(self):
         context = self.context.elevated()
         instance = self._create_fake_instance()
         instance = db.instance_get_by_uuid(context, instance['uuid'])
-        self.compute.run_instance(self.context, instance['uuid'])
+        instance = jsonutils.to_primitive(instance)
+        self.compute.run_instance(self.context, instance=instance)
         # Migrate simply calls resize() without a flavor_id.
         self.compute_api.resize(context, instance, None)
-        self.compute.terminate_instance(context,
-                instance=jsonutils.to_primitive(instance))
+        self.compute.terminate_instance(context, instance=instance)
 
     def test_resize_request_spec(self):
         def _fake_cast(context, topic, msg):
@@ -3064,12 +3080,12 @@ class ComputeAPITestCase(BaseTestCase):
         context = self.context.elevated()
         instance = self._create_fake_instance(dict(host='host2'))
         instance = db.instance_get_by_uuid(context, instance['uuid'])
-        self.compute.run_instance(self.context, instance['uuid'])
+        instance = jsonutils.to_primitive(instance)
+        self.compute.run_instance(self.context, instance=instance)
         try:
             self.compute_api.resize(context, instance, None)
         finally:
-            self.compute.terminate_instance(context,
-                    instance=jsonutils.to_primitive(instance))
+            self.compute.terminate_instance(context, instance=instance)
 
     def test_resize_request_spec_noavoid(self):
         def _fake_cast(context, topic, msg):
@@ -3085,12 +3101,12 @@ class ComputeAPITestCase(BaseTestCase):
         context = self.context.elevated()
         instance = self._create_fake_instance(dict(host='host2'))
         instance = db.instance_get_by_uuid(context, instance['uuid'])
-        self.compute.run_instance(self.context, instance['uuid'])
+        instance = jsonutils.to_primitive(instance)
+        self.compute.run_instance(self.context, instance=instance)
         try:
             self.compute_api.resize(context, instance, None)
         finally:
-            self.compute.terminate_instance(context,
-                    instance=jsonutils.to_primitive(instance))
+            self.compute.terminate_instance(context, instance=instance)
 
     def test_get(self):
         """Test get instance"""
@@ -3665,10 +3681,10 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_instance_unknown_architecture(self):
         """Test if the architecture is unknown."""
-        instance = self._create_fake_instance(
-                        params={'architecture': ''})
+        instance = jsonutils.to_primitive(self._create_fake_instance(
+                        params={'architecture': ''}))
         try:
-            self.compute.run_instance(self.context, instance['uuid'])
+            self.compute.run_instance(self.context, instance=instance)
             instances = db.instance_get_all(context.get_admin_context())
             instance = instances[0]
             self.assertNotEqual(instance['architecture'], 'Unknown')
@@ -3790,14 +3806,16 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_inject_network_info(self):
         instance = self._create_fake_instance()
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
         instance = self.compute_api.get(self.context, instance['uuid'])
         self.compute_api.inject_network_info(self.context, instance)
         self.compute_api.delete(self.context, instance)
 
     def test_reset_network(self):
         instance = self._create_fake_instance()
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
         instance = self.compute_api.get(self.context, instance['uuid'])
         self.compute_api.reset_network(self.context, instance)
 
@@ -3820,7 +3838,8 @@ class ComputeAPITestCase(BaseTestCase):
     def test_add_remove_security_group(self):
         instance = self._create_fake_instance()
 
-        self.compute.run_instance(self.context, instance['uuid'])
+        self.compute.run_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
         instance = self.compute_api.get(self.context, instance['uuid'])
         security_group_name = self._create_group()['name']
         self.security_group_api.add_to_instance(self.context,
@@ -4427,7 +4446,7 @@ class ComputeReschedulingTestCase(BaseTestCase):
 
         return functools.partial(self.compute._reschedule, self.context, uuid,
                 requested_networks, admin_password, injected_files,
-                is_first_time)
+                is_first_time, request_spec=None, filter_properties={})
 
     def test_reschedule_no_filter_properties(self):
         """no filter_properties will disable re-scheduling"""
@@ -4469,13 +4488,16 @@ class ComputeReschedulingExceptionTestCase(BaseTestCase):
         self.stubs.Set(self.compute, '_spawn',
                 exploding_spawn)
 
-        self.instance_uuid = self._create_fake_instance()['uuid']
+        self.fake_instance = jsonutils.to_primitive(
+                self._create_fake_instance())
+        self.instance_uuid = self.fake_instance['uuid']
 
     def test_exception_with_rescheduling_disabled(self):
         """Spawn fails and re-scheduling is disabled."""
         # this won't be re-scheduled:
         self.assertRaises(ThatsNoOrdinaryRabbitException,
-                self.compute._run_instance, self.context, self.instance_uuid)
+                self.compute._run_instance, self.context,
+                None, {}, None, None, None, None, self.fake_instance, None)
 
     def test_exception_with_rescheduling_enabled(self):
         """Spawn fails and re-scheduling is enabled.  Original exception
@@ -4486,8 +4508,9 @@ class ComputeReschedulingExceptionTestCase(BaseTestCase):
         filter_properties = dict(retry=retry)
         request_spec = dict(num_attempts=1)
         self.assertNotRaises(ThatsNoOrdinaryRabbitException,
-                self.compute._run_instance, self.context, self.instance_uuid,
-                filter_properties=filter_properties, request_spec=request_spec)
+                self.compute._run_instance, self.context,
+                filter_properties=filter_properties, request_spec=request_spec,
+                instance=self.fake_instance)
 
     def test_exception_context_cleared(self):
         """Test with no rescheduling and an additional exception occurs
@@ -4503,4 +4526,5 @@ class ComputeReschedulingExceptionTestCase(BaseTestCase):
 
         # the original exception should now be raised:
         self.assertRaises(ThatsNoOrdinaryRabbitException,
-                self.compute._run_instance, self.context, self.instance_uuid)
+                self.compute._run_instance, self.context,
+                None, {}, None, None, None, None, self.fake_instance, None)

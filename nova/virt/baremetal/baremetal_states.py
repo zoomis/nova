@@ -28,10 +28,5 @@ health.
 
 ACTIVE = 'active'
 BUILDING = 'building'
-REBUILDING = 'rebuilding'
-
-SUSPENDED = 'suspended'
 DELETED = 'deleted'
-STOPPED = 'stopped'
-
 ERROR = 'error'
