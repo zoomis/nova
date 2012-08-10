@@ -47,7 +47,7 @@ class BaremetalHostState(host_manager.HostState):
         if capabilities is None:
             capabilities = {}
         self.capabilities = host_manager.ReadOnlyDict(capabilities.get(topic,
-                                                                   None))
+                                                                       None))
 
         self.baremetal_compute = False
         cap_extra_specs = self.capabilities.get('instance_type_extra_specs',
