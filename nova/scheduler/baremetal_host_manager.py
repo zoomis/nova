@@ -32,6 +32,7 @@ from nova.virt.baremetal import bmdb
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 
+
 class BaremetalHostState(host_manager.HostState):
     """Mutable and immutable information tracked for a host.
     This is an attempt to remove the ad-hoc data structures
