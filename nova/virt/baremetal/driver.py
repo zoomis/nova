@@ -135,7 +135,6 @@ class BareMetalDriver(driver.ComputeDriver):
     def __init__(self):
         super(BareMetalDriver, self).__init__()
 
-        print FLAGS.baremetal_driver
         self.baremetal_nodes = importutils.import_object(
                 FLAGS.baremetal_driver)
         self._vif_driver = importutils.import_object(
