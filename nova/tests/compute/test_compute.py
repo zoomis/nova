@@ -42,6 +42,7 @@ from nova import flags
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common.notifier import api as notifier_api
 from nova.openstack.common.notifier import test_notifier
 from nova.openstack.common import policy as common_policy
 from nova.openstack.common import rpc
@@ -51,6 +52,7 @@ import nova.policy
 from nova import quota
 from nova.scheduler import driver as scheduler_driver
 from nova import test
+from nova.tests.db.fakes import FakeModel
 from nova.tests import fake_network
 from nova.tests.image import fake as fake_image
 from nova import utils
@@ -114,7 +116,7 @@ class BaseTestCase(test.TestCase):
         super(BaseTestCase, self).setUp()
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    stub_network=True,
-           notification_driver='nova.openstack.common.notifier.test_notifier',
+         notification_driver=['nova.openstack.common.notifier.test_notifier'],
                    network_manager='nova.network.manager.FlatManager')
         self.compute = importutils.import_object(FLAGS.compute_manager)
 
@@ -142,6 +144,7 @@ class BaseTestCase(test.TestCase):
     def tearDown(self):
         fake_image.FakeImageService_reset()
         instances = db.instance_get_all(self.context.elevated())
+        notifier_api._reset_drivers()
         for instance in instances:
             db.instance_destroy(self.context.elevated(), instance['uuid'])
         super(BaseTestCase, self).tearDown()
@@ -2495,6 +2498,32 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_destroy(self.context, instance['uuid'])
 
+    def test_repeated_delete_quota(self):
+        in_use = {'instances': 1}
+
+        def fake_reserve(context, **deltas):
+            return dict(deltas.iteritems())
+
+        self.stubs.Set(QUOTAS, 'reserve', fake_reserve)
+
+        def fake_commit(context, deltas):
+            for k, v in deltas.iteritems():
+                in_use[k] = in_use.get(k, 0) + v
+
+        self.stubs.Set(QUOTAS, 'commit', fake_commit)
+
+        instance, instance_uuid = self._run_instance()
+
+        self.compute_api.delete(self.context, instance)
+        self.compute_api.delete(self.context, instance)
+
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(instance['task_state'], task_states.DELETING)
+
+        self.assertEquals(in_use['instances'], 0)
+
+        db.instance_destroy(self.context, instance['uuid'])
+
     def test_delete_fast_if_host_not_set(self):
         instance = self._create_fake_instance({'host': None})
         self.compute_api.delete(self.context, instance)
@@ -3073,6 +3102,11 @@ class ComputeAPITestCase(BaseTestCase):
             filter_properties = msg['args']['filter_properties']
             instance_properties = request_spec['instance_properties']
             self.assertEqual(instance_properties['host'], 'host2')
+            # Ensure the instance passed to us has been updated with
+            # progress set to 0 and task_state set to RESIZE_PREP.
+            self.assertEqual(instance_properties['task_state'],
+                    task_states.RESIZE_PREP)
+            self.assertEqual(instance_properties['progress'], 0)
             self.assertIn('host2', filter_properties['ignore_hosts'])
 
         self.stubs.Set(rpc, 'cast', _fake_cast)
@@ -3082,6 +3116,16 @@ class ComputeAPITestCase(BaseTestCase):
         instance = db.instance_get_by_uuid(context, instance['uuid'])
         instance = jsonutils.to_primitive(instance)
         self.compute.run_instance(self.context, instance=instance)
+        # We need to set the host to something 'known'.  Unfortunately,
+        # the compute manager is using a cached copy of FLAGS.host,
+        # so we can't just self.flags(host='host2') before calling
+        # run_instance above.  Also, set progress to 10 so we ensure
+        # it is reset to 0 in compute_api.resize().  (verified in
+        # _fake_cast above).
+        instance = db.instance_update(self.context, instance['uuid'],
+                dict(host='host2', progress=10))
+        # different host
+        self.flags(host='host3')
         try:
             self.compute_api.resize(context, instance, None)
         finally:
@@ -3093,6 +3137,11 @@ class ComputeAPITestCase(BaseTestCase):
             filter_properties = msg['args']['filter_properties']
             instance_properties = request_spec['instance_properties']
             self.assertEqual(instance_properties['host'], 'host2')
+            # Ensure the instance passed to us has been updated with
+            # progress set to 0 and task_state set to RESIZE_PREP.
+            self.assertEqual(instance_properties['task_state'],
+                    task_states.RESIZE_PREP)
+            self.assertEqual(instance_properties['progress'], 0)
             self.assertNotIn('host2', filter_properties['ignore_hosts'])
 
         self.stubs.Set(rpc, 'cast', _fake_cast)
@@ -3103,6 +3152,15 @@ class ComputeAPITestCase(BaseTestCase):
         instance = db.instance_get_by_uuid(context, instance['uuid'])
         instance = jsonutils.to_primitive(instance)
         self.compute.run_instance(self.context, instance=instance)
+        # We need to set the host to something 'known'.  Unfortunately,
+        # the compute manager is using a cached copy of FLAGS.host,
+        # so we can't just self.flags(host='host2') before calling
+        # run_instance above.  Also, set progress to 10 so we ensure
+        # it is reset to 0 in compute_api.resize().  (verified in
+        # _fake_cast above).
+        instance = db.instance_update(self.context, instance['uuid'],
+                dict(host='host2', progress=10))
+        # different host
         try:
             self.compute_api.resize(context, instance, None)
         finally:
@@ -3860,6 +3918,134 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.inject_file(self.context, instance,
                                      "/tmp/test", "File Contents")
         db.instance_destroy(self.context, instance['uuid'])
+
+    def test_secgroup_refresh(self):
+        instance = self._create_fake_instance()
+
+        def rule_get(*args, **kwargs):
+            mock_rule = FakeModel({'parent_group_id': 1})
+            return [mock_rule]
+
+        def group_get(*args, **kwargs):
+            mock_group = FakeModel({'instances': [instance]})
+            return mock_group
+
+        self.stubs.Set(
+                   self.compute_api.db,
+                   'security_group_rule_get_by_security_group_grantee',
+                   rule_get)
+        self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
+
+        self.mox.StubOutWithMock(rpc, 'cast')
+        topic = rpc.queue_get_for(self.context, FLAGS.compute_topic,
+                                  instance['host'])
+        rpc.cast(self.context, topic,
+                {"method": "refresh_instance_security_rules",
+                 "args": {'instance': jsonutils.to_primitive(instance)},
+                 "version": '1.41'})
+        self.mox.ReplayAll()
+
+        self.security_group_api.trigger_members_refresh(self.context, [1])
+
+    def test_secgroup_refresh_once(self):
+        instance = self._create_fake_instance()
+
+        def rule_get(*args, **kwargs):
+            mock_rule = FakeModel({'parent_group_id': 1})
+            return [mock_rule]
+
+        def group_get(*args, **kwargs):
+            mock_group = FakeModel({'instances': [instance]})
+            return mock_group
+
+        self.stubs.Set(
+                   self.compute_api.db,
+                   'security_group_rule_get_by_security_group_grantee',
+                   rule_get)
+        self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
+
+        self.mox.StubOutWithMock(rpc, 'cast')
+        topic = rpc.queue_get_for(self.context, FLAGS.compute_topic,
+                                  instance['host'])
+        rpc.cast(self.context, topic,
+                {"method": "refresh_instance_security_rules",
+                 "args": {'instance': jsonutils.to_primitive(instance)},
+                 "version": '1.41'})
+        self.mox.ReplayAll()
+
+        self.security_group_api.trigger_members_refresh(self.context, [1, 2])
+
+    def test_secgroup_refresh_none(self):
+        def rule_get(*args, **kwargs):
+            mock_rule = FakeModel({'parent_group_id': 1})
+            return [mock_rule]
+
+        def group_get(*args, **kwargs):
+            mock_group = FakeModel({'instances': []})
+            return mock_group
+
+        self.stubs.Set(
+                   self.compute_api.db,
+                   'security_group_rule_get_by_security_group_grantee',
+                   rule_get)
+        self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
+
+        self.mox.StubOutWithMock(rpc, 'cast')
+        self.mox.ReplayAll()
+
+        self.security_group_api.trigger_members_refresh(self.context, [1])
+
+    def test_secrule_refresh(self):
+        instance = self._create_fake_instance()
+
+        def group_get(*args, **kwargs):
+            mock_group = FakeModel({'instances': [instance]})
+            return mock_group
+
+        self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
+
+        self.mox.StubOutWithMock(rpc, 'cast')
+        topic = rpc.queue_get_for(self.context, FLAGS.compute_topic,
+                                  instance['host'])
+        rpc.cast(self.context, topic,
+                {"method": "refresh_instance_security_rules",
+                 "args": {'instance': jsonutils.to_primitive(instance)},
+                 "version": '1.41'})
+        self.mox.ReplayAll()
+
+        self.security_group_api.trigger_rules_refresh(self.context, [1])
+
+    def test_secrule_refresh_once(self):
+        instance = self._create_fake_instance()
+
+        def group_get(*args, **kwargs):
+            mock_group = FakeModel({'instances': [instance]})
+            return mock_group
+
+        self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
+
+        self.mox.StubOutWithMock(rpc, 'cast')
+        topic = rpc.queue_get_for(self.context, FLAGS.compute_topic,
+                                  instance['host'])
+        rpc.cast(self.context, topic,
+                {"method": "refresh_instance_security_rules",
+                 "args": {'instance': jsonutils.to_primitive(instance)},
+                 "version": '1.41'})
+        self.mox.ReplayAll()
+
+        self.security_group_api.trigger_rules_refresh(self.context, [1, 2])
+
+    def test_secrule_refresh_none(self):
+        def group_get(*args, **kwargs):
+            mock_group = FakeModel({'instances': []})
+            return mock_group
+
+        self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
+
+        self.mox.StubOutWithMock(rpc, 'cast')
+        self.mox.ReplayAll()
+
+        self.security_group_api.trigger_rules_refresh(self.context, [1, 2])
 
 
 def fake_rpc_method(context, topic, msg, do_cast=True):

@@ -45,6 +45,7 @@ from nova import utils
 from nova.virt import driver
 from nova.virt.xenapi import agent
 from nova.virt.xenapi import firewall
+from nova.virt.xenapi import pool_states
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import volume_utils
 
@@ -511,7 +512,7 @@ class VMOps(object):
         no_agent = version is None
 
         # Inject files, if necessary
-        injected_files = instance['injected_files']
+        injected_files = instance.get("injected_files")
         if injected_files:
             # Check if this is a JSON-encoded string and convert if needed.
             if isinstance(injected_files, basestring):
@@ -1456,6 +1457,10 @@ class VMOps(object):
         """ recreates security group rules for every instance """
         self.firewall_driver.refresh_security_group_members(security_group_id)
 
+    def refresh_instance_security_rules(self, instance):
+        """ recreates security group rules for specified instance """
+        self.firewall_driver.refresh_instance_security_rules(instance)
+
     def refresh_provider_fw_rules(self):
         self.firewall_driver.refresh_provider_fw_rules()
 
@@ -1465,7 +1470,10 @@ class VMOps(object):
                                                network_info=network_info)
 
     def _get_host_uuid_from_aggregate(self, context, hostname):
-        current_aggregate = db.aggregate_get_by_host(context, FLAGS.host)
+        current_aggregate = db.aggregate_get_by_host(context, FLAGS.host,
+               key=pool_states.POOL_FLAG)[0]
+        if not current_aggregate:
+            raise exception.AggregateHostNotFound(host=FLAGS.host)
         try:
             return current_aggregate.metadetails[hostname]
         except KeyError:

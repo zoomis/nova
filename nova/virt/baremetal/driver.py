@@ -357,6 +357,9 @@ class BareMetalDriver(driver.ComputeDriver):
                }
         return dic
 
+    def refresh_instance_security_rules(self, instance):
+        self._firewall_driver.refresh_instance_security_rules(instance)
+
     def update_available_resource(self, ctxt, host):
         """Updates compute manager resource info on ComputeNode table.
 

@@ -19,6 +19,7 @@
 
 """Implementation of SQLAlchemy backend."""
 
+import collections
 import copy
 import datetime
 import functools
@@ -1995,12 +1996,20 @@ def key_pair_count_by_user(context, user_id):
 
 
 @require_admin_context
-def network_associate(context, project_id):
+def network_associate(context, project_id, force=False):
     """Associate a project with a network.
 
     called by project_get_networks under certain conditions
+    and network manager add_network_to_project()
 
     only associate if the project doesn't already have a network
+    or if force is True
+
+    force solves race condition where a fresh project has multiple instance
+    builds simultaneously picked up by multiple network hosts which attempt
+    to associate the project with multiple networks
+    force should only be used as a direct consequence of user request
+    all automated requests should not use force
     """
     session = get_session()
     with session.begin():
@@ -2012,10 +2021,13 @@ def network_associate(context, project_id):
                            with_lockmode('update').\
                            first()
 
-        # find out if project has a network
-        network_ref = network_query(project_id)
-        if not network_ref:
-            # project doesn't have a network so associate with a new network
+        if not force:
+            # find out if project has a network
+            network_ref = network_query(project_id)
+
+        if force or not network_ref:
+            # in force mode or project doesn't have a network so associate
+            # with a new network
 
             # get new network
             network_ref = network_query(None)
@@ -3223,7 +3235,7 @@ def get_ec2_volume_id_by_uuid(context, volume_id, session=None):
                     first()
 
     if not result:
-        raise exception.VolumeNotFound(uuid=volume_id)
+        raise exception.VolumeNotFound(volume_id=volume_id)
 
     return result['id']
 
@@ -3235,7 +3247,7 @@ def get_volume_uuid_by_ec2_id(context, ec2_id, session=None):
                     first()
 
     if not result:
-        raise exception.VolumeNotFound(ec2_id=ec2_id)
+        raise exception.VolumeNotFound(volume_id=ec2_id)
 
     return result['uuid']
 
@@ -3260,7 +3272,7 @@ def get_ec2_snapshot_id_by_uuid(context, snapshot_id, session=None):
                     first()
 
     if not result:
-        raise exception.SnapshotNotFound(uuid=snapshot_id)
+        raise exception.SnapshotNotFound(snapshot_id=snapshot_id)
 
     return result['id']
 
@@ -3272,7 +3284,7 @@ def get_snapshot_uuid_by_ec2_id(context, ec2_id, session=None):
                     first()
 
     if not result:
-        raise exception.SnapshotNotFound(ec2_id=ec2_id)
+        raise exception.SnapshotNotFound(snapshot_id=ec2_id)
 
     return result['uuid']
 
@@ -4926,16 +4938,30 @@ def aggregate_get(context, aggregate_id):
 
 
 @require_admin_context
-def aggregate_get_by_host(context, host):
-    aggregate_host = _aggregate_get_query(context,
-                                          models.AggregateHost,
-                                          models.AggregateHost.host,
-                                          host).first()
+def aggregate_get_by_host(context, host, key=None):
+    query = model_query(context, models.Aggregate).join(
+            "_hosts").filter(models.AggregateHost.host == host)
 
-    if not aggregate_host:
-        raise exception.AggregateHostNotFound(host=host)
+    if key:
+        query = query.join("_metadata").filter(
+        models.AggregateMetadata.key == key)
+    return query.all()
 
-    return aggregate_get(context, aggregate_host.aggregate_id)
+
+@require_admin_context
+def aggregate_metadata_get_by_host(context, host, key=None):
+    query = model_query(context, models.Aggregate).join(
+            "_hosts").filter(models.AggregateHost.host == host).join(
+            "_metadata")
+
+    if key:
+        query = query.filter(models.AggregateMetadata.key == key)
+    rows = query.all()
+    metadata = collections.defaultdict(set)
+    for agg in rows:
+        for kv in agg._metadata:
+            metadata[kv['key']].add(kv['value'])
+    return metadata
 
 
 @require_admin_context
@@ -5163,20 +5189,20 @@ def get_ec2_instance_id_by_uuid(context, instance_id, session=None):
                     first()
 
     if not result:
-        raise exception.InstanceNotFound(uuid=instance_id)
+        raise exception.InstanceNotFound(instance_id=instance_id)
 
     return result['id']
 
 
 @require_context
-def get_instance_uuid_by_ec2_id(context, instance_id, session=None):
+def get_instance_uuid_by_ec2_id(context, ec2_id, session=None):
     result = _ec2_instance_get_query(context,
                                      session=session).\
-                    filter_by(id=instance_id).\
+                    filter_by(id=ec2_id).\
                     first()
 
     if not result:
-        raise exception.InstanceNotFound(id=instance_id)
+        raise exception.InstanceNotFound(instance_id=ec2_id)
 
     return result['uuid']
 

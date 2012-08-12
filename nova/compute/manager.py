@@ -221,7 +221,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.40'
+    RPC_API_VERSION = '1.41'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -354,6 +354,16 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         return self.driver.refresh_security_group_members(security_group_id)
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    def refresh_instance_security_rules(self, context, instance):
+        """Tell the virtualization driver to refresh security rules for
+        an instance.
+
+        Passes straight through to the virtualization driver.
+
+        """
+        return self.driver.refresh_instance_security_rules(instance)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def refresh_provider_fw_rules(self, context, **kwargs):
@@ -1286,8 +1296,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         admin_pass = (rescue_password if rescue_password else
                       utils.generate_password(FLAGS.password_length))
-        self.db.instance_update(context, instance['uuid'],
-                                dict(admin_pass=admin_pass))
+        instance['admin_pass'] = admin_pass
 
         network_info = self._get_instance_nw_info(context, instance)
         image_meta = _get_image_meta(context, instance['image_ref'])
@@ -1334,7 +1343,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                  instance_uuid=None):
         """Update the metadata published to the instance."""
         if not instance:
-            instance = self.db.instance_get_by_uuid(context, instance)
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
         LOG.debug(_("Changing instance metadata according to %(diff)r") %
                   locals(), instance=instance)
         self.driver.change_instance_metadata(context, instance, diff)
@@ -2223,8 +2232,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             # NOTE(vish): We don't want to actually mark the volume
             #             detached, or delete the bdm, just remove the
             #             connection from this host.
-            self.remove_volume_connection(ctxt, instance_ref['id'],
-                                          bdm['volume_id'])
+            self.remove_volume_connection(ctxt, bdm['volume_id'],
+                                          instance_ref)
 
         # Releasing vlan.
         # (not necessary in current implementation?)

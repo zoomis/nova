@@ -792,7 +792,7 @@ class API(base.Base):
         # only going to create 1 instance.
         # This speeds up API responses for builds
         # as we don't need to wait for the scheduler.
-        create_instance_here = max_count == 1 or max_count == None
+        create_instance_here = max_count == 1 or max_count is None
 
         (instances, reservation_id) = self._create_instance(
                                context, instance_type,
@@ -843,7 +843,10 @@ class API(base.Base):
 
         :returns: None
         """
+        _, updated = self._update(context, instance, **kwargs)
+        return updated
 
+    def _update(self, context, instance, **kwargs):
         # Update the instance record and send a state update notification
         # if task or vm state changed
         old_ref, instance_ref = self.db.instance_update_and_get_original(
@@ -851,7 +854,7 @@ class API(base.Base):
         notifications.send_update(context, old_ref, instance_ref,
                 service="api")
 
-        return dict(instance_ref.iteritems())
+        return dict(old_ref.iteritems()), dict(instance_ref.iteritems())
 
     @wrap_check_policy
     @check_instance_lock
@@ -868,10 +871,9 @@ class API(base.Base):
         # that are in soft delete. If there is no host assigned, there is
         # no daemon to reclaim, so delete it immediately.
         if instance['host']:
-            self.update(context,
-                        instance,
-                        task_state=task_states.POWERING_OFF,
-                        deleted_at=timeutils.utcnow())
+            instance = self.update(context, instance,
+                                   task_state=task_states.POWERING_OFF,
+                                   deleted_at=timeutils.utcnow())
 
             self.compute_rpcapi.power_off_instance(context, instance)
         else:
@@ -885,11 +887,21 @@ class API(base.Base):
 
     def _delete(self, context, instance):
         host = instance['host']
-        reservations = QUOTAS.reserve(context,
-                                      instances=-1,
-                                      cores=-instance['vcpus'],
-                                      ram=-instance['memory_mb'])
+        reservations = None
         try:
+            old, updated = self._update(context,
+                                        instance,
+                                        task_state=task_states.DELETING,
+                                        progress=0)
+
+            # Avoid double-counting the quota usage reduction
+            # where delete is already in progress
+            if old['task_state'] != task_states.DELETING:
+                reservations = QUOTAS.reserve(context,
+                                              instances=-1,
+                                              cores=-instance['vcpus'],
+                                              ram=-instance['memory_mb'])
+
             if not instance['host']:
                 # Just update database, nothing else we can do
                 constraint = self.db.constraint(host=self.db.equal_any(host))
@@ -897,16 +909,12 @@ class API(base.Base):
                     result = self.db.instance_destroy(context,
                                                       instance['uuid'],
                                                       constraint)
-                    QUOTAS.commit(context, reservations)
+                    if reservations:
+                        QUOTAS.commit(context, reservations)
                     return result
                 except exception.ConstraintNotMet:
                     # Refresh to get new host information
                     instance = self.get(context, instance['uuid'])
-
-            self.update(context,
-                        instance,
-                        task_state=task_states.DELETING,
-                        progress=0)
 
             if instance['vm_state'] == vm_states.RESIZED:
                 # If in the middle of a resize, use confirm_resize to
@@ -922,13 +930,16 @@ class API(base.Base):
 
             self.compute_rpcapi.terminate_instance(context, instance)
 
-            QUOTAS.commit(context, reservations)
+            if reservations:
+                QUOTAS.commit(context, reservations)
         except exception.InstanceNotFound:
             # NOTE(comstud): Race condition. Instance already gone.
-            QUOTAS.rollback(context, reservations)
+            if reservations:
+                QUOTAS.rollback(context, reservations)
         except Exception:
             with excutils.save_and_reraise_exception():
-                QUOTAS.rollback(context, reservations)
+                if reservations:
+                    QUOTAS.rollback(context, reservations)
 
     # NOTE(maoy): we allow delete to be called no matter what vm_state says.
     @wrap_check_policy
@@ -949,10 +960,8 @@ class API(base.Base):
     def restore(self, context, instance):
         """Restore a previously deleted (but not reclaimed) instance."""
         if instance['host']:
-            self.update(context,
-                        instance,
-                        task_state=task_states.POWERING_ON,
-                        deleted_at=None)
+            instance = self.update(context, instance,
+                        task_state=task_states.POWERING_ON, deleted_at=None)
             self.compute_rpcapi.power_on_instance(context, instance)
         else:
             self.update(context,
@@ -977,10 +986,8 @@ class API(base.Base):
         """Stop an instance."""
         LOG.debug(_("Going to try to stop instance"), instance=instance)
 
-        self.update(context,
-                    instance,
-                    task_state=task_states.STOPPING,
-                    progress=0)
+        instance = self.update(context, instance,
+                    task_state=task_states.STOPPING, progress=0)
 
         self.compute_rpcapi.stop_instance(context, instance, cast=do_cast)
 
@@ -991,9 +998,8 @@ class API(base.Base):
         """Start an instance."""
         LOG.debug(_("Going to try to start instance"), instance=instance)
 
-        self.update(context,
-                    instance,
-                    task_state=task_states.STARTING)
+        instance = self.update(context, instance,
+                               task_state=task_states.STARTING)
 
         # TODO(yamahata): injected_files isn't supported right now.
         #                 It is used only for osapi. not for ec2 api.
@@ -1252,10 +1258,8 @@ class API(base.Base):
         """Reboot the given instance."""
         state = {'SOFT': task_states.REBOOTING,
                  'HARD': task_states.REBOOTING_HARD}[reboot_type]
-        self.update(context,
-                    instance,
-                    vm_state=vm_states.ACTIVE,
-                    task_state=state)
+        instance = self.update(context, instance, vm_state=vm_states.ACTIVE,
+                               task_state=state)
         self.compute_rpcapi.reboot_instance(context, instance=instance,
                 reboot_type=reboot_type)
 
@@ -1313,14 +1317,11 @@ class API(base.Base):
             self.db.instance_system_metadata_update(context,
                     instance['uuid'], sys_metadata, True)
 
-        self.update(context,
-                    instance,
-                    task_state=task_states.REBUILDING,
-                    # Unfortunately we need to set image_ref early,
-                    # so API users can see it.
-                    image_ref=image_href,
-                    progress=0,
-                    **kwargs)
+        instance = self.update(context, instance,
+                               task_state=task_states.REBUILDING,
+                               # Unfortunately we need to set image_ref early,
+                               # so API users can see it.
+                               image_ref=image_href, progress=0, **kwargs)
 
         # On a rebuild, since we're potentially changing images, we need to
         # wipe out the old image properties that we're storing as instance
@@ -1343,9 +1344,8 @@ class API(base.Base):
             raise exception.MigrationNotFoundByStatus(
                     instance_id=instance['uuid'], status='finished')
 
-        self.update(context,
-                    instance,
-                    task_state=task_states.RESIZE_REVERTING)
+        instance = self.update(context, instance,
+                               task_state=task_states.RESIZE_REVERTING)
 
         self.compute_rpcapi.revert_resize(context,
                 instance=instance, migration_id=migration_ref['id'],
@@ -1366,10 +1366,8 @@ class API(base.Base):
             raise exception.MigrationNotFoundByStatus(
                     instance_id=instance['uuid'], status='finished')
 
-        self.update(context,
-                    instance,
-                    vm_state=vm_states.ACTIVE,
-                    task_state=None)
+        instance = self.update(context, instance, vm_state=vm_states.ACTIVE,
+                               task_state=None)
 
         self.compute_rpcapi.confirm_resize(context,
                 instance=instance, migration_id=migration_ref['id'],
@@ -1427,11 +1425,8 @@ class API(base.Base):
         if (current_memory_mb == new_memory_mb) and flavor_id:
             raise exception.CannotResizeToSameSize()
 
-        self.update(context,
-                    instance,
-                    task_state=task_states.RESIZE_PREP,
-                    progress=0,
-                    **kwargs)
+        instance = self.update(context, instance,
+                task_state=task_states.RESIZE_PREP, progress=0, **kwargs)
 
         request_spec = {
                 'instance_type': new_instance_type,
@@ -1447,7 +1442,6 @@ class API(base.Base):
             "instance": instance,
             "instance_type": new_instance_type,
             "image": image,
-            "update_db": False,
             "request_spec": jsonutils.to_primitive(request_spec),
             "filter_properties": filter_properties,
         }
@@ -2169,20 +2163,16 @@ class SecurityGroupAPI(base.Base):
 
         security_group = self.db.security_group_get(context, id)
 
-        hosts = set()
         for instance in security_group['instances']:
             if instance['host'] is not None:
-                hosts.add(instance['host'])
-
-        for host in hosts:
-            self.security_group_rpcapi.refresh_security_group_rules(context,
-                    security_group.id, host=host)
+                self.security_group_rpcapi.refresh_instance_security_rules(
+                        context, instance['host'], instance)
 
     def trigger_members_refresh(self, context, group_ids):
         """Called when a security group gains a new or loses a member.
 
-        Sends an update request to each compute node for whom this is
-        relevant.
+        Sends an update request to each compute node for each instance for
+        which this is relevant.
         """
         # First, we get the security group rules that reference these groups as
         # the grantee..
@@ -2193,7 +2183,7 @@ class SecurityGroupAPI(base.Base):
                                                                      context,
                                                                      group_id))
 
-        # ..then we distill the security groups to which they belong..
+        # ..then we distill the rules into the groups to which they belong..
         security_groups = set()
         for rule in security_group_rules:
             security_group = self.db.security_group_get(
@@ -2207,17 +2197,11 @@ class SecurityGroupAPI(base.Base):
             for instance in security_group['instances']:
                 instances.add(instance)
 
-        # ...then we find the hosts where they live...
-        hosts = set()
+        # ..then we send a request to refresh the rules for each instance.
         for instance in instances:
             if instance['host']:
-                hosts.add(instance['host'])
-
-        # ...and finally we tell these nodes to refresh their view of this
-        # particular security group.
-        for host in hosts:
-            self.security_group_rpcapi.refresh_security_group_members(context,
-                    group_id, host=host)
+                self.security_group_rpcapi.refresh_instance_security_rules(
+                        context, instance['host'], instance)
 
     def parse_cidr(self, cidr):
         if cidr:

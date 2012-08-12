@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2011 OpenStack LLC.
+# Copyright 2012 OpenStack LLC.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -17,16 +17,11 @@
 from nova.api.openstack import extensions
 
 
-class Createserverext(extensions.ExtensionDescriptor):
-    """Extended support to the Create Server v1.1 API"""
+class User_data(extensions.ExtensionDescriptor):
+    """Add user_data to the Create Server v1.1 API"""
 
-    name = "Createserverext"
-    alias = "os-create-server-ext"
+    name = "UserData"
+    alias = "os-user-data"
     namespace = ("http://docs.openstack.org/compute/ext/"
-                 "createserverext/api/v1.1")
-    updated = "2011-07-19T00:00:00+00:00"
-
-    def get_resources(self):
-        res = extensions.ResourceExtension('os-create-server-ext',
-                                           inherits='servers')
-        return [res]
+                 "userdata/api/v1.1")
+    updated = "2012-08-07T00:00:00+00:00"
