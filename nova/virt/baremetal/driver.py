@@ -178,7 +178,7 @@ class BareMetalDriver(driver.ComputeDriver):
         ctx = nova_context.get_admin_context()
         for node in _get_baremetal_nodes(ctx):
             if node['instance_uuid']:
-                inst = db.instance_get(ctx, node['instance_uuid'])
+                inst = db.instance_get_by_uuid(ctx, node['instance_uuid'])
                 if inst:
                     l.append(inst['name'])
         return l
