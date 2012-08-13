@@ -145,7 +145,7 @@ def _cache_image_x(context, target, image_id,
 def _build_pxe_config(deployment_id, deployment_key, iscsi_iqn,
                       deploy_aki_path, deploy_ari_path, aki_path, ari_path,
                       iscsi_portal):
-    # 'default deploy' will be replaced to 'default boot' by bm_deploy_work
+    # 'default deploy' will be replaced to 'default boot' by bm_deploy_server
     pxeconf = "default deploy\n"
     pxeconf += "\n"
 
@@ -168,7 +168,7 @@ def _build_pxe_config(deployment_id, deployment_key, iscsi_iqn,
     pxeconf += "kernel %s\n" % aki_path
     pxeconf += "append"
     pxeconf += " initrd=%s" % ari_path
-    # ${ROOT} will be replaced to UUID=... by bm_deploy_work
+    # ${ROOT} will be replaced to UUID=... by bm_deploy_server
     pxeconf += " root=${ROOT} ro"
     if iscsi_portal:
         pxeconf += ' bm_iscsi_portal=%s' % iscsi_portal
