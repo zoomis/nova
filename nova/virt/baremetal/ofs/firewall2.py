@@ -321,6 +321,15 @@ class QuantumFilterFirewall(firewall.FirewallDriver):
         _fullbuild(self._connection)
         LOG.debug("refresh_security_group_members: end")
 
+    def refresh_instance_security_rules(self, instance):
+        """Refresh security group rules from data store
+
+        Gets called when an instance gets added to or removed from
+        the security group the instance is a member of or if the
+        group gains or looses a rule."""
+        _delete_all(self._connection)
+        _fullbuild(self._connection)
+
     def refresh_provider_fw_rules(self):
         """Refresh common rules for all hosts/instances from data store.
 
