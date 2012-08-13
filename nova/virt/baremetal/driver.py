@@ -77,6 +77,8 @@ def _get_baremetal_nodes(context):
 def _get_baremetal_node_by_instance_uuid(instance_uuid):
     ctx = nova_context.get_admin_context()
     node = bmdb.bm_node_get_by_instance_uuid(ctx, instance_uuid)
+    if not node:
+        return None
     if node['service_host'] != FLAGS.host:
         return None
     return node
