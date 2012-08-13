@@ -42,7 +42,7 @@ def get_power_manager(node, **kwargs):
 
 
 def get_power_manager_dummy(node, **kwargs):
-    return DummyPdu()
+    return DummyPdu(node)
 
 
 class PduError(Exception):
