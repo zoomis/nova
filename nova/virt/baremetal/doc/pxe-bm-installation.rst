@@ -101,8 +101,8 @@ Set these flags in nova.conf::
 
 	# baremetal compute driver
 	compute_driver = nova.virt.baremetal.driver.BareMetalDriver
-	baremetal_driver = pxe
-	power_manager = ipmi
+	baremetal_driver = nova.virt.baremetal.pxe.PXE
+	power_manager = nova.virt.baremetal.ipmi.Ipmi
 
 	# instance_type_extra_specs this baremetal compute
 	instanse_type_extra_specs = cpu_arch:x86_64

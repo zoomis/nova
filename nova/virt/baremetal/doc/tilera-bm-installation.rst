@@ -88,8 +88,8 @@ Set these flags in nova.conf::
 
 	# baremetal compute driver
 	compute_driver = nova.virt.baremetal.driver.BareMetalDriver
-	baremetal_driver = tilera
-	power_manager = tilera_pdu
+	baremetal_driver = nova.virt.baremetal.tilera.TILERA
+	power_manager = nova.virt.baremetal.tilera_pdu.Pdu
 
 	# instance_type_extra_specs this baremetal compute
 	instanse_type_extra_specs = cpu_arch:tilepro64

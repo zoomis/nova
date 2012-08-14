@@ -44,13 +44,13 @@ class BaremetalPduTestCase(test.TestCase):
         n1 = bmdb_utils.new_bm_node(
                 pm_address='10.1.1.1',
                 id='1')
-        pm1 = tilera_pdu.get_power_manager(n1)
+        pm1 = tilera_pdu.Pdu(n1)
         self.assertEqual(pm1._address, '10.1.1.1')
         self.assertEqual(pm1._node_id, '1')
 
         n2 = bmdb_utils.new_bm_node(
                 pm_address='10.2.2.2',
                 id='2')
-        pm2 = tilera_pdu.get_power_manager(n2)
+        pm2 = tilera_pdu.Pdu(n2)
         self.assertEqual(pm2._address, '10.2.2.2')
         self.assertEqual(pm2._node_id, '2')

@@ -33,7 +33,6 @@ from nova.virt.baremetal import driver as c
 from nova.virt.firewall import NoopFirewallDriver
 
 
-flags.DECLARE('baremetal_driver', 'nova.virt.baremetal.nodes')
 FLAGS = flags.FLAGS
 
 
@@ -68,11 +67,11 @@ class BaremetalDriverTestCase(test.TestCase):
         super(BaremetalDriverTestCase, self).setUp()
         self.flags(baremetal_sql_connection='sqlite:///:memory:',
                    host=NODE['service_host'],
-                   baremetal_driver='fake',
+                   baremetal_driver='nova.virt.baremetal.fake.Fake',
+                   power_manager='nova.virt.baremetal.ipmi.DummyIpmi',
                    baremetal_vif_driver=class_path(FakeVifDriver),
                    baremetal_firewall_driver=class_path(FakeFirewallDriver),
                    baremetal_volume_driver=class_path(FakeVolumeDriver),
-                   power_manager='dummy',
                    instance_type_extra_specs=['cpu_arch:test']
                    )
         bmdb_utils.clear_tables()
@@ -106,18 +105,11 @@ class BaremetalDriverTestCase(test.TestCase):
         block_device_info = None
         image_meta = test_utils.get_test_image_info(None, instance)
 
-        from nova.virt.baremetal import nodes
-        from nova.virt.baremetal import fake
-        self.mox.StubOutWithMock(nodes, 'get_baremetal_nodes')
-        nodes.get_baremetal_nodes().AndReturn(fake.Fake())
-        self.mox.ReplayAll()
-
         drv = c.BareMetalDriver()
         drv.spawn(context, instance=instance,
                   image_meta=image_meta,
                   network_info=network_info,
                   block_device_info=block_device_info)
-        self.mox.VerifyAll()
 
         n = bmdb.bm_node_get(context, self.node_id)
         self.assertEqual(n['instance_uuid'], instance['uuid'])
@@ -125,8 +117,7 @@ class BaremetalDriverTestCase(test.TestCase):
 
     def test_get_host_stats(self):
         self.flags(instance_type_extra_specs=['cpu_arch:x86_64', 'x:123',
-                                              'y:456', ],
-                   baremetal_driver='fake')
+                                              'y:456', ])
         drv = c.BareMetalDriver()
         s = drv._get_host_stats()
         es = s['instance_type_extra_specs']
@@ -134,7 +125,8 @@ class BaremetalDriverTestCase(test.TestCase):
         self.assertEqual(es['x'], '123')
         self.assertEqual(es['y'], '456')
         self.assertEqual(es['hypervisor_type'], 'baremetal')
-        self.assertEqual(es['baremetal_driver'], 'fake')
+        self.assertEqual(es['baremetal_driver'],
+                         'nova.virt.baremetal.fake.Fake')
         self.assertEqual(len(es), 5)
 
     def test_max_sum_baremetal_resources(self):

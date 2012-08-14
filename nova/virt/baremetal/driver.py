@@ -31,7 +31,6 @@ from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import bmdb
-from nova.virt.baremetal import nodes
 from nova.virt import driver
 from nova.virt.libvirt import imagecache
 
@@ -57,6 +56,15 @@ opts = [
                'instance_type_extra_specs for this compute '
                'host to advertise. Valid entries are name=value, pairs '
                'For example, "key1:val1, key2:val2"'),
+    cfg.StrOpt('baremetal_driver',
+               default='nova.virt.baremetal.tilera.TILERA',
+               help='Bare-metal driver runs on'),
+    cfg.StrOpt('power_manager',
+               default='nova.virt.baremetal.ipmi.Ipmi',
+               help='power management method'),
+    cfg.StrOpt('baremetal_tftp_root',
+               default='/tftpboot',
+               help='BareMetal compute node\'s tftp root path'),
     ]
 
 FLAGS = flags.FLAGS
@@ -116,13 +124,19 @@ def _update_baremetal_state(context, node, instance, state):
         })
 
 
+def get_power_manager(node, **kwargs):
+    cls = importutils.import_class(FLAGS.power_manager)
+    return cls(node, **kwargs)
+
+
 class BareMetalDriver(driver.ComputeDriver):
     """BareMetal hypervisor driver."""
 
     def __init__(self):
         super(BareMetalDriver, self).__init__()
 
-        self.baremetal_nodes = nodes.get_baremetal_nodes()
+        self.baremetal_nodes = importutils.import_object(
+                FLAGS.baremetal_driver)
         self._vif_driver = importutils.import_object(
                 FLAGS.baremetal_vif_driver)
         self._firewall_driver = importutils.import_object(
@@ -193,7 +207,7 @@ class BareMetalDriver(driver.ComputeDriver):
         self.baremetal_nodes.activate_bootloader(var, context, node,
                                                  instance)
 
-        pm = nodes.get_power_manager(node)
+        pm = get_power_manager(node)
         state = pm.activate_node()
 
         _update_baremetal_state(context, node, instance, state)
@@ -218,7 +232,7 @@ class BareMetalDriver(driver.ComputeDriver):
             raise exception.InstanceNotFound(instance_id=instance['uuid'])
 
         ctx = nova_context.get_admin_context()
-        pm = nodes.get_power_manager(node)
+        pm = get_power_manager(node)
         state = pm.reboot_node()
         _update_baremetal_state(ctx, node, instance, state)
 
@@ -235,7 +249,7 @@ class BareMetalDriver(driver.ComputeDriver):
 
         self.baremetal_nodes.deactivate_node(var, ctx, node, instance)
 
-        pm = nodes.get_power_manager(node)
+        pm = get_power_manager(node)
 
         pm.stop_console(node['id'])
 
@@ -279,7 +293,7 @@ class BareMetalDriver(driver.ComputeDriver):
         node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
         if not node:
             raise exception.InstanceNotFound(instance_id=instance['uuid'])
-        pm = nodes.get_power_manager(node)
+        pm = get_power_manager(node)
         ps = power_state.SHUTDOWN
         if pm.is_power_on():
             ps = power_state.RUNNING

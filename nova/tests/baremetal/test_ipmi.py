@@ -40,12 +40,12 @@ class BaremetalIPMITestCase(test.TestCase):
     def tearDown(self):
         super(BaremetalIPMITestCase, self).tearDown()
 
-    def test_get_power_manager(self):
+    def test_ipmi(self):
         n1 = bmdb_utils.new_bm_node(
                 pm_address='10.1.1.1',
                 pm_user='n1_user',
                 pm_password='n1_password')
-        pm1 = ipmi.get_power_manager(n1)
+        pm1 = ipmi.Ipmi(n1)
         self.assertEqual(pm1._address, '10.1.1.1')
         self.assertEqual(pm1._user, 'n1_user')
         self.assertEqual(pm1._password, 'n1_password')
@@ -54,7 +54,7 @@ class BaremetalIPMITestCase(test.TestCase):
                 pm_address='10.2.2.2',
                 pm_user='n2_user',
                 pm_password='n2_password')
-        pm2 = ipmi.get_power_manager(n2)
+        pm2 = ipmi.Ipmi(n2)
         self.assertEqual(pm2._address, '10.2.2.2')
         self.assertEqual(pm2._user, 'n2_user')
         self.assertEqual(pm2._password, 'n2_password')
@@ -75,8 +75,13 @@ class BaremetalIPMITestCase(test.TestCase):
         H = 'address'
         U = 'user'
         P = 'password'
-        I = 'interface'
+        I = 'lanplus'
         F = 'password_file'
+
+        n1 = bmdb_utils.new_bm_node(
+                pm_address=H,
+                pm_user=U,
+                pm_password=P)
 
         self.mox.StubOutWithMock(ipmi, '_make_password_file')
         self.mox.StubOutWithMock(utils, 'execute')
@@ -94,6 +99,6 @@ class BaremetalIPMITestCase(test.TestCase):
         ipmi._unlink_without_raise(F).AndReturn(None)
         self.mox.ReplayAll()
 
-        i = ipmi.Ipmi(address=H, user=U, password=P, interface=I)
+        i = ipmi.Ipmi(n1)
         i._exec_ipmitool('A B C')
         self.mox.VerifyAll()

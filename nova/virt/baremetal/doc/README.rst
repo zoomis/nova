@@ -32,8 +32,8 @@ Additional setting for bare-metal provisioning [nova.conf]
 
   # baremetal compute driver
   compute_driver = nova.virt.baremetal.driver.BareMetalDriver
-  baremetal_driver = {tilera | pxe}
-  power_manager = {tilera_pdu | ipmi}
+  baremetal_driver = {nova.virt.baremetal.tilera.TILERA | nova.virt.baremetal.pxe.PXE}
+  power_manager = {nova.virt.baremetal.tilera_pdu.Pdu | nova.virt.baremetal.ipmi.Ipmi}
 
   # instance_type_extra_specs this baremetal compute
   instanse_type_extra_specs = cpu_arch:{tilepro64 | x86_64 | arm}

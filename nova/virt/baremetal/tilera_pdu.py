@@ -35,16 +35,6 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 
 
-def get_power_manager(node, **kwargs):
-    pm = Pdu(address=node['pm_address'],
-              node_id=node['id'])
-    return pm
-
-
-def get_power_manager_dummy(node, **kwargs):
-    return DummyPdu(node)
-
-
 class PduError(Exception):
     def __init__(self, status, message):
         self.status = status
@@ -56,13 +46,13 @@ class PduError(Exception):
 
 class Pdu(object):
 
-    def __init__(self, address=None, node_id=None):
-        if address == None:
+    def __init__(self, node):
+        self._address = node['pm_address']
+        self._node_id = node['id']
+        if self._address == None:
             raise PduError(-1, "address is None")
-        if node_id == None:
+        if self._node_id == None:
             raise PduError(-1, "node_id is None")
-        self._address = address
-        self._node_id = node_id
 
     def _exec_status(self):
         LOG.debug(_("Before ping to the bare-metal node"))
