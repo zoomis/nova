@@ -87,20 +87,17 @@ class IpmiError(Exception):
 
 class Ipmi(object):
 
-    def __init__(self, address=None, user=None, password=None,
-                 interface="lanplus"):
-        if address == None:
+    def __init__(self, node):
+        self._address = node['pm_address']
+        self._user = node['pm_user']
+        self._password = node['pm_password']
+        self._interface = "lanplus"
+        if self._address == None:
             raise IpmiError(-1, "address is None")
-        if user == None:
+        if self._user == None:
             raise IpmiError(-1, "user is None")
-        if password == None:
+        if self._password == None:
             raise IpmiError(-1, "password is None")
-        if interface == None:
-            raise IpmiError(-1, "interface is None")
-        self._address = address
-        self._user = user
-        self._password = password
-        self._interface = interface
 
     def _exec_ipmitool(self, command):
         args = []
