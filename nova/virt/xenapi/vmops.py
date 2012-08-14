@@ -232,8 +232,9 @@ class VMOps(object):
 
         return vdis
 
-    def spawn(self, context, instance, image_meta, network_info,
-              block_device_info=None, name_label=None, rescue=False):
+    def spawn(self, context, instance, image_meta, injected_files,
+              admin_password, network_info=None, block_device_info=None,
+              name_label=None, rescue=False):
         if name_label is None:
             name_label = instance['name']
 
@@ -318,7 +319,8 @@ class VMOps(object):
 
         @step
         def boot_instance_step(undo_mgr, vm_ref):
-            self._boot_new_instance(instance, vm_ref)
+            self._boot_new_instance(instance, vm_ref, injected_files,
+                                    admin_password)
 
         @step
         def apply_security_group_filters_step(undo_mgr):
@@ -463,7 +465,8 @@ class VMOps(object):
                                         DEVICE_EPHEMERAL, name_label,
                                         ephemeral_gb)
 
-    def _boot_new_instance(self, instance, vm_ref):
+    def _boot_new_instance(self, instance, vm_ref, injected_files,
+                           admin_password):
         """Boot a new instance and configure it."""
         LOG.debug(_('Starting VM'), instance=instance)
         self._start(instance, vm_ref)
@@ -494,7 +497,6 @@ class VMOps(object):
 
         # Update agent, if necessary
         # This also waits until the agent starts
-        LOG.debug(_("Querying agent version"), instance=instance)
         version = agent.get_agent_version(self._session, instance, vm_ref)
         if version:
             LOG.info(_('Instance agent version: %s'), version,
@@ -502,17 +504,13 @@ class VMOps(object):
 
         if (version and agent_build and
             cmp_version(version, agent_build['version']) < 0):
-            LOG.info(_('Updating Agent to %s'), agent_build['version'],
-                     instance=instance)
-            agent.agent_update(self._session, instance, vm_ref,
-                               agent_build['url'], agent_build['md5hash'])
+            agent.agent_update(self._session, instance, vm_ref, agent_build)
 
         # if the guest agent is not available, configure the
         # instance, but skip the admin password configuration
         no_agent = version is None
 
         # Inject files, if necessary
-        injected_files = instance.get("injected_files")
         if injected_files:
             # Check if this is a JSON-encoded string and convert if needed.
             if isinstance(injected_files, basestring):
@@ -523,21 +521,16 @@ class VMOps(object):
                                   injected_files, instance=instance)
                     injected_files = []
             # Inject any files, if specified
-            for path, contents in instance['injected_files']:
-                LOG.debug(_("Injecting file path: '%s'") % path,
-                          instance=instance)
+            for path, contents in injected_files:
                 agent.inject_file(self._session, instance, vm_ref,
                                   path, contents)
 
-        admin_password = instance['admin_pass']
         # Set admin password, if necessary
         if admin_password and not no_agent:
-            LOG.debug(_("Setting admin password"), instance=instance)
             agent.set_admin_password(self._session, instance, vm_ref,
                                      admin_password)
 
         # Reset network config
-        LOG.debug(_("Resetting network"), instance=instance)
         agent.resetnetwork(self._session, instance, vm_ref)
 
         # Set VCPU weight
@@ -1048,7 +1041,8 @@ class VMOps(object):
         self._release_bootlock(vm_ref)
         self._session.call_xenapi('VM.resume', vm_ref, False, True)
 
-    def rescue(self, context, instance, network_info, image_meta):
+    def rescue(self, context, instance, network_info, image_meta,
+               rescue_password):
         """Rescue the specified instance.
 
             - shutdown the instance VM.
@@ -1065,8 +1059,8 @@ class VMOps(object):
         vm_ref = self._get_vm_opaque_ref(instance)
         vm_utils.shutdown_vm(self._session, instance, vm_ref)
         self._acquire_bootlock(vm_ref)
-        self.spawn(context, instance, image_meta, network_info,
-                   name_label=rescue_name_label, rescue=True)
+        self.spawn(context, instance, image_meta, [], rescue_password,
+                   network_info, name_label=rescue_name_label, rescue=True)
         rescue_vm_ref = vm_utils.lookup(self._session, rescue_name_label)
         vdi_ref = self._find_root_vdi_ref(vm_ref)
 

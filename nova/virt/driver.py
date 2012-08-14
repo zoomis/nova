@@ -149,8 +149,8 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def spawn(self, context, instance, image_meta,
-              network_info=None, block_device_info=None):
+    def spawn(self, context, instance, image_meta, injected_files,
+              admin_password, network_info=None, block_device_info=None):
         """
         Create a new instance/VM/domain on the virtualization platform.
 
@@ -167,6 +167,8 @@ class ComputeDriver(object):
                          the creation of the new instance.
         :param image_meta: image object returned by nova.image.glance that
                            defines the image from which to boot this instance
+        :param injected_files: User files to inject into instance.
+        :param admin_password: Administrator password to set in instance.
         :param network_info:
            :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
         :param block_device_info: Information about block devices to be
@@ -304,7 +306,8 @@ class ComputeDriver(object):
         """resume guest state when a host is booted"""
         raise NotImplementedError()
 
-    def rescue(self, context, instance, network_info, image_meta):
+    def rescue(self, context, instance, network_info, image_meta,
+               rescue_password):
         """Rescue the specified instance"""
         raise NotImplementedError()
 
@@ -487,6 +490,14 @@ class ComputeDriver(object):
         """
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
+
+    def filter_defer_apply_on(self):
+        """Defer application of IPTables rules"""
+        pass
+
+    def filter_defer_apply_off(self):
+        """Turn off deferral of IPTables rules and apply the rules now"""
+        pass
 
     def unfilter_instance(self, instance, network_info):
         """Stop filtering instance"""

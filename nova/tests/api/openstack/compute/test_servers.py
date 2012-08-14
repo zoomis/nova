@@ -1619,6 +1619,94 @@ class ServersControllerCreateTest(test.TestCase):
                           req,
                           body)
 
+    def test_create_instance_invalid_negative_min(self):
+        self.ext_mgr.extensions = {'os-multiple-create': 'fake'}
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+
+        body = {
+            'server': {
+                'min_count': -1,
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+            }
+        }
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          req,
+                          body)
+
+    def test_create_instance_invalid_negative_max(self):
+        self.ext_mgr.extensions = {'os-multiple-create': 'fake'}
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+
+        body = {
+            'server': {
+                'max_count': -1,
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+            }
+        }
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          req,
+                          body)
+
+    def test_create_instance_invalid_alpha_min(self):
+        self.ext_mgr.extensions = {'os-multiple-create': 'fake'}
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+
+        body = {
+            'server': {
+                'min_count': 'abcd',
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+            }
+        }
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          req,
+                          body)
+
+    def test_create_instance_invalid_alpha_max(self):
+        self.ext_mgr.extensions = {'os-multiple-create': 'fake'}
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+
+        body = {
+            'server': {
+                'max_count': 'abcd',
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+            }
+        }
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          req,
+                          body)
+
     def test_create_multiple_instances(self):
         """Test creating multiple instances but not asking for
         reservation_id
@@ -1785,6 +1873,32 @@ class ServersControllerCreateTest(test.TestCase):
             #             enabled, then security groups passed in
             #             are ignored.
             self.assertEqual(kwargs['security_group'], ['default'])
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
+
+    def test_create_instance_with_disk_config_enabled(self):
+        self.ext_mgr.extensions = {'OS-DCF': 'fake'}
+        # NOTE(vish): the extension converts OS-DCF:disk_config into
+        #             auto_disk_config, so we are testing with
+        #             the_internal_value
+        params = {'auto_disk_config': True}
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['auto_disk_config'], True)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
+
+    def test_create_instance_with_disk_config_disabled(self):
+        params = {'auto_disk_config': True}
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['auto_disk_config'], False)
             return old_create(*args, **kwargs)
 
         self.stubs.Set(nova.compute.api.API, 'create', create)

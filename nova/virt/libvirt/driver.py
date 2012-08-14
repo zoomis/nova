@@ -954,7 +954,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self._create_domain_and_network(xml, instance, network_info)
 
     @exception.wrap_exception()
-    def rescue(self, context, instance, network_info, image_meta):
+    def rescue(self, context, instance, network_info, image_meta,
+               rescue_password):
         """Loads a VM using rescue images.
 
         A rescue is normally performed when something goes wrong with the
@@ -979,7 +980,8 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = self.to_xml(instance, network_info, image_meta,
                           rescue=rescue_images)
         self._create_image(context, instance, xml, '.rescue', rescue_images,
-                           network_info=network_info)
+                           network_info=network_info,
+                           admin_pass=rescue_password)
         self._destroy(instance)
         self._create_domain(xml, virt_dom)
 
@@ -1020,12 +1022,14 @@ class LibvirtDriver(driver.ComputeDriver):
     # NOTE(ilyaalekseyev): Implementation like in multinics
     # for xenapi(tr3buchet)
     @exception.wrap_exception()
-    def spawn(self, context, instance, image_meta, network_info,
-              block_device_info=None):
+    def spawn(self, context, instance, image_meta, injected_files,
+              admin_password, network_info=None, block_device_info=None):
         xml = self.to_xml(instance, network_info, image_meta,
                           block_device_info=block_device_info)
         self._create_image(context, instance, xml, network_info=network_info,
-                           block_device_info=block_device_info)
+                           block_device_info=block_device_info,
+                           files=injected_files,
+                           admin_pass=admin_password)
         self._create_domain_and_network(xml, instance, network_info)
         LOG.debug(_("Instance is running"), instance=instance)
 
@@ -1203,7 +1207,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _create_image(self, context, instance, libvirt_xml, suffix='',
                       disk_images=None, network_info=None,
-                      block_device_info=None):
+                      block_device_info=None, files=None, admin_pass=None):
         if not suffix:
             suffix = ''
 
@@ -1391,12 +1395,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # File injection
         metadata = instance.get('metadata')
 
-        if FLAGS.libvirt_inject_password:
-            admin_pass = instance.get('admin_pass')
-        else:
+        if not FLAGS.libvirt_inject_password:
             admin_pass = None
-
-        files = instance.get('injected_files')
 
         if any((key, net, metadata, admin_pass, files)):
             if not using_config_drive:
@@ -2443,6 +2443,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.NovaException(msg % instance_ref["name"])
             time_module.sleep(1)
 
+    def filter_defer_apply_on(self):
+        self.firewall_driver.filter_defer_apply_on()
+
+    def filter_defer_apply_off(self):
+        self.firewall_driver.filter_defer_apply_off()
+
     def live_migration(self, ctxt, instance_ref, dest,
                        post_method, recover_method, block_migration=False):
         """Spawning live_migration operation for distributing high-load.
@@ -2548,7 +2554,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     LOG.warn(_("plug_vifs() failed %(cnt)d."
                                "Retry up to %(max_retry)d for %(hostname)s.")
                                % locals())
-                    time.sleep(1)
+                    greenthread.sleep(1)
 
     def pre_block_migration(self, ctxt, instance_ref, disk_info_json):
         """Preparation block migration.
