@@ -35,10 +35,6 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 
 
-def get_power_manager_dummy(node, **kwargs):
-    return DummyPdu(node)
-
-
 class PduError(Exception):
     def __init__(self, status, message):
         self.status = status
@@ -50,7 +46,7 @@ class PduError(Exception):
 
 class Pdu(object):
 
-    def __init__(self, node=None):
+    def __init__(self, node):
         self._address = node['pm_address']
         self._node_id = node['id']
         if self._address == None:

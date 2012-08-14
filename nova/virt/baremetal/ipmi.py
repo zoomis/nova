@@ -49,18 +49,6 @@ FLAGS.register_opts(opts)
 LOG = logging.getLogger(__name__)
 
 
-def get_power_manager(node, **kwargs):
-    pm = Ipmi(address=node['pm_address'],
-              user=node['pm_user'],
-              password=node['pm_password'],
-              interface="lanplus")
-    return pm
-
-
-def get_power_manager_dummy(node, **kwargs):
-    return DummyIpmi(node)
-
-
 def _make_password_file(password):
     fd, path = tempfile.mkstemp()
     os.fchmod(fd, stat.S_IRUSR | stat.S_IWUSR)
