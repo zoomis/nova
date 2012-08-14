@@ -26,7 +26,7 @@ from nova import flags
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
 from nova.scheduler import host_manager
-from nova.virt.baremetal import bmdb
+from nova.virt.baremetal import db as bmdb
 
 
 FLAGS = flags.FLAGS

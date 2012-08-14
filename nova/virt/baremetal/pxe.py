@@ -28,7 +28,7 @@ from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils
-from nova.virt.baremetal import bmdb
+from nova.virt.baremetal import db as bmdb
 from nova.virt.baremetal import vlan
 from nova.virt.disk import api as disk
 from nova.virt.libvirt import utils as libvirt_utils

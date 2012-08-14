@@ -26,7 +26,7 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
 
 from nova import context
 from nova import flags
-from nova.virt.baremetal import bmdb
+from nova.virt.baremetal import db
 
 FLAGS = flags.FLAGS
 
@@ -45,7 +45,7 @@ def main():
                 _('MAC_ADDRESS'),
                 _('DATAPATH_ID'),
                 _('PORT_NO'))
-    for pif in bmdb.bm_interface_get_all(ctx):
+    for pif in db.bm_interface_get_all(ctx):
         print fmt % (pif['id'], pif['bm_node_id'],
                      pif['address'], pif['datapath_id'], pif['port_no'])
     print

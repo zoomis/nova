@@ -27,8 +27,7 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
 
 from nova import context
 from nova import flags
-from nova import utils
-from nova.virt.baremetal import bmdb
+from nova.virt.baremetal import db
 
 
 def main():
@@ -60,7 +59,7 @@ def main():
     args = flags.parse_args(args)
     ctx = context.get_admin_context()
 
-    id = bmdb.bm_pxe_ip_create(ctx, address, server_address)
+    id = db.bm_pxe_ip_create(ctx, address, server_address)
     print "id=%s" % id
 
 

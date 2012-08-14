@@ -18,15 +18,15 @@
 from nova import context as nova_context
 from nova import flags
 from nova import test
-from nova.virt.baremetal import bmdb
-from nova.virt.baremetal.bmdb.sqlalchemy import baremetal_models
+from nova.virt.baremetal import db
+from nova.virt.baremetal.db.sqlalchemy import models
 
 flags.DECLARE('baremetal_sql_connection',
-              'nova.virt.baremetal.bmdb.sqlalchemy.baremetal_session')
+              'nova.virt.baremetal.db.sqlalchemy.session')
 
 
 def new_bm_node(**kwargs):
-    h = baremetal_models.BareMetalNode()
+    h = models.BareMetalNode()
     h.id = kwargs.pop('id', None)
     h.service_host = kwargs.pop('service_host', None)
     h.instance_id = kwargs.pop('instance_id', None)
@@ -47,8 +47,8 @@ def new_bm_node(**kwargs):
 
 
 def clear_tables():
-    baremetal_models.unregister_models()
-    baremetal_models.register_models()
+    models.unregister_models()
+    models.register_models()
 
 
 class BMDBTestCase(test.TestCase):

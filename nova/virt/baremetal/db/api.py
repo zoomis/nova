@@ -22,9 +22,9 @@
 
 The underlying driver is loaded as a :class:`LazyPluggable`.
 
-Functions in this module are imported into the nova.virt.baremetal.bmdb
-namespace. Call these functions from nova.virt.baremetal.bmdb namespace, not
-the nova.virt.baremetal.bmdb.baremetal_api namespace.
+Functions in this module are imported into the nova.virt.baremetal.db
+namespace. Call these functions from nova.virt.baremetal.db namespace, not
+the nova.virt.baremetal.db.api namespace.
 
 All functions in this module return objects that implement a dictionary-like
 interface. Currently, many of these objects are sqlalchemy objects that
@@ -58,7 +58,7 @@ FLAGS.register_opts(db_opts)
 
 IMPL = utils.LazyPluggable(
         'baremetal_db_backend',
-        sqlalchemy='nova.virt.baremetal.bmdb.sqlalchemy.baremetal_api')
+        sqlalchemy='nova.virt.baremetal.db.sqlalchemy.api')
 
 
 def bm_node_get_all(context, service_host=None, session=None):

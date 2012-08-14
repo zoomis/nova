@@ -25,8 +25,8 @@ import sqlalchemy
 from nova import exception
 from nova import flags
 from nova.openstack.common import log as logging
-from nova.virt.baremetal.bmdb import migration
-from nova.virt.baremetal.bmdb.sqlalchemy.baremetal_session import get_engine
+from nova.virt.baremetal.db import migration
+from nova.virt.baremetal.db.sqlalchemy.session import get_engine
 
 LOG = logging.getLogger(__name__)
 

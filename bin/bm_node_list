@@ -25,10 +25,8 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
 from nova import context
-from nova import db
 from nova import flags
-from nova import utils
-from nova.virt.baremetal import bmdb
+from nova.virt.baremetal import db
 
 
 def main():
@@ -50,7 +48,7 @@ def main():
                 _('PROV_MAC'),
                 _('PROV_VLAN'))
     ctxt = context.get_admin_context()
-    for ph in bmdb.bm_node_get_all(ctxt):
+    for ph in db.bm_node_get_all(ctxt):
         print fmt % (ph['id'], ph['service_host'], ph['instance_uuid'],
                      ph['cpus'], ph['memory_mb'], ph['local_gb'],
                      ph['pm_address'], ph['pm_user'],

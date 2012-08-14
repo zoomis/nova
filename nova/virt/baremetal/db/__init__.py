@@ -13,4 +13,4 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.virt.baremetal.bmdb.baremetal_api import *
+from nova.virt.baremetal.db.api import *

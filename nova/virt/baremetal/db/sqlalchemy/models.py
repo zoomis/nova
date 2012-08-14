@@ -29,7 +29,7 @@ from sqlalchemy.schema import ForeignKeyConstraint
 from nova import flags
 
 from nova.db.sqlalchemy import models
-from nova.virt.baremetal.bmdb.sqlalchemy import baremetal_session
+from nova.virt.baremetal.db.sqlalchemy import session
 
 
 FLAGS = flags.FLAGS
@@ -85,10 +85,10 @@ class BareMetalDeployment(BASE, models.NovaBase):
 
 
 def register_models():
-    engine = baremetal_session.get_engine()
+    engine = session.get_engine()
     BASE.metadata.create_all(engine)
 
 
 def unregister_models():
-    engine = baremetal_session.get_engine()
+    engine = session.get_engine()
     BASE.metadata.drop_all(engine)

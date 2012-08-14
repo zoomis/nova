@@ -27,7 +27,7 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
 
 from nova import context
 from nova import flags
-from nova.virt.baremetal import bmdb
+from nova.virt.baremetal import db
 
 FLAGS = flags.FLAGS
 
@@ -90,7 +90,7 @@ usage:
     args = flags.parse_args(args, default_config_files=flagfile)
     ctx = context.get_admin_context()
 
-    node_ref = bmdb.bm_node_get(ctx, values['bm_node_id'])
+    node_ref = db.bm_node_get(ctx, values['bm_node_id'])
     if not node_ref:
         print >> sys.stderr, 'node_id %s is not found' % values['bm_node_id']
         sys.exit(1)
@@ -100,7 +100,7 @@ usage:
                   % values['mac_address']
         sys.exit(1)
 
-    id = bmdb.bm_interface_create(
+    id = db.bm_interface_create(
              ctx,
              bm_node_id=values['bm_node_id'],
              address=values['mac_address'],

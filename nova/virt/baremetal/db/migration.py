@@ -23,7 +23,7 @@ from nova import utils
 
 IMPL = utils.LazyPluggable(
         'baremetal_db_backend',
-        sqlalchemy='nova.virt.baremetal.bmdb.sqlalchemy.migration')
+        sqlalchemy='nova.virt.baremetal.db.sqlalchemy.migration')
 
 INIT_VERSION = 0
 

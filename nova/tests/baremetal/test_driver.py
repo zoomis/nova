@@ -23,12 +23,12 @@ import mox
 from nova import flags
 from nova import test
 
-from nova.tests.baremetal import bmdb as bmdb_utils
-from nova.tests.baremetal.bmdb import new_bm_node
+from nova.tests.baremetal import db as bmdb_utils
+from nova.tests.baremetal.db import new_bm_node
 from nova.tests.image import fake as fake_image
 from nova.tests import utils as test_utils
 from nova.virt.baremetal import baremetal_states
-from nova.virt.baremetal import bmdb
+from nova.virt.baremetal import db
 from nova.virt.baremetal import driver as c
 from nova.virt.firewall import NoopFirewallDriver
 
@@ -76,10 +76,10 @@ class BaremetalDriverTestCase(test.TestCase):
                    )
         bmdb_utils.clear_tables()
         context = test_utils.get_test_admin_context()
-        node = bmdb.bm_node_create(context, NODE)
+        node = db.bm_node_create(context, NODE)
         self.node_id = node['id']
         for nic in NICS:
-            bmdb.bm_interface_create(context,
+            db.bm_interface_create(context,
                                       node['id'],
                                       nic['address'],
                                       nic['datapath_id'],
@@ -114,7 +114,7 @@ class BaremetalDriverTestCase(test.TestCase):
                   network_info=network_info,
                   block_device_info=block_device_info)
 
-        n = bmdb.bm_node_get(context, self.node_id)
+        n = db.bm_node_get(context, self.node_id)
         self.assertEqual(n['instance_uuid'], instance['uuid'])
         self.assertEqual(n['task_state'], baremetal_states.ACTIVE)
 

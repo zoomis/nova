@@ -23,7 +23,7 @@ from nova import db
 from nova import flags
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
-from nova.virt.baremetal import bmdb
+from nova.virt.baremetal import db as bmdb
 from nova.virt import firewall
 
 from nova.virt.baremetal.ofs.firewall import _build_allow_dhcp_client

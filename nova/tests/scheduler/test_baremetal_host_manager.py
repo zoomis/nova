@@ -27,7 +27,7 @@ from nova.scheduler import baremetal_host_manager
 from nova import test
 from nova.tests.scheduler import fakes
 from nova import utils
-from nova.virt.baremetal import bmdb
+from nova.virt.baremetal import db as bmdb
 
 
 FLAGS = flags.FLAGS
