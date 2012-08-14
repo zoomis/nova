@@ -34,7 +34,8 @@ class Fake:
     def define_vars(self, instance, network_info, block_device_info):
         return {}
 
-    def create_image(self, var, context, image_meta, node, instance):
+    def create_image(self, var, context, image_meta, node, instance,
+                     injected_files=None, admin_password=None):
         pass
 
     def destroy_images(self, var, context, node, instance):

@@ -183,8 +183,8 @@ class BareMetalDriver(driver.ComputeDriver):
                     l.append(inst['name'])
         return l
 
-    def spawn(self, context, instance, image_meta,
-              network_info=None, block_device_info=None):
+    def spawn(self, context, instance, image_meta, injected_files,
+              admin_password, network_info=None, block_device_info=None):
         node = _find_suitable_baremetal_node(context, instance)
 
         if not node:
@@ -203,7 +203,9 @@ class BareMetalDriver(driver.ComputeDriver):
         self._firewall_driver.prepare_instance_filter(instance, network_info)
 
         self.baremetal_nodes.create_image(var, context, image_meta, node,
-                                          instance)
+                                          instance,
+                                          injected_files=injected_files,
+                                          admin_password=admin_password)
         self.baremetal_nodes.activate_bootloader(var, context, node,
                                                  instance)
 

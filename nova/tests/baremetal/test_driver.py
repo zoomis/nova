@@ -106,8 +106,11 @@ class BaremetalDriverTestCase(test.TestCase):
         image_meta = test_utils.get_test_image_info(None, instance)
 
         drv = c.BareMetalDriver()
-        drv.spawn(context, instance=instance,
+        drv.spawn(context,
+                  instance=instance,
                   image_meta=image_meta,
+                  injected_files=[('/foo', 'bar'), ('/abc', 'xyz')],
+                  admin_password='testpass',
                   network_info=network_info,
                   block_device_info=block_device_info)
 

@@ -83,7 +83,8 @@ class TILERA(object):
         var['block_device_info'] = block_device_info
         return var
 
-    def _inject_to_image(self, context, target, node, inst, network_info):
+    def _inject_to_image(self, context, target, node, inst, network_info,
+                         injected_files=None, admin_password=None):
         # For now, we assume that if we're not using a kernel, we're using a
         # partitioned disk image where the target partition is the first
         # partition
@@ -154,6 +155,7 @@ class TILERA(object):
             try:
                 disk.inject_data(target,
                                  key, net, metadata, admin_password,
+                                 files=injected_files,
                                  partition=target_partition,
                                  use_cow=False)
 
@@ -163,7 +165,8 @@ class TILERA(object):
                         ' data into image %(img_id)s (%(e)s)') % locals(),
                          instance=inst)
 
-    def create_image(self, var, context, image_meta, node, instance):
+    def create_image(self, var, context, image_meta, node, instance,
+                     injected_files=None, admin_password=None):
         image_root = var['image_root']
         network_info = var['network_info']
 
@@ -179,7 +182,9 @@ class TILERA(object):
                            project_id=instance['project_id'])
         LOG.debug("injecting to image id=%s target=%s", ami_id, image_path)
         self._inject_to_image(context, image_path, node, instance,
-                              network_info)
+                              network_info,
+                              injected_files=injected_files,
+                              admin_password=admin_password)
         var['image_path'] = image_path
         LOG.debug("fetching images all done")
 

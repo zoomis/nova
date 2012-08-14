@@ -261,8 +261,8 @@ class PXE(object):
         var['block_device_info'] = block_device_info
         return var
 
-    def _inject_to_image(self, context, target, node, inst, network_info):
-        files = []
+    def _inject_to_image(self, context, target, node, inst, network_info,
+                         injected_files=None, admin_password=None):
         # For now, we assume that if we're not using a kernel, we're using a
         # partitioned disk image where the target partition is the first
         # partition
@@ -286,7 +286,10 @@ class PXE(object):
                      'ATTR{type}=="1", KERNEL=="eth*", NAME="eth%d"\n' \
                      % (hwaddr.lower(), i)
             i += 1
-        files.append(('/etc/udev/rules.d/70-persistent-net.rules', rules))
+        if not injected_files:
+            injected_files = []
+        injected_files.append(('/etc/udev/rules.d/70-persistent-net.rules',
+                               rules))
         bootif_name = "eth%d" % (i - 1)
 
         if inst['key_data']:
@@ -339,9 +342,7 @@ class PXE(object):
         net += "auto %s\n" % bootif_name
         net += "iface %s inet dhcp\n" % bootif_name
 
-        if FLAGS.baremetal_inject_password:
-            admin_password = inst.get('admin_pass')
-        else:
+        if not FLAGS.baremetal_inject_password:
             admin_password = None
 
         metadata = inst.get('metadata')
@@ -358,7 +359,7 @@ class PXE(object):
             try:
                 disk.inject_data(target,
                                  key, net, metadata, admin_password,
-                                 files=files,
+                                 files=injected_files,
                                  partition=target_partition,
                                  use_cow=False)
 
@@ -368,7 +369,8 @@ class PXE(object):
                         ' data into image %(img_id)s (%(e)s)') % locals(),
                          instance=inst)
 
-    def create_image(self, var, context, image_meta, node, instance):
+    def create_image(self, var, context, image_meta, node, instance,
+                     injected_files=None, admin_password=None):
         image_root = var['image_root']
         network_info = var['network_info']
 
@@ -385,7 +387,9 @@ class PXE(object):
 
         LOG.debug("injecting to image id=%s target=%s", ami_id, image_path)
         self._inject_to_image(context, image_path, node,
-                              instance, network_info)
+                              instance, network_info,
+                              injected_files=injected_files,
+                              admin_password=admin_password)
         var['image_path'] = image_path
         LOG.debug("fetching images all done")
 
