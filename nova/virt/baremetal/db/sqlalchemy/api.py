@@ -30,14 +30,14 @@ from sqlalchemy.sql.expression import desc
 from sqlalchemy.sql.expression import literal_column
 from sqlalchemy.sql import func
 
+from nova.db.sqlalchemy.api import is_user_context
+from nova.db.sqlalchemy.api import require_admin_context
 from nova import exception
 from nova import flags
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova.virt.baremetal.db.sqlalchemy import models
 from nova.virt.baremetal.db.sqlalchemy.session import get_session
-from nova.db.sqlalchemy.api import is_user_context
-from nova.db.sqlalchemy.api import require_admin_context
 
 FLAGS = flags.FLAGS
 
