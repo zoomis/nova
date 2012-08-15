@@ -19,6 +19,7 @@
 Class for TILERA bare-metal nodes.
 """
 
+import base64
 import os
 import shutil
 import subprocess
