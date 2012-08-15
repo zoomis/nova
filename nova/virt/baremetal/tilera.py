@@ -285,7 +285,7 @@ class TILERA(object):
         """
         Gets console output of the given node.
         """
-        var = self.baremetal_nodes.define_vars(instance, None, None)
+        var = self.define_vars(instance, None, None)
         console_log = os.path.join(FLAGS.instances_path, instance['name'],
                                    'console.log')
         tftp_root = var['tftp_root']
