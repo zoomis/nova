@@ -23,8 +23,7 @@ import mox
 from nova import flags
 from nova import test
 
-from nova.tests.baremetal import db as bmdb_utils
-from nova.tests.baremetal.db import new_bm_node
+from nova.tests.baremetal import utils
 from nova.tests.image import fake as fake_image
 from nova.tests import utils as test_utils
 from nova.virt.baremetal import baremetal_states
@@ -50,7 +49,7 @@ FakeFirewallDriver = NoopFirewallDriver
 class FakeVolumeDriver(object):
     pass
 
-NODE = bmdb_utils.new_bm_node(cpus=2, memory_mb=4096, service_host="host1")
+NODE = utils.new_bm_node(cpus=2, memory_mb=4096, service_host="host1")
 NICS = [
        {'address': '01:23:45:67:89:01', 'datapath_id': '0x1', 'port_no': 1, },
        {'address': '01:23:45:67:89:02', 'datapath_id': '0x2', 'port_no': 2, },
@@ -74,7 +73,7 @@ class BaremetalDriverTestCase(test.TestCase):
                    baremetal_volume_driver=class_path(FakeVolumeDriver),
                    instance_type_extra_specs=['cpu_arch:test']
                    )
-        bmdb_utils.clear_tables()
+        utils.clear_tables()
         context = test_utils.get_test_admin_context()
         node = db.bm_node_create(context, NODE)
         self.node_id = node['id']
@@ -133,14 +132,14 @@ class BaremetalDriverTestCase(test.TestCase):
         self.assertEqual(len(es), 5)
 
     def test_max_sum_baremetal_resources(self):
-        N1 = new_bm_node(service_host="host1", cpus=1, memory_mb=1000,
-                         local_gb=10)
-        N2 = new_bm_node(service_host="host1", cpus=1, memory_mb=1000,
-                         local_gb=20)
-        N3 = new_bm_node(service_host="host1", cpus=10, memory_mb=1000,
-                         local_gb=20)
-        N4 = new_bm_node(service_host="host1", cpus=1, memory_mb=2000,
-                         local_gb=20)
+        N1 = utils.new_bm_node(service_host="host1", cpus=1,
+                                      memory_mb=1000, local_gb=10)
+        N2 = utils.new_bm_node(service_host="host1", cpus=1,
+                                      memory_mb=1000, local_gb=20)
+        N3 = utils.new_bm_node(service_host="host1", cpus=10,
+                                      memory_mb=1000, local_gb=20)
+        N4 = utils.new_bm_node(service_host="host1", cpus=1,
+                                      memory_mb=2000, local_gb=20)
         ns = [N1, N2, N3, N4, ]
         context = test_utils.get_test_admin_context()
         self.stubs.Set(c, '_get_baremetal_nodes', lambda ctx: ns)
@@ -245,9 +244,9 @@ class BaremetalDriverTestCase(test.TestCase):
 class FindHostTestCase(test.TestCase):
 
     def test_find_suitable_baremetal_node_verify(self):
-        n1 = bmdb_utils.new_bm_node(id=1, memory_mb=512, service_host="host1")
-        n2 = bmdb_utils.new_bm_node(id=2, memory_mb=2048, service_host="host1")
-        n3 = bmdb_utils.new_bm_node(id=3, memory_mb=1024, service_host="host1")
+        n1 = utils.new_bm_node(id=1, memory_mb=512, service_host="host1")
+        n2 = utils.new_bm_node(id=2, memory_mb=2048, service_host="host1")
+        n3 = utils.new_bm_node(id=3, memory_mb=1024, service_host="host1")
         hosts = [n1, n2, n3]
         inst = {}
         inst['vcpus'] = 1
@@ -261,9 +260,9 @@ class FindHostTestCase(test.TestCase):
         self.assertEqual(result['id'], 3)
 
     def test_find_suitable_baremetal_node_about_memory(self):
-        h1 = bmdb_utils.new_bm_node(id=1, memory_mb=512, service_host="host1")
-        h2 = bmdb_utils.new_bm_node(id=2, memory_mb=2048, service_host="host1")
-        h3 = bmdb_utils.new_bm_node(id=3, memory_mb=1024, service_host="host1")
+        h1 = utils.new_bm_node(id=1, memory_mb=512, service_host="host1")
+        h2 = utils.new_bm_node(id=2, memory_mb=2048, service_host="host1")
+        h3 = utils.new_bm_node(id=3, memory_mb=1024, service_host="host1")
         hosts = [h1, h2, h3]
         self.stubs.Set(c, '_get_baremetal_nodes', lambda self: hosts)
         inst = {'vcpus': 1}
@@ -297,12 +296,12 @@ class FindHostTestCase(test.TestCase):
         self.assertTrue(result is None)
 
     def test_find_suitable_baremetal_node_about_cpu(self):
-        n1 = bmdb_utils.new_bm_node(id=1, cpus=1, memory_mb=512,
-                                    service_host="host1")
-        n2 = bmdb_utils.new_bm_node(id=2, cpus=2, memory_mb=512,
-                                    service_host="host1")
-        n3 = bmdb_utils.new_bm_node(id=3, cpus=3, memory_mb=512,
-                                    service_host="host1")
+        n1 = utils.new_bm_node(id=1, cpus=1, memory_mb=512,
+                               service_host="host1")
+        n2 = utils.new_bm_node(id=2, cpus=2, memory_mb=512,
+                               service_host="host1")
+        n3 = utils.new_bm_node(id=3, cpus=3, memory_mb=512,
+                               service_host="host1")
         nodes = [n1, n2, n3]
         self.stubs.Set(c, '_get_baremetal_nodes', lambda self: nodes)
         inst = {'memory_mb': 512}

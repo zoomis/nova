@@ -19,7 +19,7 @@ Baremetal DB testcase for PXE IP
 
 from nova import exception
 from nova.tests.baremetal.db import BMDBTestCase
-from nova.tests.baremetal.db import new_bm_node
+from nova.tests.baremetal import utils
 from nova.virt.baremetal import db
 
 from nova.virt.baremetal.db.sqlalchemy import models
@@ -61,7 +61,7 @@ class BareMetalPxeIpTestCase(BMDBTestCase):
 
     def test_bm_pxe_ip_associate(self):
         self._create_pxe_ip()
-        node = db.bm_node_create(self.context, new_bm_node())
+        node = db.bm_node_create(self.context, utils.new_bm_node())
         ip_id = db.bm_pxe_ip_associate(self.context, node['id'])
         ref = db.bm_pxe_ip_get(self.context, ip_id)
         self.assertEqual(ref['bm_node_id'], node['id'])

@@ -24,9 +24,9 @@ import mox
 
 from nova import flags
 from nova import test
-from nova import utils
+from nova import utils as nova_utils
 
-from nova.tests.baremetal import db as bmdb_utils
+from nova.tests.baremetal import utils
 from nova.virt.baremetal import ipmi
 
 FLAGS = flags.FLAGS
@@ -41,7 +41,7 @@ class BaremetalIPMITestCase(test.TestCase):
         super(BaremetalIPMITestCase, self).tearDown()
 
     def test_ipmi(self):
-        n1 = bmdb_utils.new_bm_node(
+        n1 = utils.new_bm_node(
                 pm_address='10.1.1.1',
                 pm_user='n1_user',
                 pm_password='n1_password')
@@ -50,7 +50,7 @@ class BaremetalIPMITestCase(test.TestCase):
         self.assertEqual(pm1._user, 'n1_user')
         self.assertEqual(pm1._password, 'n1_password')
 
-        n2 = bmdb_utils.new_bm_node(
+        n2 = utils.new_bm_node(
                 pm_address='10.2.2.2',
                 pm_user='n2_user',
                 pm_password='n2_password')
@@ -78,13 +78,13 @@ class BaremetalIPMITestCase(test.TestCase):
         I = 'lanplus'
         F = 'password_file'
 
-        n1 = bmdb_utils.new_bm_node(
+        n1 = utils.new_bm_node(
                 pm_address=H,
                 pm_user=U,
                 pm_password=P)
 
         self.mox.StubOutWithMock(ipmi, '_make_password_file')
-        self.mox.StubOutWithMock(utils, 'execute')
+        self.mox.StubOutWithMock(nova_utils, 'execute')
         self.mox.StubOutWithMock(ipmi, '_unlink_without_raise')
         ipmi._make_password_file(P).AndReturn(F)
         args = [
@@ -95,7 +95,7 @@ class BaremetalIPMITestCase(test.TestCase):
                 '-f', F,
                 'A', 'B', 'C',
                 ]
-        utils.execute(*args, attempts=3).AndReturn(('', ''))
+        nova_utils.execute(*args, attempts=3).AndReturn(('', ''))
         ipmi._unlink_without_raise(F).AndReturn(None)
         self.mox.ReplayAll()
 

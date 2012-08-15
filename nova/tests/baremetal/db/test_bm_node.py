@@ -18,7 +18,7 @@ Baremetal DB testcase for PhyHost
 """
 
 from nova.tests.baremetal.db import BMDBTestCase
-from nova.tests.baremetal.db import new_bm_node
+from nova.tests.baremetal import utils
 from nova.virt.baremetal import db
 
 
@@ -28,9 +28,9 @@ class BareMetalNodesTestCase(BMDBTestCase):
         super(BareMetalNodesTestCase, self).setUp()
 
     def _create_hosts(self):
-        h1 = new_bm_node(service_host="host1")
-        h2 = new_bm_node(service_host="host2")
-        h3 = new_bm_node(service_host="host2")
+        h1 = utils.new_bm_node(service_host="host1")
+        h2 = utils.new_bm_node(service_host="host2")
+        h3 = utils.new_bm_node(service_host="host2")
 
         h1_ref = db.bm_node_create(self.context, h1)
         self.assertTrue(h1_ref['id'] is not None)

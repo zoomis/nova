@@ -17,16 +17,12 @@
 Tests for baremetal tilera_pdu driver.
 """
 
-import os
-import stat
-
 import mox
 
 from nova import flags
 from nova import test
-from nova import utils
 
-from nova.tests.baremetal import db as bmdb_utils
+from nova.tests.baremetal import utils
 from nova.virt.baremetal import tilera_pdu
 
 FLAGS = flags.FLAGS
@@ -41,14 +37,14 @@ class BaremetalPduTestCase(test.TestCase):
         super(BaremetalPduTestCase, self).tearDown()
 
     def test_get_power_manager(self):
-        n1 = bmdb_utils.new_bm_node(
+        n1 = utils.new_bm_node(
                 pm_address='10.1.1.1',
                 id='1')
         pm1 = tilera_pdu.Pdu(n1)
         self.assertEqual(pm1._address, '10.1.1.1')
         self.assertEqual(pm1._node_id, '1')
 
-        n2 = bmdb_utils.new_bm_node(
+        n2 = utils.new_bm_node(
                 pm_address='10.2.2.2',
                 id='2')
         pm2 = tilera_pdu.Pdu(n2)
