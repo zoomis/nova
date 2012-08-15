@@ -56,6 +56,7 @@ from nova.virt.libvirt import firewall
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import volume
+from nova.virt.libvirt import volume_nfs
 from nova.volume import driver as volume_driver
 
 
@@ -326,6 +327,31 @@ class LibvirtVolumeTestCase(test.TestCase):
         libvirt_driver.disconnect_volume(connection_info, mount_device)
         connection_info = vol_driver.terminate_connection(vol, self.connr)
 
+    def test_libvirt_nfs_driver(self):
+        # NOTE(vish) exists is to make driver assume connecting worked
+        mnt_base = '/mnt'
+        self.flags(nfs_mount_point_base=mnt_base)
+
+        libvirt_driver = volume_nfs.NfsVolumeDriver(self.fake_conn)
+        export_string = '192.168.1.1:/nfs/share1'
+        name = 'volume-00001'
+        export_mnt_base = os.path.join(mnt_base,
+                libvirt_driver.get_hash_str(export_string))
+        file_path = os.path.join(export_mnt_base, name)
+
+        connection_info = {'data': {'export': export_string, 'name': name}}
+        mount_device = "vde"
+        conf = libvirt_driver.connect_volume(connection_info, mount_device)
+        tree = conf.format_dom()
+        self.assertEqual(tree.get('type'), 'file')
+        self.assertEqual(tree.find('./source').get('file'), file_path)
+        libvirt_driver.disconnect_volume(connection_info, mount_device)
+
+        expected_commands = [
+            ('stat', export_mnt_base),
+            ('mount', '-t', 'nfs', export_string, export_mnt_base)]
+        self.assertEqual(self.executes, expected_commands)
+
 
 class CacheConcurrencyTestCase(test.TestCase):
     def setUp(self):
@@ -412,7 +438,6 @@ class LibvirtConnTestCase(test.TestCase):
 
     def setUp(self):
         super(LibvirtConnTestCase, self).setUp()
-        libvirt_driver._late_load_cheetah()
         self.flags(fake_call=True)
         self.user_id = 'fake'
         self.project_id = 'fake'
@@ -2656,6 +2681,10 @@ class HostStateTestCase(test.TestCase):
 
         def get_hypervisor_hostname(self):
             return 'compute1'
+
+        def get_host_uptime(self):
+            return ('10:01:16 up  1:36,  6 users,  '
+                    'load average: 0.21, 0.16, 0.19')
 
         def get_disk_available_least(self):
             return 13091

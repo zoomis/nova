@@ -729,7 +729,6 @@ def floating_ip_get(context, id):
 
 @require_context
 def floating_ip_get_pools(context):
-    session = get_session()
     pools = []
     for result in model_query(context, models.FloatingIp.pool).distinct():
         pools.append({'name': result[0]})
@@ -758,10 +757,34 @@ def floating_ip_allocate_address(context, project_id, pool):
 
 
 @require_context
-def floating_ip_create(context, values):
+def floating_ip_bulk_create(context, ips):
+    session = get_session()
+    with session.begin():
+        for ip in ips:
+            floating_ip_create(context, ip, session)
+
+
+@require_context
+def floating_ip_create(context, values, session=None):
+    if not session:
+        session = get_session()
+
     floating_ip_ref = models.FloatingIp()
     floating_ip_ref.update(values)
-    floating_ip_ref.save()
+
+    # check uniqueness for not deleted addresses
+    if not floating_ip_ref.deleted:
+        try:
+            floating_ip = floating_ip_get_by_address(context,
+                                                     floating_ip_ref.address,
+                                                     session)
+        except exception.FloatingIpNotFoundForAddress:
+            pass
+        else:
+            if floating_ip.id != floating_ip_ref.id:
+                raise exception.FloatingIpExists(**dict(floating_ip_ref))
+
+    floating_ip_ref.save(session=session)
     return floating_ip_ref['address']
 
 
@@ -1993,7 +2016,7 @@ def key_pair_count_by_user(context, user_id):
 
 
 @require_admin_context
-def network_associate(context, project_id, force=False):
+def network_associate(context, project_id, network_id=None, force=False):
     """Associate a project with a network.
 
     called by project_get_networks under certain conditions
@@ -2011,10 +2034,13 @@ def network_associate(context, project_id, force=False):
     session = get_session()
     with session.begin():
 
-        def network_query(project_filter):
+        def network_query(project_filter, id=None):
+            filter_kwargs = {'project_id': project_filter}
+            if id is not None:
+                filter_kwargs['id'] = id
             return model_query(context, models.Network, session=session,
                               read_deleted="no").\
-                           filter_by(project_id=project_filter).\
+                           filter_by(**filter_kwargs).\
                            with_lockmode('update').\
                            first()
 
@@ -2027,7 +2053,7 @@ def network_associate(context, project_id, force=False):
             # with a new network
 
             # get new network
-            network_ref = network_query(None)
+            network_ref = network_query(None, network_id)
             if not network_ref:
                 raise db.NoMoreNetworks()
 
@@ -4493,8 +4519,6 @@ def volume_type_create(context, values):
         except exception.VolumeTypeNotFoundByName:
             pass
         try:
-            specs = values.get('extra_specs')
-
             values['extra_specs'] = _metadata_refs(values.get('extra_specs'),
                                                    models.VolumeTypeExtraSpecs)
             volume_type_ref = models.VolumeTypes()
@@ -4763,7 +4787,6 @@ def sm_backend_conf_get(context, sm_backend_id):
 
 @require_admin_context
 def sm_backend_conf_get_by_sr(context, sr_uuid):
-    session = get_session()
     result = model_query(context, models.SMBackendConf, read_deleted="yes").\
                          filter_by(sr_uuid=sr_uuid).\
                          first()

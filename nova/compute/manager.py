@@ -180,7 +180,7 @@ def checks_instance_lock(function):
 
         # if admin or unlocked call function otherwise log error
         if admin or not locked:
-            function(self, context, *args, **kwargs)
+            return function(self, context, *args, **kwargs)
         else:
             LOG.error(_("check_instance_lock: not executing |%s|"),
                       function, context=context, instance_uuid=instance_uuid)
@@ -200,7 +200,7 @@ def reverts_task_state(function):
             instance_uuid = kwargs['instance_uuid']
 
         try:
-            function(self, context, *args, **kwargs)
+            return function(self, context, *args, **kwargs)
         except Exception:
             with excutils.save_and_reraise_exception():
                 try:
@@ -247,7 +247,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.42'
+    RPC_API_VERSION = '1.43'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1179,6 +1179,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 context, instance, "snapshot.start")
 
         self.driver.snapshot(context, instance, image_id)
+        self._instance_update(context, instance['uuid'], task_state=None)
 
         if image_type == 'snapshot' and rotation:
             raise exception.ImageRotationNotAllowed()
@@ -2177,6 +2178,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                              in) nova.db.sqlalchemy.models.Instance.Id
         :param block_migration: if true, prepare for block migration
         :param disk_over_commit: if true, allow disk over commit
+
+        Returns a mapping of values required in case of block migration
+        and None otherwise.
         """
         if not instance:
             instance = self.db.instance_get(ctxt, instance_id)
@@ -2188,6 +2192,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         finally:
             self.driver.check_can_live_migrate_destination_cleanup(ctxt,
                     dest_check_data)
+        if dest_check_data and 'migrate_data' in dest_check_data:
+            return dest_check_data['migrate_data']
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def check_can_live_migrate_source(self, ctxt, dest_check_data,
@@ -2257,7 +2263,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.driver.pre_block_migration(context, instance, disk)
 
     def live_migration(self, context, dest, block_migration=False,
-                       instance=None, instance_id=None):
+                       instance=None, instance_id=None, migrate_data=None):
         """Executing live migration.
 
         :param context: security context
@@ -2265,6 +2271,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param instance: instance dict
         :param dest: destination host
         :param block_migration: if true, prepare for block migration
+        :param migrate_data: implementation specific params
 
         """
         # Get instance for error handling.
@@ -2302,7 +2309,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.live_migration(context, instance, dest,
                                    self._post_live_migration,
                                    self.rollback_live_migration,
-                                   block_migration)
+                                   block_migration, migrate_data)
 
     def _post_live_migration(self, ctxt, instance_ref,
                             dest, block_migration=False):

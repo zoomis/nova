@@ -282,6 +282,11 @@ def floating_ip_allocate_address(context, project_id, pool):
     return IMPL.floating_ip_allocate_address(context, project_id, pool)
 
 
+def floating_ip_bulk_create(context, ips):
+    """Create a lot of floating ips from the values dictionary."""
+    return IMPL.floating_ip_bulk_create(context, ips)
+
+
 def floating_ip_create(context, values):
     """Create a floating ip from the values dictionary."""
     return IMPL.floating_ip_create(context, values)
@@ -779,9 +784,9 @@ def key_pair_count_by_user(context, user_id):
 ####################
 
 
-def network_associate(context, project_id, force=False):
+def network_associate(context, project_id, network_id=None, force=False):
     """Associate a free network to a project."""
-    return IMPL.network_associate(context, project_id, force)
+    return IMPL.network_associate(context, project_id, network_id, force)
 
 
 def network_count(context):
