@@ -23,7 +23,7 @@ import mox
 from nova import flags
 from nova import test
 
-from nova.tests.baremetal import utils
+from nova.tests.baremetal.db import utils
 from nova.tests.image import fake as fake_image
 from nova.tests import utils as test_utils
 from nova.virt.baremetal import baremetal_states

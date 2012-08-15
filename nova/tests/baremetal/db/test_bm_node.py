@@ -18,7 +18,7 @@ Baremetal DB testcase for PhyHost
 """
 
 from nova.tests.baremetal.db import base
-from nova.tests.baremetal import utils
+from nova.tests.baremetal.db import utils
 from nova.virt.baremetal import db
 
 

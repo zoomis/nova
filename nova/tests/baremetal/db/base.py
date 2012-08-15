@@ -18,7 +18,7 @@
 from nova import context as nova_context
 from nova import flags
 from nova import test
-from nova.tests.baremetal import utils
+from nova.tests.baremetal.db import utils
 
 
 flags.DECLARE('baremetal_sql_connection',

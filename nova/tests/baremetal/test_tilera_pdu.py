@@ -22,7 +22,7 @@ import mox
 from nova import flags
 from nova import test
 
-from nova.tests.baremetal import utils
+from nova.tests.baremetal.db import utils
 from nova.virt.baremetal import tilera_pdu
 
 FLAGS = flags.FLAGS
