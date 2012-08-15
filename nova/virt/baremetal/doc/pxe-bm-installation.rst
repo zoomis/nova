@@ -121,7 +121,7 @@ Set these flags in nova.conf::
 	scheduler_host_manager = nova.scheduler.baremetal_host_manager.BaremetalHostManager
 
 
-Nova Database
+Baremetal Database
 =====
 
 Create the baremetal database. Grant all provileges to the user specified by the 'baremetal_sql_connection' flag.

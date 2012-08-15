@@ -102,7 +102,7 @@ Set these flags in nova.conf::
 
 
 
-Nova Database
+Baremetal Database
 =====
 
 Create the baremetal database. Grant all provileges to the user specified by the 'baremetal_sql_connection' flag.
