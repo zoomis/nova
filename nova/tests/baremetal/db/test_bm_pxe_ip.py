@@ -18,7 +18,7 @@ Baremetal DB testcase for PXE IP
 """
 
 from nova import exception
-from nova.tests.baremetal.db import BMDBTestCase
+from nova.tests.baremetal.db import base
 from nova.tests.baremetal import utils
 from nova.virt.baremetal import db
 
@@ -36,7 +36,7 @@ def new_bm_pxe_ip(**kwargs):
     return x
 
 
-class BareMetalPxeIpTestCase(BMDBTestCase):
+class BareMetalPxeIpTestCase(base.BMDBTestCase):
 
     def setUp(self):
         super(BareMetalPxeIpTestCase, self).setUp()

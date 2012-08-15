@@ -12,25 +12,3 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
-"""Baremetal DB utils for test."""
-
-from nova import context as nova_context
-from nova import flags
-from nova import test
-from nova.tests.baremetal import utils
-from nova.virt.baremetal import db
-from nova.virt.baremetal.db.sqlalchemy import models
-
-
-flags.DECLARE('baremetal_sql_connection',
-              'nova.virt.baremetal.db.sqlalchemy.session')
-
-
-class BMDBTestCase(test.TestCase):
-
-    def setUp(self):
-        super(BMDBTestCase, self).setUp()
-        self.flags(baremetal_sql_connection='sqlite:///:memory:')
-        utils.clear_tables()
-        self.context = nova_context.get_admin_context()

@@ -17,12 +17,12 @@
 Baremetal DB testcase for PhyHost
 """
 
-from nova.tests.baremetal.db import BMDBTestCase
+from nova.tests.baremetal.db import base
 from nova.tests.baremetal import utils
 from nova.virt.baremetal import db
 
 
-class BareMetalNodesTestCase(BMDBTestCase):
+class BareMetalNodesTestCase(base.BMDBTestCase):
 
     def setUp(self):
         super(BareMetalNodesTestCase, self).setUp()
