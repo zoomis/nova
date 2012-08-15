@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Baremetal DB utils for test."""
+"""Baremetal DB test base class."""
 
 from nova import context as nova_context
 from nova import flags
