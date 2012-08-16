@@ -157,7 +157,7 @@ class BareMetalDriver(driver.ComputeDriver):
             LOG.warning('cpu_arch is not found in instance_type_extra_specs')
             extra_specs['cpu_arch'] = ''
         self._extra_specs = extra_specs
-        
+
         x = (extra_specs['cpu_arch'], 'baremetal', 'baremetal')
         self._supported_instances = [x]
 

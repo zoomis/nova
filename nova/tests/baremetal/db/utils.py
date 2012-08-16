@@ -37,7 +37,8 @@ def new_bm_node(**kwargs):
     h.prov_vlan_id = kwargs.pop('prov_vlan_id', None)
     h.terminal_port = kwargs.pop('terminal_port', 8000)
     if len(kwargs) > 0:
-        raise test.TestingException("unknown field: %s" % ','.join(kwargs.keys()))
+        raise test.TestingException("unknown field: %s"
+                                    % ','.join(kwargs.keys()))
     return h
 
 
@@ -48,7 +49,8 @@ def new_bm_pxe_ip(**kwargs):
     x.server_address = kwargs.pop('server_address', None)
     x.bm_node_id = kwargs.pop('bm_node_id', None)
     if len(kwargs) > 0:
-        raise test.TestingException("unknown field: %s" % ','.join(kwargs.keys()))
+        raise test.TestingException("unknown field: %s"
+                                    % ','.join(kwargs.keys()))
     return x
 
 
