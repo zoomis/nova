@@ -29,6 +29,7 @@ from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
+from nova.scheduler import baremetal_utils as sched_utils
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import db as bmdb
 from nova.virt import driver
@@ -92,28 +93,6 @@ def _get_baremetal_node_by_instance_uuid(instance_uuid):
     return node
 
 
-def _find_suitable_baremetal_node(context, instance):
-    result = None
-    for node in _get_baremetal_nodes(context):
-        if node['instance_uuid']:
-            continue
-        if node['registration_status'] != 'done':
-            continue
-        if node['cpus'] < instance['vcpus']:
-            continue
-        if node['memory_mb'] < instance['memory_mb']:
-            continue
-        if result == None:
-            result = node
-        else:
-            if node['cpus'] < result['cpus']:
-                result = node
-            elif node['cpus'] == result['cpus'] \
-                    and node['memory_mb'] < result['memory_mb']:
-                result = node
-    return result
-
-
 def _update_baremetal_state(context, node, instance, state):
     instance_uuid = None
     if instance:
@@ -122,31 +101,6 @@ def _update_baremetal_state(context, node, instance, state):
         {'instance_uuid': instance_uuid,
         'task_state': state,
         })
-
-
-def _find_biggest_node(nodes):
-    max_node = {'cpus': 0,
-                'memory_mb': 0,
-                'local_gb': 0,
-                }
-
-    for node in nodes:
-        if node['registration_status'] != 'done':
-            continue
-        if node['instance_uuid']:
-            continue
-
-        # Put prioirty to memory size.
-        # You can use CPU and HDD, if you change the following lines.
-        if max_node['memory_mb'] < node['memory_mb']:
-            max_node = node
-        elif max_node['memory_mb'] == node['memory_mb']:
-            if max_node['cpus'] < node['cpus']:
-                max_node = node
-            elif max_node['cpus'] == node['cpus']:
-                if max_node['local_gb'] < node['local_gb']:
-                    max_node = node
-    return max_node
 
 
 def get_power_manager(node, **kwargs):
@@ -182,7 +136,7 @@ class BareMetalDriver(driver.ComputeDriver):
             LOG.warning('cpu_arch is not found in instance_type_extra_specs')
             extra_specs['cpu_arch'] = ''
         self._extra_specs = extra_specs
-        
+
         x = (extra_specs['cpu_arch'], 'baremetal', 'baremetal')
         self._supported_instances = [x]
 
@@ -213,7 +167,8 @@ class BareMetalDriver(driver.ComputeDriver):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
-        node = _find_suitable_baremetal_node(context, instance)
+        node = sched_utils.find_suitable_node(instance,
+                                              _get_baremetal_nodes(context))
 
         if not node:
             LOG.info("no suitable baremetal node found")
@@ -372,7 +327,7 @@ class BareMetalDriver(driver.ComputeDriver):
         return dic
 
     def _max_baremetal_resources(self, ctxt):
-        n = _find_biggest_node(_get_baremetal_nodes(ctxt))
+        n = sched_utils.find_biggest_node(_get_baremetal_nodes(ctxt))
         dic = {'vcpus': n['cpus'],
                'memory_mb': n['memory_mb'],
                'local_gb': n['local_gb'],
