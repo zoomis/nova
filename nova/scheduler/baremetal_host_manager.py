@@ -18,19 +18,78 @@
 Manage hosts in the current zone.
 """
 
-import operator
-
 from nova import context as ctx
-from nova import db
 from nova import flags
 from nova.openstack.common import log as logging
-from nova.scheduler import filters
 from nova.scheduler import host_manager
-from nova.virt.baremetal import db as bmdb
 
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
+
+
+def _is_available_node(node):
+    if node.get('instance_uuid'):
+        return False
+    if node.get('registration_status', 'done') != 'done':
+        return False
+    return True
+
+
+def _find_suitable_node(instance, nodes):
+    result = None
+    for node in nodes:
+        if not _is_available_node(node):
+            continue
+        if node['cpus'] < instance['vcpus']:
+            continue
+        if node['memory_mb'] < instance['memory_mb']:
+            continue
+        if result == None:
+            result = node
+        else:
+            if node['cpus'] < result['cpus']:
+                result = node
+            elif node['cpus'] == result['cpus'] \
+                    and node['memory_mb'] < result['memory_mb']:
+                result = node
+    return result
+
+
+def _find_biggest_node(nodes):
+    max_node = {'cpus': 0,
+                'memory_mb': 0,
+                'local_gb': 0,
+                }
+
+    for node in nodes:
+        if not _is_available_node(node):
+            continue
+
+        # Put prioirty to memory size.
+        # You can use CPU and HDD, if you change the following lines.
+        if max_node['memory_mb'] < node['memory_mb']:
+            max_node = node
+        elif max_node['memory_mb'] == node['memory_mb']:
+            if max_node['cpus'] < node['cpus']:
+                max_node = node
+            elif max_node['cpus'] == node['cpus']:
+                if max_node['local_gb'] < node['local_gb']:
+                    max_node = node
+    return max_node
+
+
+def _map_nodes(nodes):
+    nodes_map = {}
+    instances = {}
+    for n in nodes:
+        if n['instance_uuid']:
+            instances[n['instance_uuid']] = n
+            continue
+        if not _is_available_node(n):
+            continue
+        nodes_map[n['id']] = n
+    return (nodes_map, instances)
 
 
 class BaremetalHostState(host_manager.HostState):
@@ -40,170 +99,77 @@ class BaremetalHostState(host_manager.HostState):
     """
 
     def __init__(self, host, topic, capabilities=None, service=None):
-        self.host = host
-        self.topic = topic
-
-        # Read-only capability dicts
-
+        super(BaremetalHostState, self).__init__(host, topic, capabilities,
+                                                 service)
         if capabilities is None:
             capabilities = {}
-        self.capabilities = host_manager.ReadOnlyDict(capabilities.get(topic,
-                                                                       None))
+        cap = capabilities.get(topic, {})
+        print cap
+        print cap.get('nodes')
+        self._nodes_from_capabilities = cap.get('nodes', [])
+        self._nodes = None
+        self._instances = None
+        self._init_nodes()
+        self._update()
+    
+    def _init_nodes(self):
+        nodes, instances = _map_nodes(self._nodes_from_capabilities)
+        self._nodes = nodes
+        self._instances = instances
 
-        self.baremetal_compute = False
-        cap_extra_specs = self.capabilities.get('instance_type_extra_specs',
-                                                {})
-        if cap_extra_specs.get('baremetal_driver'):
-            self.baremetal_compute = True
+    def _update(self):
+        bm_node = _find_biggest_node(self._nodes.values())
 
-        if service is None:
-            service = {}
-        self.service = host_manager.ReadOnlyDict(service)
-        # Mutable available resources.
-        # These will change as resources are virtually "consumed".
-        self.free_ram_mb = 0
-        self.free_disk_mb = 0
-        self.vcpus_total = 0
-        self.vcpus_used = 0
+        if not bm_node:
+            bm_node = {}
+            bm_node['local_gb'] = 0
+            bm_node['memory_mb'] = 0
+            bm_node['cpus'] = 0
 
-        self.available_nodes = []
+        self.free_ram_mb = bm_node['memory_mb']
+        self.total_usable_ram_mb = bm_node['memory_mb']
+        self.free_disk_mb = bm_node['local_gb'] * 1024
+        self.vcpus_total = bm_node['cpus']
 
-    def update_from_compute_node(self, compute, context=None):
-        """Update information about a host from its compute_node info."""
-        if self.baremetal_compute:
-            service_host = compute['service']['host']
-            bm_nodes = bmdb.bm_node_get_all(context,
-                                            service_host=service_host)
-            for n in bm_nodes:
-                if not n['instance_uuid']:
-                    self.available_nodes.append(n)
-
-            """those sorting should be decided by weight in a scheduler."""
-            self.available_nodes = sorted(self.available_nodes,
-                                          key=operator.itemgetter('memory_mb'),
-                                          reverse=True)
-            self.available_nodes = sorted(self.available_nodes,
-                                          key=operator.itemgetter('cpus'),
-                                          reverse=True)
-
-            if len(self.available_nodes):
-                bm_node = self.available_nodes[0]
-            else:
-                bm_node = {}
-                bm_node['local_gb'] = 0
-                bm_node['memory_mb'] = 0
-                bm_node['cpus'] = 0
-
-            all_disk_mb = bm_node['local_gb'] * 1024
-            all_ram_mb = bm_node['memory_mb']
-            vcpus_total = bm_node['cpus']
-        else:
-            all_disk_mb = compute['local_gb'] * 1024
-            all_ram_mb = compute['memory_mb']
-            vcpus_total = compute['vcpus']
-            if FLAGS.reserved_host_disk_mb > 0:
-                all_disk_mb -= FLAGS.reserved_host_disk_mb
-            if FLAGS.reserved_host_memory_mb > 0:
-                all_ram_mb -= FLAGS.reserved_host_memory_mb
-
-        self.free_ram_mb = all_ram_mb
-        self.total_usable_ram_mb = all_ram_mb
-        self.free_disk_mb = all_disk_mb
-        self.vcpus_total = vcpus_total
+    def update_from_compute_node(self, compute):
+        self._init_nodes()
+        self._update()
 
     def consume_from_instance(self, instance):
         """Update information about a host from instance info."""
-        if self.baremetal_compute:
-            context = ctx.get_admin_context()
-            instance_uuid = instance.get('uuid', None)
-            if instance_uuid:
-                bm_node = bmdb.bm_node_get_by_instance_uuid(context,
-                                                            instance['uuid'])
-            else:
-                bm_node = None
-
-            if bm_node:
+        instance_uuid = instance.get('uuid', None)
+        if instance_uuid:
+            if instance_uuid in self._instances:
                 return
+        node = _find_suitable_node(instance, self._nodes.values())
+        if not node:
+            return
+        self._nodes.pop(node['id'])
+        if instance_uuid:
+            self._instances[instance_uuid] = node
+        self._update()
 
-            if len(self.available_nodes):
-                self.available_nodes.pop(0)
 
-            if len(self.available_nodes):
-                bm_node = self.available_nodes[0]
-            else:
-                bm_node = {}
-                bm_node['local_gb'] = 0
-                bm_node['memory_mb'] = 0
-                bm_node['cpus'] = 0
-
-            self.free_disk_mb = bm_node['local_gb'] * 1024
-            self.free_ram_mb = bm_node['memory_mb']
-            self.vcpus_used = 0
-            self.vcpus_total = bm_node['cpus']
-        else:
-            disk_mb = (instance['root_gb'] + instance['ephemeral_gb']) * 1024
-            ram_mb = instance['memory_mb']
-            vcpus = instance['vcpus']
-            self.free_ram_mb -= ram_mb
-            self.free_disk_mb -= disk_mb
-            self.vcpus_used += vcpus
+def new_host_state(self, host, topic, capabilities=None, service=None):
+    if capabilities is None:
+        capabilities = {}
+    cap = capabilities.get(topic, {})
+    baremetal_compute = False
+    cap_extra_specs = cap.get('instance_type_extra_specs', {})
+    if cap_extra_specs.get('baremetal_driver'):
+        baremetal_compute = True
+    if baremetal_compute:
+        return BaremetalHostState(host, topic, capabilities, service)
+    else:
+        return host_manager.HostState(host, topic, capabilities, service)
 
 
 class BaremetalHostManager(host_manager.HostManager):
     """Bare-Metal HostManager class."""
 
     # Can be overriden in a subclass
-    host_state_cls = BaremetalHostState
+    # Yes, this is not a class
+    host_state_cls = new_host_state
 
     def __init__(self):
-        self.service_states = {}  # { <host> : { <service> : { cap k : v }}}
-        self.filter_classes = filters.get_filter_classes(
-                FLAGS.scheduler_available_filters)
-
-    def get_all_host_states(self, context, topic):
-        """Returns a dict of all the hosts the HostManager
-        knows about. Also, each of the consumable resources in HostState
-        are pre-populated and adjusted based on data in the db.
-
-        For example:
-        {'192.168.1.100': HostState(), ...}
-
-        Note: this can be very slow with a lot of instances.
-        InstanceType table isn't required since a copy is stored
-        with the instance (in case the InstanceType changed since the
-        instance was created)."""
-
-        if topic != 'compute':
-            raise NotImplementedError(_(
-                "host_manager only implemented for 'compute'"))
-
-        host_state_map = {}
-
-        # Make a compute node dict with the bare essential metrics.
-        compute_nodes = db.compute_node_get_all(context)
-        for compute in compute_nodes:
-            service = compute['service']
-            if not service:
-                LOG.warn(_("No service for compute ID %s") % compute['id'])
-                continue
-            host = service['host']
-            capabilities = self.service_states.get(host, None)
-            host_state = self.host_state_cls(host, topic,
-                    capabilities=capabilities,
-                    service=dict(service.iteritems()))
-            # pass context to access DB
-            host_state.update_from_compute_node(compute, context=context)
-            host_state_map[host] = host_state
-
-        # "Consume" resources from the host the instance resides on.
-        instances = db.instance_get_all(context,
-                columns_to_join=['instance_type'])
-        for instance in instances:
-            host = instance['host']
-            if not host:
-                continue
-            host_state = host_state_map.get(host, None)
-            if not host_state:
-                continue
-            host_state.consume_from_instance(instance)
-        return host_state_map
+        super(BaremetalHostManager, self).__init__()

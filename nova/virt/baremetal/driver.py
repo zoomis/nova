@@ -124,6 +124,31 @@ def _update_baremetal_state(context, node, instance, state):
         })
 
 
+def _find_biggest_node(nodes):
+    max_node = {'cpus': 0,
+                'memory_mb': 0,
+                'local_gb': 0,
+                }
+
+    for node in nodes:
+        if node['registration_status'] != 'done':
+            continue
+        if node['instance_uuid']:
+            continue
+
+        # Put prioirty to memory size.
+        # You can use CPU and HDD, if you change the following lines.
+        if max_node['memory_mb'] < node['memory_mb']:
+            max_node = node
+        elif max_node['memory_mb'] == node['memory_mb']:
+            if max_node['cpus'] < node['cpus']:
+                max_node = node
+            elif max_node['cpus'] == node['cpus']:
+                if max_node['local_gb'] < node['local_gb']:
+                    max_node = node
+    return max_node
+
+
 def get_power_manager(node, **kwargs):
     cls = importutils.import_class(FLAGS.power_manager)
     return cls(node, **kwargs)
@@ -347,31 +372,10 @@ class BareMetalDriver(driver.ComputeDriver):
         return dic
 
     def _max_baremetal_resources(self, ctxt):
-        max_node = {'cpus': 0,
-                    'memory_mb': 0,
-                    'local_gb': 0,
-                    }
-
-        for node in _get_baremetal_nodes(ctxt):
-            if node['registration_status'] != 'done':
-                continue
-            if node['instance_uuid']:
-                continue
-
-            # Put prioirty to memory size.
-            # You can use CPU and HDD, if you change the following lines.
-            if max_node['memory_mb'] < node['memory_mb']:
-                max_node = node
-            elif max_node['memory_mb'] == node['memory_mb']:
-                if max_node['cpus'] < node['cpus']:
-                    max_node = node
-                elif max_node['cpus'] == node['cpus']:
-                    if max_node['local_gb'] < node['local_gb']:
-                        max_node = node
-
-        dic = {'vcpus': max_node['cpus'],
-               'memory_mb': max_node['memory_mb'],
-               'local_gb': max_node['local_gb'],
+        n = _find_biggest_node(_get_baremetal_nodes(ctxt))
+        dic = {'vcpus': n['cpus'],
+               'memory_mb': n['memory_mb'],
+               'local_gb': n['local_gb'],
                'vcpus_used': 0,
                'memory_mb_used': 0,
                'local_gb_used': 0,
@@ -450,7 +454,10 @@ class BareMetalDriver(driver.ComputeDriver):
         return self._get_host_stats()
 
     def get_host_stats(self, refresh=False):
-        return self._get_host_stats()
+        x = self._get_host_stats()
+        context = nova_context.get_admin_context()
+        x['nodes'] = _get_baremetal_nodes(context)
+        return x
 
     def plug_vifs(self, instance, network_info):
         """Plugin VIFs into networks."""
