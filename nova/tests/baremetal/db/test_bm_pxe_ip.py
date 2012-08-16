@@ -18,23 +18,9 @@ Baremetal DB testcase for PXE IP
 """
 
 from nova import exception
-from nova import test
 from nova.tests.baremetal.db import base
 from nova.tests.baremetal.db import utils
 from nova.virt.baremetal import db
-
-from nova.virt.baremetal.db.sqlalchemy import models
-
-
-def new_bm_pxe_ip(**kwargs):
-    x = models.BareMetalPxeIp()
-    x.id = kwargs.pop('id', None)
-    x.address = kwargs.pop('address', None)
-    x.server_address = kwargs.pop('server_address', None)
-    x.bm_node_id = kwargs.pop('bm_node_id', None)
-    if len(kwargs) > 0:
-        raise test.TestingException("unknown field: %s" % ','.join(kwargs.keys()))
-    return x
 
 
 class BareMetalPxeIpTestCase(base.BMDBTestCase):
@@ -43,9 +29,9 @@ class BareMetalPxeIpTestCase(base.BMDBTestCase):
         super(BareMetalPxeIpTestCase, self).setUp()
 
     def _create_pxe_ip(self):
-        i1 = new_bm_pxe_ip(address='10.1.1.1')
-        i2 = new_bm_pxe_ip(address='10.1.1.2')
-        i3 = new_bm_pxe_ip(address='10.1.1.3')
+        i1 = utils.new_bm_pxe_ip(address='10.1.1.1')
+        i2 = utils.new_bm_pxe_ip(address='10.1.1.2')
+        i3 = utils.new_bm_pxe_ip(address='10.1.1.3')
 
         i1_ref = db.bm_pxe_ip_create_direct(self.context, i1)
         self.assertTrue(i1_ref['id'] is not None)
