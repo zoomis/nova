@@ -15,6 +15,7 @@
 
 """Baremetal test utils."""
 
+from nova import test
 from nova.virt.baremetal import db
 from nova.virt.baremetal.db.sqlalchemy import models
 
@@ -36,7 +37,7 @@ def new_bm_node(**kwargs):
     h.prov_vlan_id = kwargs.pop('prov_vlan_id', None)
     h.terminal_port = kwargs.pop('terminal_port', 8000)
     if len(kwargs) > 0:
-        raise Exception("unknown field: %s" % ','.join(kwargs.keys()))
+        raise test.TestingException("unknown field: %s" % ','.join(kwargs.keys()))
     return h
 
 

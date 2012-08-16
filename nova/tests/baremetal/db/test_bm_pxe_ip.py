@@ -18,6 +18,7 @@ Baremetal DB testcase for PXE IP
 """
 
 from nova import exception
+from nova import test
 from nova.tests.baremetal.db import base
 from nova.tests.baremetal.db import utils
 from nova.virt.baremetal import db
@@ -32,7 +33,7 @@ def new_bm_pxe_ip(**kwargs):
     x.server_address = kwargs.pop('server_address', None)
     x.bm_node_id = kwargs.pop('bm_node_id', None)
     if len(kwargs) > 0:
-        raise Exception("unknown field: %s" % ','.join(kwargs.keys()))
+        raise test.TestingException("unknown field: %s" % ','.join(kwargs.keys()))
     return x
 
 
