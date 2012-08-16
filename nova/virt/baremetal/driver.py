@@ -157,6 +157,9 @@ class BareMetalDriver(driver.ComputeDriver):
             LOG.warning('cpu_arch is not found in instance_type_extra_specs')
             extra_specs['cpu_arch'] = ''
         self._extra_specs = extra_specs
+        
+        x = (extra_specs['cpu_arch'], 'baremetal', 'baremetal')
+        self._supported_instances = [x]
 
     @classmethod
     def instance(cls):
@@ -440,6 +443,7 @@ class BareMetalDriver(driver.ComputeDriver):
           'host_name_label': FLAGS.host,
           'cpu_arch': self._extra_specs.get('cpu_arch'),
           'instance_type_extra_specs': self._extra_specs,
+          'supported_instances': self._supported_instances,
           }
 
     def update_host_status(self):
