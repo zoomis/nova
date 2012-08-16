@@ -104,28 +104,24 @@ class BaremetalHostState(host_manager.HostState):
         if capabilities is None:
             capabilities = {}
         cap = capabilities.get(topic, {})
-        print cap
-        print cap.get('nodes')
         self._nodes_from_capabilities = cap.get('nodes', [])
         self._nodes = None
         self._instances = None
         self._init_nodes()
-        self._update()
     
     def _init_nodes(self):
         nodes, instances = _map_nodes(self._nodes_from_capabilities)
         self._nodes = nodes
         self._instances = instances
+        self._update()
 
     def _update(self):
         bm_node = _find_biggest_node(self._nodes.values())
-
         if not bm_node:
             bm_node = {}
             bm_node['local_gb'] = 0
             bm_node['memory_mb'] = 0
             bm_node['cpus'] = 0
-
         self.free_ram_mb = bm_node['memory_mb']
         self.total_usable_ram_mb = bm_node['memory_mb']
         self.free_disk_mb = bm_node['local_gb'] * 1024
@@ -133,7 +129,6 @@ class BaremetalHostState(host_manager.HostState):
 
     def update_from_compute_node(self, compute):
         self._init_nodes()
-        self._update()
 
     def consume_from_instance(self, instance):
         """Update information about a host from instance info."""
