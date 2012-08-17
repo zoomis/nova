@@ -57,7 +57,7 @@ class BaremetalHostStateTestCase(test.TestCase):
             capabilities=caps)
         self.assertEquals(host_state.host, "host1")
         self.assertEquals(host_state.topic, "compute")
-        self.assertIs(host_state.__class__,
+        self.assertTrue(host_state.__class__ is
                       baremetal_host_manager.BaremetalHostState)
         self.assertEquals(host_state.service, {})
 
@@ -72,7 +72,7 @@ class BaremetalHostStateTestCase(test.TestCase):
             capabilities=caps)
         self.assertEquals(host_state.host, "host1")
         self.assertEquals(host_state.topic, "compute")
-        self.assertIs(host_state.__class__, host_manager.HostState)
+        self.assertTrue(host_state.__class__ is host_manager.HostState)
         self.assertEquals(host_state.service, {})
 
     def test_dict_node(self):
