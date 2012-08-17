@@ -413,10 +413,10 @@ class BareMetalDriver(driver.ComputeDriver):
         return self._get_host_stats()
 
     def get_host_stats(self, refresh=False):
-        capa = self._get_host_stats()
+        caps = self._get_host_stats()
         context = nova_context.get_admin_context()
-        capa['nodes'] = _get_baremetal_nodes(context)
-        return capa
+        caps['nodes'] = _get_baremetal_nodes(context)
+        return caps
 
     def plug_vifs(self, instance, network_info):
         """Plugin VIFs into networks."""
