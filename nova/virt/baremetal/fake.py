@@ -51,7 +51,7 @@ class Fake:
         """For operations after power on."""
         pass
 
-    def deativate_node(self, var, context, node, instance):
+    def deactivate_node(self, var, context, node, instance):
         """For operations before power off."""
         pass
 
