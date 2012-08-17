@@ -75,13 +75,13 @@ class BaremetalHostStateTestCase(test.TestCase):
         self.assertTrue(host_state.__class__ is host_manager.HostState)
         self.assertEquals(host_state.service, {})
 
-    def test_dict_node(self):
+    def test_canonicalize_node(self):
         n = {'id': 1,
              'cpus': 2,
              'memory_mb': 3,
              'local_gb': 4,
              }
-        dn = baremetal_host_manager._dict_node(n)
+        dn = baremetal_host_manager._canonicalize_node(n)
         self.assertEqual(dn.get('id'), 1)
         self.assertEqual(dn.get('cpus'), 2)
         self.assertEqual(dn.get('memory_mb'), 3)
@@ -89,44 +89,44 @@ class BaremetalHostStateTestCase(test.TestCase):
         self.assertTrue('instance_uuid' in dn)
         self.assertTrue(dn['instance_uuid'] is None)
 
-    def test_dict_node_with_instance_uuid(self):
+    def test_canonicalize_node_with_instance_uuid(self):
         n = {'id': 1,
              'cpus': 2,
              'memory_mb': 3,
              'local_gb': 4,
              'instance_uuid': 'uuuuiidd'
              }
-        dn = baremetal_host_manager._dict_node(n)
+        dn = baremetal_host_manager._canonicalize_node(n)
         self.assertEqual(dn.get('id'), 1)
         self.assertEqual(dn.get('cpus'), 2)
         self.assertEqual(dn.get('memory_mb'), 3)
         self.assertEqual(dn.get('local_gb'), 4)
         self.assertEqual(dn.get('instance_uuid'), 'uuuuiidd')
 
-    def test_dict_node_without_id(self):
+    def test_canonicalize_node_without_id(self):
         n = {'id': None,
              'cpus': 2,
              'memory_mb': 3,
              'local_gb': 4,
              }
-        dn = baremetal_host_manager._dict_node(n)
+        dn = baremetal_host_manager._canonicalize_node(n)
         self.assertTrue(dn is None)
 
-    def test_dict_node_registration_not_done(self):
+    def test_canonicalize_node_registration_not_done(self):
         n = {'id': 1,
              'cpus': 2,
              'memory_mb': 3,
              'local_gb': 4,
              'registration_status': '!done',
              }
-        dn = baremetal_host_manager._dict_node(n)
+        dn = baremetal_host_manager._canonicalize_node(n)
         self.assertTrue(dn is None)
 
-    def test_dict_node_with_spec_none(self):
+    def test_canonicalize_node_with_spec_none(self):
         n = {'id': 1,
              'local_gb': 4,
              }
-        dn = baremetal_host_manager._dict_node(n)
+        dn = baremetal_host_manager._canonicalize_node(n)
         self.assertEqual(dn.get('id'), 1)
         self.assertEqual(dn.get('cpus'), 0)
         self.assertEqual(dn.get('memory_mb'), 0)
