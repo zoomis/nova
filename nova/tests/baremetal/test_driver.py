@@ -25,7 +25,6 @@ from nova import test
 
 from nova.tests.baremetal.db import utils
 from nova.tests.image import fake as fake_image
-from nova.tests import test_virt_drivers
 from nova.tests import utils as test_utils
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import db
@@ -63,29 +62,6 @@ NICS = [
 
 def class_path(class_):
     return class_.__module__ + '.' + class_.__name__
-
-
-class BareMetalDriverInterfaceTestCase(test_virt_drivers._VirtDriverTestCase):
-    def setUp(self):
-        # Point _VirtDriverTestCase at the right module
-        self.driver_module = 'nova.virt.baremetal.BareMetalDriver'
-        self.flags(baremetal_sql_connection='sqlite:///:memory:',
-                   baremetal_driver='nova.virt.baremetal.fake.Fake',
-                   power_manager='nova.virt.baremetal.ipmi.DummyIpmi',
-                   baremetal_vif_driver=class_path(FakeVifDriver),
-                   baremetal_firewall_driver=class_path(FakeFirewallDriver),
-                   baremetal_volume_driver=class_path(FakeVolumeDriver),
-                   instance_type_extra_specs=['cpu_arch:test'],
-                   host='test',
-                   )
-        super(BareMetalDriverInterfaceTestCase, self).setUp()
-        utils.clear_tables()
-        context = test_utils.get_test_admin_context()
-        db.bm_node_create(context,
-                          utils.new_bm_node(service_host='test', cpus=2))
-
-    def tearDown(self):
-        super(BareMetalDriverInterfaceTestCase, self).tearDown()
 
 
 class BaremetalDriverTestCase(test.TestCase):
