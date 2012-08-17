@@ -139,8 +139,9 @@ class BareMetalDriver(driver.ComputeDriver):
             extra_specs['cpu_arch'] = ''
         self._extra_specs = extra_specs
 
-        x = (extra_specs['cpu_arch'], 'baremetal', 'baremetal')
-        self._supported_instances = [x]
+        self._supported_instances = [
+                (extra_specs['cpu_arch'], 'baremetal', 'baremetal'),
+                ]
 
     @classmethod
     def instance(cls):
@@ -412,10 +413,10 @@ class BareMetalDriver(driver.ComputeDriver):
         return self._get_host_stats()
 
     def get_host_stats(self, refresh=False):
-        x = self._get_host_stats()
+        capa = self._get_host_stats()
         context = nova_context.get_admin_context()
-        x['nodes'] = _get_baremetal_nodes(context)
-        return x
+        capa['nodes'] = _get_baremetal_nodes(context)
+        return capa
 
     def plug_vifs(self, instance, network_info):
         """Plugin VIFs into networks."""

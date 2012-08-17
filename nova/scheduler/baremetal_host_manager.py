@@ -28,25 +28,25 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 
 
-def _dict_node(node):
-    d = {}
+def _canonicalize_node(node):
+    canon = {}
     if not node.get('id'):
         LOG.warn('Node has no id. This node is ignored in scheduling.')
         return None
     if node.get('registration_status', 'done') != 'done':
         return None
-    d['id'] = node['id']
+    canon['id'] = node['id']
     for k in ('memory_mb', 'cpus', 'local_gb'):
-        d[k] = node.get(k, 0)
-    d['instance_uuid'] = node.get('instance_uuid')
-    return d
+        canon[k] = node.get(k, 0)
+    canon['instance_uuid'] = node.get('instance_uuid')
+    return canon
 
 
 def _map_nodes(nodes):
     nodes_map = {}
     instances = {}
     for n in nodes:
-        n = _dict_node(n)
+        n = _canonicalize_node(n)
         if n is None:
             continue
         if n['instance_uuid']:
