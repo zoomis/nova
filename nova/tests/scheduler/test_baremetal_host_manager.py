@@ -20,10 +20,10 @@ Tests For BaremetalHostManager.
 from nova import db
 from nova import exception
 from nova import flags
+from nova.openstack.common import timeutils
 from nova.scheduler import baremetal_host_manager
 from nova.scheduler import host_manager
 from nova import test
-from nova.openstack.common import timeutils
 
 
 FLAGS = flags.FLAGS
