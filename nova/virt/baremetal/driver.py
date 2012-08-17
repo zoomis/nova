@@ -83,6 +83,8 @@ def _get_baremetal_nodes(context):
 
 
 def _get_baremetal_node_by_instance_uuid(instance_uuid):
+    if not instance_uuid:
+        return None
     ctx = nova_context.get_admin_context()
     node = bmdb.bm_node_get_by_instance_uuid(ctx, instance_uuid)
     if not node:
@@ -132,7 +134,7 @@ def get_power_manager(node, **kwargs):
 class BareMetalDriver(driver.ComputeDriver):
     """BareMetal hypervisor driver."""
 
-    def __init__(self):
+    def __init__(self, read_only=False):
         super(BareMetalDriver, self).__init__()
 
         self.baremetal_nodes = importutils.import_object(
@@ -295,9 +297,10 @@ class BareMetalDriver(driver.ComputeDriver):
                                                  instance_name, mountpoint)
 
     def get_info(self, instance):
-        node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
+        inst_uuid = instance.get('uuid')
+        node = _get_baremetal_node_by_instance_uuid(inst_uuid)
         if not node:
-            raise exception.InstanceNotFound(instance_id=instance['uuid'])
+            raise exception.InstanceNotFound(instance_id=inst_uuid)
         pm = get_power_manager(node)
         ps = power_state.SHUTDOWN
         if pm.is_power_on():

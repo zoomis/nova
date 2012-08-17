@@ -156,6 +156,7 @@ class VolumeDriver(object):
         return {
             'ip': FLAGS.my_ip,
             'initiator': self._initiator,
+            'host': FLAGS.host,
         }
 
     def attach_volume(self, connection_info, instance_name, mountpoint):
