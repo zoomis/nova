@@ -28,19 +28,6 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 
 
-def find_biggest_node(nodes):
-    result = {'cpus': 0,
-              'memory_mb': 0,
-              'local_gb': 0,
-              }
-    for node in nodes:
-        if not baremetal_utils._is_available_node(node):
-            continue
-        if baremetal_utils._compare_node(node, result) > 0:
-            result = node
-    return result
-
-
 def _dict_node(node):
     d = {}
     if not node.get('id'):
@@ -95,7 +82,7 @@ class BaremetalHostState(host_manager.HostState):
         self._update()
 
     def _update(self):
-        bm_node = find_biggest_node(self._nodes.values())
+        bm_node = baremetal_utils.find_biggest_node(self._nodes.values())
         if not bm_node:
             bm_node = {}
             bm_node['local_gb'] = 0
