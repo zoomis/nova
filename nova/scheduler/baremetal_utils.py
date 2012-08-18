@@ -49,7 +49,7 @@ def find_suitable_node(instance, nodes):
         if v is None:
             return 0
         return v
-    instance_local_gb = n0(instance.get('local_gb')) \
+    instance_local_gb = n0(instance.get('root_gb')) \
                         + n0(instance.get('ephemeral_gb'))
     result = None
     for node in nodes:
