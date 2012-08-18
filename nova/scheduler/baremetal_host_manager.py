@@ -73,13 +73,6 @@ class BaremetalHostState(host_manager.HostState):
         self._nodes_from_capabilities = cap.get('nodes', [])
         self._nodes = None
         self._instances = None
-        self._init_nodes()
-
-    def _init_nodes(self):
-        nodes, instances = _map_nodes(self._nodes_from_capabilities)
-        self._nodes = nodes
-        self._instances = instances
-        self._update()
 
     def _update(self):
         bm_node = baremetal_utils.find_biggest_node(self._nodes.values())
@@ -96,7 +89,10 @@ class BaremetalHostState(host_manager.HostState):
     def update_from_compute_node(self, compute):
         # Update(==initialize) information using capabilities.
         # compute_node info is not used.
-        self._init_nodes()
+        nodes, instances = _map_nodes(self._nodes_from_capabilities)
+        self._nodes = nodes
+        self._instances = instances
+        self._update()
 
     def consume_from_instance(self, instance):
         instance_uuid = instance.get('uuid', None)
