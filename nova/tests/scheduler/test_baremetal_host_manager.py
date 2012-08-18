@@ -140,7 +140,7 @@ class BaremetalHostStateTestCase(test.TestCase):
         self.assertEqual(n[3], NODES_FREE[2])
         self.assertEqual(len(n), 3)
 
-        self.assertEqual(i['A'], NODES_USED[0])
+        self.assertEqual(i['A'], NODES_USED[0]['id'])
         self.assertEqual(len(i), 1)
 
     def test_init(self):

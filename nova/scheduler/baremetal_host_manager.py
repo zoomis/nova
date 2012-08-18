@@ -50,7 +50,7 @@ def _map_nodes(nodes):
         if n is None:
             continue
         if n['instance_uuid']:
-            instances[n['instance_uuid']] = n
+            instances[n['instance_uuid']] = n['id']
             continue
         if not baremetal_utils._is_available_node(n):
             continue
@@ -105,7 +105,7 @@ class BaremetalHostState(host_manager.HostState):
             return
         self._nodes.pop(node['id'])
         if instance_uuid:
-            self._instances[instance_uuid] = node
+            self._instances[instance_uuid] = node['id']
         self._update()
 
 
