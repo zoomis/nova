@@ -18,6 +18,11 @@
 Manage hosts in the current zone.
 """
 
+import datetime
+
+from nova.compute import vm_states
+from nova import context as nova_context
+from nova import db
 from nova import flags
 from nova.openstack.common import log as logging
 from nova.scheduler import baremetal_utils
@@ -51,11 +56,20 @@ def _map_nodes(nodes):
             continue
         if n['instance_uuid']:
             instances[n['instance_uuid']] = n['id']
-            continue
-        if not baremetal_utils._is_available_node(n):
-            continue
+            del(n['instance_uuid'])
         nodes_map[n['id']] = n
     return (nodes_map, instances)
+
+
+def _get_deleted_instances_from_db(context, host, since):
+    ts = datetime.datetime.utcfromtimestamp(since)
+    insts = db.instance_get_all_by_filters(
+            context,
+            {'host': host,
+             'changes-since': ts,
+             'vm_state': vm_states.DELETED,
+             })
+    return insts
 
 
 class BaremetalHostState(host_manager.HostState):
@@ -70,6 +84,7 @@ class BaremetalHostState(host_manager.HostState):
         if capabilities is None:
             capabilities = {}
         cap = capabilities.get(topic, {})
+        self._cap_timestamp = cap.get("timestamp", None)
         self._nodes_from_capabilities = cap.get('nodes', [])
         self._nodes = None
         self._instances = None
@@ -90,6 +105,19 @@ class BaremetalHostState(host_manager.HostState):
         # Update(==initialize) information using capabilities.
         # compute_node info is not used.
         nodes, instances = _map_nodes(self._nodes_from_capabilities)
+
+        # Remove terminated insts from instances
+        if self._cap_timestamp is not None:
+            context = nova_context.get_admin_context()
+            deleted = _get_deleted_instances_from_db(context,
+                                                     self.host,
+                                                     self._cap_timestamp)
+            for inst in deleted:
+                instances.pop(inst.get('uuid'))
+
+        for node_id in instances.values():
+            nodes.pop(node_id)
+
         self._nodes = nodes
         self._instances = instances
         self._update()

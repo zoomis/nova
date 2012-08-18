@@ -13,30 +13,36 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+from nova.compute import vm_states
+
 """
 Tests For BaremetalHostManager.
 """
+
+import mox
+
+from nova.tests import utils
 
 from nova import db
 from nova import exception
 from nova import flags
 from nova.openstack.common import timeutils
-from nova.scheduler import baremetal_host_manager
+from nova.scheduler import baremetal_host_manager as bhm
 from nova.scheduler import host_manager
 from nova import test
 
 
 FLAGS = flags.FLAGS
-
-
+UUID_A = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+UUID_B = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+UUID_C = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
 NODES_FREE = [
         dict(id=1, cpus=2, memory_mb=512, local_gb=100, instance_uuid=None),
         dict(id=2, cpus=2, memory_mb=1024, local_gb=200, instance_uuid=None),
         dict(id=3, cpus=1, memory_mb=2048, local_gb=300, instance_uuid=None),
 ]
-
 NODES_USED = [
-        dict(id=4, cpus=2, memory_mb=4096, local_gb=400, instance_uuid='A'),
+        dict(id=4, cpus=2, memory_mb=4096, local_gb=400, instance_uuid=UUID_A),
 ]
 
 NODES = []
@@ -50,7 +56,7 @@ class BaremetalHostStateTestCase(test.TestCase):
                 'instance_type_extra_specs': {'baremetal_driver': 'test'}}
         caps = {'compute': compute_caps}
 
-        host_state = baremetal_host_manager.new_host_state(
+        host_state = bhm.new_host_state(
             None,
             "host1",
             "compute",
@@ -58,14 +64,14 @@ class BaremetalHostStateTestCase(test.TestCase):
         self.assertEquals(host_state.host, "host1")
         self.assertEquals(host_state.topic, "compute")
         self.assertTrue(host_state.__class__ is
-                      baremetal_host_manager.BaremetalHostState)
+                      bhm.BaremetalHostState)
         self.assertEquals(host_state.service, {})
 
     def test_new_non_baremetal(self):
         compute_caps = {}
         caps = {'compute': compute_caps}
 
-        host_state = baremetal_host_manager.new_host_state(
+        host_state = bhm.new_host_state(
             None,
             "host1",
             "compute",
@@ -81,7 +87,7 @@ class BaremetalHostStateTestCase(test.TestCase):
              'memory_mb': 3,
              'local_gb': 4,
              }
-        dn = baremetal_host_manager._canonicalize_node(n)
+        dn = bhm._canonicalize_node(n)
         self.assertEqual(dn.get('id'), 1)
         self.assertEqual(dn.get('cpus'), 2)
         self.assertEqual(dn.get('memory_mb'), 3)
@@ -96,7 +102,7 @@ class BaremetalHostStateTestCase(test.TestCase):
              'local_gb': 4,
              'instance_uuid': 'uuuuiidd'
              }
-        dn = baremetal_host_manager._canonicalize_node(n)
+        dn = bhm._canonicalize_node(n)
         self.assertEqual(dn.get('id'), 1)
         self.assertEqual(dn.get('cpus'), 2)
         self.assertEqual(dn.get('memory_mb'), 3)
@@ -109,7 +115,7 @@ class BaremetalHostStateTestCase(test.TestCase):
              'memory_mb': 3,
              'local_gb': 4,
              }
-        dn = baremetal_host_manager._canonicalize_node(n)
+        dn = bhm._canonicalize_node(n)
         self.assertTrue(dn is None)
 
     def test_canonicalize_node_registration_not_done(self):
@@ -119,29 +125,55 @@ class BaremetalHostStateTestCase(test.TestCase):
              'local_gb': 4,
              'registration_status': '!done',
              }
-        dn = baremetal_host_manager._canonicalize_node(n)
+        dn = bhm._canonicalize_node(n)
         self.assertTrue(dn is None)
 
     def test_canonicalize_node_with_spec_none(self):
         n = {'id': 1,
              'local_gb': 4,
              }
-        dn = baremetal_host_manager._canonicalize_node(n)
+        dn = bhm._canonicalize_node(n)
         self.assertEqual(dn.get('id'), 1)
         self.assertEqual(dn.get('cpus'), 0)
         self.assertEqual(dn.get('memory_mb'), 0)
         self.assertEqual(dn.get('local_gb'), 4)
 
     def test_map_nodes(self):
-        n, i = baremetal_host_manager._map_nodes(NODES)
+        n, i = bhm._map_nodes(NODES)
 
-        self.assertEqual(n[1], NODES_FREE[0])
-        self.assertEqual(n[2], NODES_FREE[1])
-        self.assertEqual(n[3], NODES_FREE[2])
-        self.assertEqual(len(n), 3)
+        self.assertEqual(n[NODES[0]['id']], NODES[0])
+        self.assertEqual(n[NODES[1]['id']], NODES[1])
+        self.assertEqual(n[NODES[2]['id']], NODES[2])
+        nodes3 = NODES[3].copy()
+        del(nodes3['instance_uuid'])
+        self.assertEqual(n[NODES[3]['id']], nodes3)
+        self.assertEqual(len(n), 4)
 
-        self.assertEqual(i['A'], NODES_USED[0]['id'])
+        self.assertEqual(i[UUID_A], NODES_USED[0]['id'])
         self.assertEqual(len(i), 1)
+
+    def test_get_deleted_instances_from_db(self):
+        context = utils.get_test_admin_context()
+        r = bhm._get_deleted_instances_from_db(context, 'host1', 0)
+        self.assertEqual(r, [])
+
+        db.instance_create(context, {'host': 'host1', 'uuid': UUID_A})
+        db.instance_create(context, {'host': 'host1', 'uuid': UUID_B})
+        db.instance_create(context, {'host': 'host2', 'uuid': UUID_C})
+        db.instance_update(context, UUID_A, {'vm_state': vm_states.DELETED})
+        db.instance_update(context, UUID_B, {'vm_state': vm_states.ACTIVE})
+        db.instance_update(context, UUID_C, {'vm_state': vm_states.DELETED})
+        db.instance_destroy(context, UUID_A)
+        db.instance_destroy(context, UUID_C)
+
+        r = bhm._get_deleted_instances_from_db(context, 'host1', 0)
+        self.assertEqual(r[0]['uuid'], UUID_A)
+        self.assertEqual(len(r), 1)
+
+        # Parameter 'since' works
+        r = bhm._get_deleted_instances_from_db(context, 'host1',
+                                               timeutils.utcnow_ts() + 1000)
+        self.assertEqual(len(r), 0)
 
     def test_init(self):
         cap = {'timestamp': 1,
@@ -149,7 +181,7 @@ class BaremetalHostStateTestCase(test.TestCase):
                'nodes': NODES,
                 }
         caps = {'compute': cap}
-        s = baremetal_host_manager.new_host_state(
+        s = bhm.new_host_state(
             None,
             "host1",
             "compute",
@@ -172,58 +204,51 @@ class BaremetalHostStateTestCase(test.TestCase):
         self.assertEqual(len(s._nodes), 3)
         self.assertEqual(len(s._instances), 1)
         self.assertEqual(s.free_ram_mb, 2048)
-        self.assertEqual(s.free_disk_mb, 300 * 1024)
-        self.assertEqual(s.vcpus_total, 1)
-        self.assertEqual(s.vcpus_used, 0)
         return s
 
-    def test_init_without_free_nodes(self):
-        cap = {'timestamp': 1,
-               'instance_type_extra_specs': {'baremetal_driver': 'test'},
-               'nodes': NODES_USED,
-                }
-        caps = {'compute': cap}
-        s = baremetal_host_manager.new_host_state(
-            None,
-            "host1",
-            "compute",
-            capabilities=caps)
-        self.assertEqual(s.host, "host1")
-        self.assertEqual(s.topic, "compute")
+    def test_update_from_compute_node_with_terminated_inst(self):
+        s = self.test_init()
+
+        self.mox.StubOutWithMock(bhm, '_get_deleted_instances_from_db')
+        bhm._get_deleted_instances_from_db(mox.IgnoreArg(), 'host1', 1)\
+                .AndReturn([{'uuid': UUID_A}])
+        self.mox.ReplayAll()
+
         s.update_from_compute_node(None)
-        self.assertEqual(s._nodes_from_capabilities, NODES_USED)
-        self.assertEqual(len(s._nodes), 0)
-        self.assertEqual(len(s._instances), 1)
-        self.assertEqual(s.free_ram_mb, 0)
-        self.assertEqual(s.free_disk_mb, 0)
-        self.assertEqual(s.vcpus_total, 0)
-        self.assertEqual(s.vcpus_used, 0)
+        self.assertEqual(s._nodes_from_capabilities, NODES)
+        self.assertEqual(len(s._nodes), 4)
+        self.assertEqual(len(s._instances), 0)
+        self.assertEqual(s.free_ram_mb, 4096)
         return s
 
-    def test_consume_from_instance(self):
-        inst = {'uuid': 'X', 'vcpus': 1, 'memory_mb': 2048}
+    def test_consume_from_instance_known_uuid(self):
+        inst = {'uuid': UUID_A, 'vcpus': 1, 'memory_mb': 2048}
+        s = self.test_update_from_compute_node()
+        s.consume_from_instance(inst)
+        self.assertEqual(len(s._nodes), 3)
+        self.assertEqual(len(s._instances), 1)
+        self.assertEqual(s.free_ram_mb, 2048)
+
+    def test_consume_from_instance_unknown_uuid(self):
+        inst = {'uuid': UUID_B, 'vcpus': 1, 'memory_mb': 2048}
         s = self.test_update_from_compute_node()
         s.consume_from_instance(inst)
         self.assertEqual(len(s._nodes), 2)
-        self.assertTrue('X' in s._instances)
+        self.assertTrue(UUID_A in s._instances)
+        self.assertTrue(UUID_B in s._instances)
         self.assertEqual(len(s._instances), 2)
         self.assertEqual(s.free_ram_mb, 1024)
-        self.assertEqual(s.free_disk_mb, 200 * 1024)
-        self.assertEqual(s.vcpus_total, 2)
-        self.assertEqual(s.vcpus_used, 0)
 
-    def test_consume_from_instance_small(self):
-        inst = {'uuid': 'X', 'vcpus': 1, 'memory_mb': 256}
+    def test_consume_from_instance_unknown_uuid_small(self):
+        inst = {'uuid': UUID_B, 'vcpus': 1, 'memory_mb': 256}
         s = self.test_update_from_compute_node()
         s.consume_from_instance(inst)
         self.assertEqual(len(s._nodes), 2)
-        self.assertTrue('X' in s._instances)
+        self.assertTrue(UUID_A in s._instances)
+        self.assertTrue(UUID_B in s._instances)
         self.assertEqual(len(s._instances), 2)
-        # the following is not changed since the biggest node is still free
+        # not changed since the biggest node is still free
         self.assertEqual(s.free_ram_mb, 2048)
-        self.assertEqual(s.free_disk_mb, 300 * 1024)
-        self.assertEqual(s.vcpus_total, 1)
-        self.assertEqual(s.vcpus_used, 0)
 
     def test_consume_from_instance_without_uuid(self):
         inst = {'uuid': None, 'vcpus': 1, 'memory_mb': 2048}
@@ -231,25 +256,20 @@ class BaremetalHostStateTestCase(test.TestCase):
         s.consume_from_instance(inst)
         # _nodes is consumed, but _instances is unchanged
         self.assertEqual(len(s._nodes), 2)
-        self.assertFalse('X' in s._instances)
+        self.assertTrue(UUID_A in s._instances)
         self.assertEqual(len(s._instances), 1)
         self.assertEqual(s.free_ram_mb, 1024)
-        self.assertEqual(s.free_disk_mb, 200 * 1024)
-        self.assertEqual(s.vcpus_total, 2)
-        self.assertEqual(s.vcpus_used, 0)
 
-    def test_consume_from_instance_without_free_nodes(self):
+    def test_consume_from_instance_not_capable(self):
         # no suitable node
-        inst = {'uuid': 'X', 'vcpus': 300, 'memory_mb': 100000}
-        s = self.test_init_without_free_nodes()
+        inst = {'uuid': UUID_B, 'vcpus': 10000, 'memory_mb': 10000000}
+        s = self.test_update_from_compute_node()
         s.consume_from_instance(inst)
-        self.assertEqual(len(s._nodes), 0)
-        self.assertFalse('X' in s._instances)
+        # unchanged
+        self.assertEqual(len(s._nodes), 3)
+        self.assertTrue(UUID_A in s._instances)
         self.assertEqual(len(s._instances), 1)
-        self.assertEqual(s.free_ram_mb, 0)
-        self.assertEqual(s.free_disk_mb, 0)
-        self.assertEqual(s.vcpus_total, 0)
-        self.assertEqual(s.vcpus_used, 0)
+        self.assertEqual(s.free_ram_mb, 2048)
 
 
 BAREMETAL_COMPUTE_NODES = [
@@ -395,7 +415,7 @@ class BaremetalHostManagerTestCase(test.TestCase):
 
     def setUp(self):
         super(BaremetalHostManagerTestCase, self).setUp()
-        self.bhm = baremetal_host_manager.BaremetalHostManager()
+        self.bhm = bhm.BaremetalHostManager()
 
     def test_choose_host_filters_not_found(self):
         self.flags(scheduler_default_filters='ComputeFilterClass3')
@@ -417,8 +437,8 @@ class BaremetalHostManagerTestCase(test.TestCase):
         topic = 'fake_topic'
 
         filters = ['fake-filter1', 'fake-filter2']
-        fake_host1 = baremetal_host_manager.BaremetalHostState('host1', topic)
-        fake_host2 = baremetal_host_manager.BaremetalHostState('host2', topic)
+        fake_host1 = bhm.BaremetalHostState('host1', topic)
+        fake_host2 = bhm.BaremetalHostState('host2', topic)
         hosts = [fake_host1, fake_host2]
         filter_properties = 'fake_properties'
 
