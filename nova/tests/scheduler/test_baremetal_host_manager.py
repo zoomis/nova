@@ -156,6 +156,17 @@ class BaremetalHostStateTestCase(test.TestCase):
             capabilities=caps)
         self.assertEqual(s.host, "host1")
         self.assertEqual(s.topic, "compute")
+        self.assertEqual(s._nodes_from_capabilities, NODES)
+        self.assertTrue(s._nodes is None)
+        self.assertTrue(s._instances is None)
+        self.assertEqual(s.free_ram_mb, 0)
+        self.assertEqual(s.free_disk_mb, 0)
+        self.assertEqual(s.vcpus_total, 0)
+        self.assertEqual(s.vcpus_used, 0)
+        return s
+
+    def test_update_from_compute_node(self):
+        s = self.test_init()
         s.update_from_compute_node(None)
         self.assertEqual(s._nodes_from_capabilities, NODES)
         self.assertEqual(len(s._nodes), 3)
@@ -191,7 +202,7 @@ class BaremetalHostStateTestCase(test.TestCase):
 
     def test_consume_from_instance(self):
         inst = {'uuid': 'X', 'vcpus': 1, 'memory_mb': 2048}
-        s = self.test_init()
+        s = self.test_update_from_compute_node()
         s.consume_from_instance(inst)
         self.assertEqual(len(s._nodes), 2)
         self.assertTrue('X' in s._instances)
@@ -203,7 +214,7 @@ class BaremetalHostStateTestCase(test.TestCase):
 
     def test_consume_from_instance_small(self):
         inst = {'uuid': 'X', 'vcpus': 1, 'memory_mb': 256}
-        s = self.test_init()
+        s = self.test_update_from_compute_node()
         s.consume_from_instance(inst)
         self.assertEqual(len(s._nodes), 2)
         self.assertTrue('X' in s._instances)
@@ -216,7 +227,7 @@ class BaremetalHostStateTestCase(test.TestCase):
 
     def test_consume_from_instance_without_uuid(self):
         inst = {'uuid': None, 'vcpus': 1, 'memory_mb': 2048}
-        s = self.test_init()
+        s = self.test_update_from_compute_node()
         s.consume_from_instance(inst)
         # _nodes is consumed, but _instances is unchanged
         self.assertEqual(len(s._nodes), 2)
