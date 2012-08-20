@@ -21,6 +21,7 @@ Tests for baremetal connection.
 import mox
 
 from nova import flags
+from nova import test
 from nova.tests.baremetal.db import utils
 from nova.tests.image import fake as fake_image
 from nova.tests import test_virt_drivers
