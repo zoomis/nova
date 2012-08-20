@@ -114,10 +114,15 @@ class BaremetalHostState(host_manager.HostState):
                                                      self.host,
                                                      self._cap_timestamp)
             for inst in deleted:
-                instances.pop(inst.get('uuid'))
+                node_id = instances.pop(inst.get('uuid'), None)
+                if node_id:
+                    LOG.debug('node %s is freed from instance %s',
+                              node_id, inst['uuid'])
+                else:
+                    LOG.debug('instance %s not found in nodes', inst['uuid'])
 
         for node_id in instances.values():
-            nodes.pop(node_id)
+            nodes.pop(node_id, None)
 
         self._nodes = nodes
         self._instances = instances
@@ -131,8 +136,15 @@ class BaremetalHostState(host_manager.HostState):
         node = baremetal_utils.find_suitable_node(instance,
                                                   self._nodes.values())
         if not node:
-            return
-        self._nodes.pop(node['id'])
+            LOG.warn('No suitable node found. Use the biggest one.')
+            node = baremetal_utils.find_biggest_node(self._nodes.values())
+            if not node:
+                LOG.warn('No node available')
+                # return anyway
+                return
+
+        LOG.debug('consume node %s', node['id'])
+        self._nodes.pop(node['id'], None)
         if instance_uuid:
             self._instances[instance_uuid] = node['id']
         self._update()
