@@ -62,11 +62,12 @@ def _map_nodes(nodes):
 
 
 def _get_deleted_instances_from_db(context, host, since):
-    ts = datetime.datetime.utcfromtimestamp(since)
+    if not isinstance(since, datetime.datetime):
+        since = datetime.datetime.utcfromtimestamp(since)
     insts = db.instance_get_all_by_filters(
             context,
             {'host': host,
-             'changes-since': ts,
+             'changes-since': since,
              'vm_state': vm_states.DELETED,
              })
     return insts
