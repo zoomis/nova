@@ -92,7 +92,6 @@ class BaremetalHostStateTestCase(test.TestCase):
         self.assertEqual(dn.get('cpus'), 2)
         self.assertEqual(dn.get('memory_mb'), 3)
         self.assertEqual(dn.get('local_gb'), 4)
-        self.assertTrue('instance_uuid' in dn)
         self.assertTrue(dn['instance_uuid'] is None)
 
     def test_canonicalize_node_with_instance_uuid(self):
@@ -197,13 +196,21 @@ class BaremetalHostStateTestCase(test.TestCase):
         self.assertEqual(s.vcpus_used, 0)
         return s
 
+    def _check_used_none(self, hs):
+        self.assertEqual(len(hs._nodes), 4)
+        self.assertEqual(len(hs._instances), 0)
+        self.assertEqual(hs.free_ram_mb, 4096)
+
+    def _check_used_3(self, hs):
+        self.assertEqual(len(hs._nodes), 3)
+        self.assertEqual(hs._instances[UUID_A], NODES_USED[0]['id'])
+        self.assertEqual(len(hs._instances), 1)
+        self.assertEqual(hs.free_ram_mb, 2048)
+
     def test_update_from_compute_node(self):
         s = self.test_init()
         s.update_from_compute_node(None)
-        self.assertEqual(s._nodes_from_capabilities, NODES)
-        self.assertEqual(len(s._nodes), 3)
-        self.assertEqual(len(s._instances), 1)
-        self.assertEqual(s.free_ram_mb, 2048)
+        self._check_used_3(s)
         return s
 
     def test_update_from_compute_node_with_terminated_inst(self):
@@ -215,27 +222,34 @@ class BaremetalHostStateTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         s.update_from_compute_node(None)
-        self.assertEqual(s._nodes_from_capabilities, NODES)
-        self.assertEqual(len(s._nodes), 4)
-        self.assertEqual(len(s._instances), 0)
-        self.assertEqual(s.free_ram_mb, 4096)
+        self._check_used_none(s)
+        return s
+
+    def test_update_from_compute_node_with_terminated_unknown_inst(self):
+        s = self.test_init()
+
+        self.mox.StubOutWithMock(bhm, '_get_deleted_instances_from_db')
+        bhm._get_deleted_instances_from_db(mox.IgnoreArg(), 'host1', 1)\
+                .AndReturn([{'uuid': UUID_B}])
+        self.mox.ReplayAll()
+
+        s.update_from_compute_node(None)
+        self._check_used_3(s)
         return s
 
     def test_consume_from_instance_known_uuid(self):
         inst = {'uuid': UUID_A, 'vcpus': 1, 'memory_mb': 2048}
         s = self.test_update_from_compute_node()
         s.consume_from_instance(inst)
-        self.assertEqual(len(s._nodes), 3)
-        self.assertEqual(len(s._instances), 1)
-        self.assertEqual(s.free_ram_mb, 2048)
+        self._check_used_3(s)
 
     def test_consume_from_instance_unknown_uuid(self):
         inst = {'uuid': UUID_B, 'vcpus': 1, 'memory_mb': 2048}
         s = self.test_update_from_compute_node()
         s.consume_from_instance(inst)
         self.assertEqual(len(s._nodes), 2)
-        self.assertTrue(UUID_A in s._instances)
-        self.assertTrue(UUID_B in s._instances)
+        self.assertIn(UUID_A, s._instances)
+        self.assertIn(UUID_B, s._instances)
         self.assertEqual(len(s._instances), 2)
         self.assertEqual(s.free_ram_mb, 1024)
 
@@ -244,32 +258,33 @@ class BaremetalHostStateTestCase(test.TestCase):
         s = self.test_update_from_compute_node()
         s.consume_from_instance(inst)
         self.assertEqual(len(s._nodes), 2)
-        self.assertTrue(UUID_A in s._instances)
-        self.assertTrue(UUID_B in s._instances)
+        self.assertIn(UUID_A, s._instances)
+        self.assertIn(UUID_B, s._instances)
         self.assertEqual(len(s._instances), 2)
         # not changed since the biggest node is still free
         self.assertEqual(s.free_ram_mb, 2048)
 
     def test_consume_from_instance_without_uuid(self):
-        inst = {'uuid': None, 'vcpus': 1, 'memory_mb': 2048}
         s = self.test_update_from_compute_node()
+        inst = {'uuid': None, 'vcpus': 1, 'memory_mb': 2048}
         s.consume_from_instance(inst)
         # _nodes is consumed, but _instances is unchanged
         self.assertEqual(len(s._nodes), 2)
-        self.assertTrue(UUID_A in s._instances)
+        self.assertIn(UUID_A, s._instances)
         self.assertEqual(len(s._instances), 1)
         self.assertEqual(s.free_ram_mb, 1024)
 
     def test_consume_from_instance_not_capable(self):
+        s = self.test_update_from_compute_node()
         # no suitable node
         inst = {'uuid': UUID_B, 'vcpus': 10000, 'memory_mb': 10000000}
-        s = self.test_update_from_compute_node()
         s.consume_from_instance(inst)
-        # unchanged
-        self.assertEqual(len(s._nodes), 3)
-        self.assertTrue(UUID_A in s._instances)
-        self.assertEqual(len(s._instances), 1)
-        self.assertEqual(s.free_ram_mb, 2048)
+        # the biggest node in available nodes (id=3) is consumed
+        self.assertEqual(len(s._nodes), 2)
+        self.assertIn(UUID_A, s._instances)
+        self.assertEqual(s._instances[UUID_B], NODES[2]['id'])
+        self.assertEqual(len(s._instances), 2)
+        self.assertEqual(s.free_ram_mb, 1024)
 
 
 BAREMETAL_COMPUTE_NODES = [
@@ -290,113 +305,79 @@ BAREMETAL_COMPUTE_NODES = [
 auto_id = 0
 
 
-def id_dict(**kwargs):
-    d = dict(**kwargs)
+def inst(**kwargs):
+    d = kwargs.copy()
+    d['root_gb'] = d.get('root_gb', 10)
+    d['ephemeral_gb'] = d.get('ephemeral_gb', 20)
+    d['memory_mb'] = d.get('memory_mb', 512)
+    d['vcpus'] = d.get('vcpus', 1)
+    return d
+
+
+def node(**kwargs):
+    d = kwargs.copy()
     if 'id' not in d:
         global auto_id
         auto_id += 1
         d['id'] = auto_id
+    if 'cpus' not in d:
+        d['cpus'] = 9999
+    if 'local_gb' not in d:
+        d['local_gb'] = 9999
+    if 'instance_uuid' not in d:
+        d['instance_uuid'] = None
     return d
 
+
 BAREMETAL_INSTANCES = [
-        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=1,
-                host='host1', uuid='1'),
-        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=1,
-                host='host1', uuid='2'),
-        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=2,
-                host='host2', uuid='3'),
-        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=3,
-                host='host3', uuid='4'),
-        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=4,
-                host='host4', uuid='5'),
-        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=2,
-                host='host4', uuid='6'),
-        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=1,
-                host='host2', uuid='7'),
-        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=1,
-                host='host3', uuid='8'),
-        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=1,
-                host='host1', uuid='9'),
+        inst(vcpus=1, host='host1', uuid='1'),
+        inst(vcpus=1, host='host1', uuid='2'),
+        inst(vcpus=1, host='host1', uuid='9'),
+
+        inst(vcpus=2, host='host2', uuid='3'),
+        inst(vcpus=1, host='host2', uuid='7'),
+
+        inst(vcpus=3, host='host3', uuid='4'),
+        inst(vcpus=1, host='host3', uuid='8'),
+
+        inst(vcpus=4, host='host4', uuid='5'),
+        inst(vcpus=2, host='host4', uuid='6'),
         # Broken host
-        dict(root_gb=1024, ephemeral_gb=0, memory_mb=1024, vcpus=1,
-                host=None, uuid='1000'),
+        inst(vcpus=1, host=None, uuid='1000'),
         # No matching host
-        dict(root_gb=1024, ephemeral_gb=0, memory_mb=1024, vcpus=1,
-                host='hostz', uuid='2000'),
+        inst(vcpus=1, host='hostz', uuid='2000'),
 ]
 
 
 BAREMETAL_NODES_1 = [
-        id_dict(cpus=2, instance_uuid='9', ipmi_address='172.27.2.111',
-                memory_mb=1024, local_gb=0),
-        id_dict(cpus=3, instance_uuid='2', ipmi_address='172.27.2.111',
-                memory_mb=4096, local_gb=0),
-        id_dict(cpus=3, instance_uuid='1', ipmi_address='172.27.2.111',
-                memory_mb=8192, local_gb=0),
-        # No matching host
-        id_dict(cpus=1, instance_uuid=None, ipmi_address='172.27.2.111',
-                memory_mb=512, local_gb=0),
-        id_dict(cpus=1, instance_uuid=None, ipmi_address='172.27.2.111',
-                memory_mb=1024, local_gb=0),
-        id_dict(cpus=2, instance_uuid=None, ipmi_address='172.27.2.111',
-                memory_mb=2048, local_gb=0),
-        id_dict(cpus=1, instance_uuid=None, ipmi_address='172.27.2.111',
-                memory_mb=256, local_gb=0),
-        id_dict(cpus=4, instance_uuid=None, ipmi_address='172.27.2.111',
-                memory_mb=10240, local_gb=0),
+        node(instance_uuid='1', memory_mb=8192),
+        node(instance_uuid='2', memory_mb=4096),
+        node(instance_uuid='9', memory_mb=1024),
+        node(memory_mb=512),
+        node(memory_mb=1024),
+        node(memory_mb=2048),
+        node(memory_mb=256),
+        node(memory_mb=10240),
 ]
 
 BAREMETAL_NODES_2 = [
-        id_dict(cpus=4, instance_uuid='3', ipmi_address='172.27.2.112',
-                memory_mb=10240, local_gb=0),
-        # No matching host
-        id_dict(cpus=4, instance_uuid=None, ipmi_address='172.27.2.112',
-                memory_mb=2048, local_gb=0),
-        id_dict(cpus=3, instance_uuid=None, ipmi_address='172.27.2.112',
-                memory_mb=2048, local_gb=0),
-        id_dict(cpus=2, instance_uuid=None, ipmi_address='172.27.2.112',
-                memory_mb=512, local_gb=0),
-        id_dict(cpus=3, instance_uuid=None, ipmi_address='172.27.2.112',
-                memory_mb=8192, local_gb=0),
-        id_dict(cpus=4, instance_uuid=None, ipmi_address='172.27.2.112',
-                memory_mb=1024, local_gb=0),
-        id_dict(cpus=2, instance_uuid=None, ipmi_address='172.27.2.112',
-                memory_mb=4096, local_gb=0),
-        id_dict(cpus=1, instance_uuid=None, ipmi_address='172.27.2.112',
-                memory_mb=512, local_gb=0),
+        node(instance_uuid='3', memory_mb=10240),
+        node(memory_mb=2048),
+        node(memory_mb=2048),
+        node(memory_mb=512),
+        node(memory_mb=8192),
+        node(memory_mb=1024),
+        node(memory_mb=4096),
+        node(memory_mb=512),
 ]
 
 BAREMETAL_NODES_3 = [
-        id_dict(cpus=5, instance_uuid='4', ipmi_address='172.27.2.113',
-                memory_mb=8192, local_gb=0),
-        id_dict(cpus=4, instance_uuid='7', ipmi_address='172.27.2.113',
-                memory_mb=10240, local_gb=0),
-        # No matching host
-        id_dict(cpus=4, instance_uuid=None, ipmi_address='172.27.2.113',
-                memory_mb=512, local_gb=0),
-        id_dict(cpus=4, instance_uuid=None, ipmi_address='172.27.2.113',
-                memory_mb=2048, local_gb=0),
-        id_dict(cpus=5, instance_uuid=None, ipmi_address='172.27.2.113',
-                memory_mb=1024, local_gb=0),
-        id_dict(cpus=1, instance_uuid=None, ipmi_address='172.27.2.113',
-                memory_mb=512, local_gb=0),
-]
-
-
-BAREMETAL_NODES_4 = [
-        id_dict(cpus=5, instance_uuid='5', ipmi_address='172.27.2.114',
-                memory_mb=8192, local_gb=0),
-        id_dict(cpus=6, instance_uuid='6', ipmi_address='172.27.2.114',
-                memory_mb=8192, local_gb=0),
-        # No matching host
-        id_dict(cpus=5, instance_uuid=None, ipmi_address='172.27.2.114',
-                memory_mb=512, local_gb=0),
-        id_dict(cpus=6, instance_uuid=None, ipmi_address='172.27.2.114',
-                memory_mb=512, local_gb=0),
-        id_dict(cpus=1, instance_uuid=None, ipmi_address='172.27.2.114',
-                memory_mb=512, local_gb=0),
-        id_dict(cpus=4, instance_uuid=None, ipmi_address='172.27.2.114',
-                memory_mb=10240, local_gb=0),
+        node(instance_uuid='4', memory_mb=8192),
+        node(instance_uuid='7', memory_mb=10240),
+        node(memory_mb=512),
+        node(memory_mb=2048),
+        node(memory_mb=1024),
+        node(memory_mb=512),
 ]
 
 
@@ -570,24 +551,9 @@ class BaremetalHostManagerTestCase(test.TestCase):
         self.assertIn('host4', host_states)
 
         # check returned value
-        # host1 : subtract total ram of BAREMETAL_INSTANCES
-        # from BAREMETAL_COMPUTE_NODES
-        # host1 : total vcpu of BAREMETAL_INSTANCES
-        self.assertEqual(host_states['host1'].vcpus_total, 4)
         self.assertEqual(host_states['host1'].free_ram_mb, 10240)
-
-        # host2 : subtract BAREMETAL_INSTANCES from BAREMETAL_NODES_2
-        # host2 : total vcpu of BAREMETAL_INSTANCES
         self.assertEqual(host_states['host2'].free_ram_mb, 8192)
-        self.assertEqual(host_states['host2'].vcpus_total, 3)
-
-        # host3 : subtract BAREMETAL_INSTANCES from BAREMETAL_NODES_3
-        # host3 : total vcpu of BAREMETAL_INSTANCES
         self.assertEqual(host_states['host3'].free_ram_mb, 2048)
-        self.assertEqual(host_states['host3'].vcpus_total, 4)
-
-        # host4 : subtract BAREMETAL_INSTANCES from BAREMETAL_COMPUTE_NODES
-        # host4 : total vcpu of BAREMETAL_INSTANCES
         self.assertEqual(host_states['host4'].free_ram_mb, 512)
         self.assertEqual(host_states['host4'].vcpus_used, 6)
 
