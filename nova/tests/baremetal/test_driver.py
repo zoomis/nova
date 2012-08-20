@@ -21,16 +21,16 @@ Tests for baremetal connection.
 import mox
 
 from nova import flags
-from nova import test
-
 from nova.tests.baremetal.db import utils
 from nova.tests.image import fake as fake_image
+from nova.tests import test_virt_drivers
 from nova.tests import utils as test_utils
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import db
 from nova.virt.baremetal import driver as c
 from nova.virt.baremetal import volume_driver
 from nova.virt.firewall import NoopFirewallDriver
+import nova.virt.libvirt.driver
 
 
 FLAGS = flags.FLAGS
@@ -64,33 +64,41 @@ def class_path(class_):
     return class_.__module__ + '.' + class_.__name__
 
 
-class BaremetalDriverTestCase(test.TestCase):
+class BaremetalDriverTestCase(test_virt_drivers._VirtDriverTestCase):
 
     def setUp(self):
-        super(BaremetalDriverTestCase, self).setUp()
+        # Point _VirtDriverTestCase at the right module
+        self.driver_module = 'nova.virt.baremetal.BareMetalDriver'
         self.flags(baremetal_sql_connection='sqlite:///:memory:',
-                   host=NODE['service_host'],
                    baremetal_driver='nova.virt.baremetal.fake.Fake',
                    power_manager='nova.virt.baremetal.ipmi.DummyIpmi',
                    baremetal_vif_driver=class_path(FakeVifDriver),
                    baremetal_firewall_driver=class_path(FakeFirewallDriver),
                    baremetal_volume_driver=class_path(FakeVolumeDriver),
                    instance_type_extra_specs=['cpu_arch:test'],
+                   host=NODE['service_host'],
                    )
+
         utils.clear_tables()
         context = test_utils.get_test_admin_context()
         node = db.bm_node_create(context, NODE)
         self.node_id = node['id']
         for nic in NICS:
             db.bm_interface_create(context,
-                                      node['id'],
-                                      nic['address'],
-                                      nic['datapath_id'],
-                                      nic['port_no'])
+                                   node['id'],
+                                   nic['address'],
+                                   nic['datapath_id'],
+                                   nic['port_no'])
+        # _VirtDriverTestCase forget to restore imagesbackend in tearDown()
+        self.__imagebackend_save = nova.virt.libvirt.driver.imagebackend
+        super(BaremetalDriverTestCase, self).setUp()
         fake_image.stub_out_image_service(self.stubs)
 
     def tearDown(self):
         super(BaremetalDriverTestCase, self).tearDown()
+        # _VirtDriverTestCase forget to restore imagesbackend in tearDown()
+        nova.virt.libvirt.driver.imagebackend = self.__imagebackend_save
+        fake_image.FakeImageService_reset()
 
     def test_loading_baremetal_drivers(self):
         from nova.virt.baremetal import fake
