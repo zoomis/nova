@@ -16,7 +16,6 @@
 """Baremetal test utils."""
 
 from nova import test
-from nova.virt.baremetal import db
 from nova.virt.baremetal.db.sqlalchemy import models
 
 
@@ -48,6 +47,34 @@ def new_bm_pxe_ip(**kwargs):
     x.address = kwargs.pop('address', None)
     x.server_address = kwargs.pop('server_address', None)
     x.bm_node_id = kwargs.pop('bm_node_id', None)
+    if len(kwargs) > 0:
+        raise test.TestingException("unknown field: %s"
+                                    % ','.join(kwargs.keys()))
+    return x
+
+
+def new_bm_interface(**kwargs):
+    x = models.BareMetalInterface()
+    x.id = kwargs.pop('id', None)
+    x.bm_node_id = kwargs.pop('bm_node_id', None)
+    x.address = kwargs.pop('address', None)
+    x.datapath_id = kwargs.pop('datapath_id', None)
+    x.port_no = kwargs.pop('port_no', None)
+    x.vif_uuid = kwargs.pop('vif_uuid', None)
+    if len(kwargs) > 0:
+        raise test.TestingException("unknown field: %s"
+                                    % ','.join(kwargs.keys()))
+    return x
+
+
+def new_bm_deployment(**kwargs):
+    x = models.BareMetalDeployment()
+    x.id = kwargs.pop('id', None)
+    x.key = kwargs.pop('key', None)
+    x.image_path = kwargs.pop('image_path', None)
+    x.pxe_config_path = kwargs.pop('pxe_config_path', None)
+    x.root_mb = kwargs.pop('root_mb', None)
+    x.swap_mb = kwargs.pop('swap_mb', None)
     if len(kwargs) > 0:
         raise test.TestingException("unknown field: %s"
                                     % ','.join(kwargs.keys()))

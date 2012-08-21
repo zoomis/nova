@@ -29,22 +29,46 @@ class BareMetalPxeIpTestCase(base.BMDBTestCase):
         super(BareMetalPxeIpTestCase, self).setUp()
 
     def _create_pxe_ip(self):
-        i1 = utils.new_bm_pxe_ip(address='10.1.1.1')
-        i2 = utils.new_bm_pxe_ip(address='10.1.1.2')
-        i3 = utils.new_bm_pxe_ip(address='10.1.1.3')
+        i1 = utils.new_bm_pxe_ip(address='10.1.1.1',
+                                 server_address='10.1.1.101')
+        i2 = utils.new_bm_pxe_ip(address='10.1.1.2',
+                                 server_address='10.1.1.102')
 
         i1_ref = db.bm_pxe_ip_create_direct(self.context, i1)
         self.assertTrue(i1_ref['id'] is not None)
+        self.assertEqual(i1_ref['address'], '10.1.1.1')
+        self.assertEqual(i1_ref['server_address'], '10.1.1.101')
 
         i2_ref = db.bm_pxe_ip_create_direct(self.context, i2)
         self.assertTrue(i2_ref['id'] is not None)
-
-        i3_ref = db.bm_pxe_ip_create_direct(self.context, i3)
-        self.assertTrue(i3_ref['id'] is not None)
+        self.assertEqual(i2_ref['address'], '10.1.1.2')
+        self.assertEqual(i2_ref['server_address'], '10.1.1.102')
 
         self.i1 = i1_ref
         self.i2 = i2_ref
-        self.i3 = i3_ref
+
+    def test_unuque_address(self):
+        self._create_pxe_ip()
+
+        # address duplicates
+        i = utils.new_bm_pxe_ip(address='10.1.1.1',
+                                server_address='10.1.1.201')
+        self.assertRaises(exception.DBError,
+                          db.bm_pxe_ip_create_direct,
+                          self.context, i)
+
+        # server_address duplicates
+        i = utils.new_bm_pxe_ip(address='10.1.1.3',
+                                server_address='10.1.1.101')
+        self.assertRaises(exception.DBError,
+                          db.bm_pxe_ip_create_direct,
+                          self.context, i)
+
+        db.bm_pxe_ip_destroy(self.context, self.i1['id'])
+        i = utils.new_bm_pxe_ip(address='10.1.1.1',
+                                server_address='10.1.1.101')
+        ref = db.bm_pxe_ip_create_direct(self.context, i)
+        self.assertTrue(ref)
 
     def test_bm_pxe_ip_associate(self):
         self._create_pxe_ip()

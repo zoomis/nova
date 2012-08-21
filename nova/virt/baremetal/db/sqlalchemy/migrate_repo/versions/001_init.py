@@ -64,7 +64,7 @@ def upgrade(migrate_engine):
         Column('address', String(length=255)),
         Column('datapath_id', String(length=255)),
         Column('port_no', Integer),
-        Column('vif_uuid', String(length=36)),
+        Column('vif_uuid', String(length=36), unique=True),
         mysql_engine='InnoDB',
         #mysql_charset='utf8'
     )
@@ -75,9 +75,9 @@ def upgrade(migrate_engine):
         Column('deleted_at', DateTime),
         Column('deleted', Boolean),
         Column('id', Integer, primary_key=True, nullable=False),
-        Column('address', String(length=255)),
+        Column('address', String(length=255), unique=True),
         Column('bm_node_id', Integer),
-        Column('server_address', String(length=255)),
+        Column('server_address', String(length=255), unique=True),
         mysql_engine='InnoDB',
         #mysql_charset='utf8'
     )
@@ -102,6 +102,13 @@ def upgrade(migrate_engine):
     bm_interfaces.create()
     bm_pxe_ips.create()
     bm_deployments.create()
+
+    Index('idx_service_host_deleted',
+          bm_nodes.c.service_host, bm_nodes.c.deleted)\
+          .create(migrate_engine)
+    Index('idx_instance_uuid_deleted',
+          bm_nodes.c.instance_uuid, bm_nodes.c.deleted)\
+          .create(migrate_engine)
 
 
 def downgrade(migrate_engine):

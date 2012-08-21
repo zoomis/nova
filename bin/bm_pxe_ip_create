@@ -59,8 +59,8 @@ def main():
     args = flags.parse_args(args)
     ctx = context.get_admin_context()
 
-    id = db.bm_pxe_ip_create(ctx, address, server_address)
-    print "id=%s" % id
+    ref = db.bm_pxe_ip_create(ctx, address, server_address)
+    print "id=%s" % ref['id']
 
 
 if __name__ == "__main__":

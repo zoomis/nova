@@ -329,10 +329,17 @@ class ComputeManager(manager.SchedulerDependentManager):
                     LOG.info(
                            _('Rebooting instance after nova-compute restart.'),
                            locals(), instance=instance)
+
+                    block_device_info = \
+                        self._get_instance_volume_block_device_info(
+                            context, instance['uuid'])
+
                     try:
-                        self.driver.resume_state_on_host_boot(context,
-                                               instance,
-                                               self._legacy_nw_info(net_info))
+                        self.driver.resume_state_on_host_boot(
+                                context,
+                                instance,
+                                self._legacy_nw_info(net_info),
+                                block_device_info)
                     except NotImplementedError:
                         LOG.warning(_('Hypervisor driver does not support '
                                       'resume guests'), instance=instance)
@@ -1118,9 +1125,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                      context=context, instance=instance)
 
         network_info = self._get_instance_nw_info(context, instance)
+
+        block_device_info = self._get_instance_volume_block_device_info(
+                            context, instance['uuid'])
+
         try:
             self.driver.reboot(instance, self._legacy_nw_info(network_info),
-                               reboot_type)
+                               reboot_type, block_device_info)
         except Exception, exc:
             LOG.error(_('Cannot reboot instance: %(exc)s'), locals(),
                       context=context, instance=instance)
@@ -2161,7 +2172,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             pass
 
     def get_instance_disk_info(self, context, instance_name):
-        """Getting infomation of instance's current disk.
+        """Getting information of instance's current disk.
 
         DEPRECATED: This method is no longer used by any current code, but it
         is left here to provide backwards compatibility in the rpcapi.
@@ -2435,7 +2446,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         if not instance:
             instance = self.db.instance_get(context, instance_id)
-        LOG.info(_('Post operation of migraton started'),
+        LOG.info(_('Post operation of migration started'),
                  instance=instance)
 
         # NOTE(tr3buchet): setup networks on destination host
@@ -2829,7 +2840,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                         # to allow all the hooks and checks to be performed.
                         self.compute_api.stop(context, db_instance)
                     except Exception:
-                        # Note(maoy): there is no need to propergate the error
+                        # Note(maoy): there is no need to propagate the error
                         # because the same power_state will be retrieved next
                         # time and retried.
                         # For example, there might be another task scheduled.
