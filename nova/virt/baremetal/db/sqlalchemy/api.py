@@ -143,31 +143,31 @@ def bm_pxe_ip_get_all(context, session=None):
 def bm_pxe_ip_create(context, address, server_address, session=None):
     if not session:
         session = get_session()
-    ref = model_query(context, models.BareMetalPxeIp,
-                      read_deleted="no", session=session).\
-                     filter_by(address=address).\
-                     first()
-    if not ref:
+    with session.begin():
         ref = models.BareMetalPxeIp()
         ref.address = address
         ref.server_address = server_address
         ref.save(session=session)
-    else:
-        if ref.server_address != server_address:
-            raise exception.NovaException(
-                    'address exists, but server_address is not same')
-    return ref.id
+        return ref
 
 
 @require_admin_context
 def bm_pxe_ip_create_direct(context, bm_pxe_ip, session=None):
+    ref = bm_pxe_ip_create(context,
+                           address=bm_pxe_ip['address'],
+                           server_address=bm_pxe_ip['server_address'],
+                           session=session)
+    return ref
+
+
+@require_admin_context
+def bm_pxe_ip_destroy(context, ip_id, session=None):
+    # Delete physically since it has unique columns
     if not session:
         session = get_session()
     with session.begin():
-        ref = models.BareMetalPxeIp()
-        ref.update(bm_pxe_ip)
-        ref.save(session=session)
-        return ref
+        ip_ref = bm_pxe_ip_get(context, ip_id, session)
+        session.delete(ip_ref)
 
 
 @require_admin_context
@@ -202,6 +202,9 @@ def bm_pxe_ip_associate(context, bm_node_id, session=None):
                          first()
         if ip_ref:
             return ip_ref.id
+        # with_lockmode('update') and filter_by(bm_node_id=None) will lock all
+        # records. It may cause a performance problem in high-concurrency
+        # environment. 
         ip_ref = model_query(context, models.BareMetalPxeIp,
                              read_deleted="no", session=session).\
                          filter_by(bm_node_id=None).\
@@ -242,12 +245,12 @@ def bm_interface_get_all(context, session=None):
 
 @require_admin_context
 def bm_interface_destroy(context, if_id, session=None):
-    model_query(context, models.BareMetalInterface,
-                read_deleted="no", session=session).\
-                filter_by(id=if_id).\
-                update({'deleted': True,
-                        'deleted_at': timeutils.utcnow(),
-                        'updated_at': literal_column('updated_at')})
+    # Delete physically since it has unique colmuns
+    if not session:
+        session = get_session()
+    with session.begin():
+        vif_ref = bm_interface_get(context, if_id, session)
+        session.delete(vif_ref)
 
 
 @require_admin_context

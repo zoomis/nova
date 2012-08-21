@@ -77,84 +77,96 @@ def bm_node_get_by_instance_uuid(context, instance_uuid, session=None):
                                              session=session)
 
 
-def bm_node_create(context, values):
-    return IMPL.bm_node_create(context, values)
+def bm_node_create(context, values, session=None):
+    return IMPL.bm_node_create(context, values, session=session)
 
 
-def bm_node_destroy(context, bm_node_id):
-    return IMPL.bm_node_destroy(context, bm_node_id)
+def bm_node_destroy(context, bm_node_id, session=None):
+    return IMPL.bm_node_destroy(context, bm_node_id, session=session)
 
 
-def bm_node_update(context, bm_node_id, values):
-    return IMPL.bm_node_update(context, bm_node_id, values)
+def bm_node_update(context, bm_node_id, values, session=None):
+    return IMPL.bm_node_update(context, bm_node_id, values, session=session)
 
 
-def bm_pxe_ip_create(context, address, server_address):
-    return IMPL.bm_pxe_ip_create(context, address, server_address)
+def bm_pxe_ip_create(context, address, server_address, session=None):
+    return IMPL.bm_pxe_ip_create(context, address, server_address,
+                                 session=session)
 
 
-def bm_pxe_ip_create_direct(context, bm_pxe_ip):
-    return IMPL.bm_pxe_ip_create_direct(context, bm_pxe_ip)
+def bm_pxe_ip_create_direct(context, bm_pxe_ip, session=None):
+    return IMPL.bm_pxe_ip_create_direct(context, bm_pxe_ip, session=session)
 
 
-def bm_pxe_ip_get_all(context):
-    return IMPL.bm_pxe_ip_get_all(context)
+def bm_pxe_ip_destroy(context, ip_id, session=None):
+    return IMPL.bm_pxe_ip_destroy(context, ip_id, session=session)
+
+
+def bm_pxe_ip_get_all(context, session=None):
+    return IMPL.bm_pxe_ip_get_all(context, session=session)
 
 
 def bm_pxe_ip_get(context, ip_id, session=None):
-    return IMPL.bm_pxe_ip_get(context, ip_id, session)
+    return IMPL.bm_pxe_ip_get(context, ip_id, session=session)
 
 
 def bm_pxe_ip_get_by_bm_node_id(context, bm_node_id, session=None):
-    return IMPL.bm_pxe_ip_get_by_bm_node_id(context, bm_node_id, session)
+    return IMPL.bm_pxe_ip_get_by_bm_node_id(context, bm_node_id,
+                                            session=session)
 
 
-def bm_pxe_ip_associate(context, bm_node_id):
-    return IMPL.bm_pxe_ip_associate(context, bm_node_id)
+def bm_pxe_ip_associate(context, bm_node_id, session=None):
+    return IMPL.bm_pxe_ip_associate(context, bm_node_id, session=session)
 
 
-def bm_pxe_ip_disassociate(context, bm_node_id):
-    return IMPL.bm_pxe_ip_disassociate(context, bm_node_id)
+def bm_pxe_ip_disassociate(context, bm_node_id, session=None):
+    return IMPL.bm_pxe_ip_disassociate(context, bm_node_id, session=session)
 
 
 def bm_interface_get(context, if_id, session=None):
-    return IMPL.bm_interface_get(context, if_id, session)
+    return IMPL.bm_interface_get(context, if_id, session=session)
 
 
 def bm_interface_get_all(context, session=None):
-    return IMPL.bm_interface_get_all(context, session)
+    return IMPL.bm_interface_get_all(context, session=session)
 
 
-def bm_interface_destroy(context, if_id):
-    return IMPL.bm_interface_destroy(context, if_id)
+def bm_interface_destroy(context, if_id, session=None):
+    return IMPL.bm_interface_destroy(context, if_id, session=session)
 
 
-def bm_interface_create(context, bm_node_id, address, datapath_id, port_no):
+def bm_interface_create(context, bm_node_id, address, datapath_id, port_no,
+                        session=None):
     return IMPL.bm_interface_create(context, bm_node_id, address,
-                                    datapath_id, port_no)
+                                    datapath_id, port_no,
+                                    session=session)
 
 
-def bm_interface_set_vif_uuid(context, if_id, vif_uuid):
-    return IMPL.bm_interface_set_vif_uuid(context, if_id, vif_uuid)
+def bm_interface_set_vif_uuid(context, if_id, vif_uuid, session=None):
+    return IMPL.bm_interface_set_vif_uuid(context, if_id, vif_uuid,
+                                          session=session)
 
 
-def bm_interface_get_by_vif_uuid(context, vif_uuid):
-    return IMPL.bm_interface_get_by_vif_uuid(context, vif_uuid)
+def bm_interface_get_by_vif_uuid(context, vif_uuid, session=None):
+    return IMPL.bm_interface_get_by_vif_uuid(context, vif_uuid,
+                                             session=session)
 
 
-def bm_interface_get_all_by_bm_node_id(context, bm_node_id):
-    return IMPL.bm_interface_get_all_by_bm_node_id(context, bm_node_id)
+def bm_interface_get_all_by_bm_node_id(context, bm_node_id, session=None):
+    return IMPL.bm_interface_get_all_by_bm_node_id(context, bm_node_id,
+                                                   session=session)
 
 
 def bm_deployment_create(context, key, image_path, pxe_config_path, root_mb,
-                         swap_mb):
+                         swap_mb,
+                         session=None):
     return IMPL.bm_deployment_create(context, key, image_path,
                                      pxe_config_path, root_mb, swap_mb)
 
 
 def bm_deployment_get(context, dep_id, session=None):
-    return IMPL.bm_deployment_get(context, dep_id, session)
+    return IMPL.bm_deployment_get(context, dep_id, session=session)
 
 
-def bm_deployment_destroy(context, dep_id):
-    return IMPL.bm_deployment_destroy(context, dep_id)
+def bm_deployment_destroy(context, dep_id, session=None):
+    return IMPL.bm_deployment_destroy(context, dep_id, session=session)

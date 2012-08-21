@@ -21,7 +21,7 @@ SQLAlchemy models for baremetal data.
 
 from sqlalchemy.orm import relationship, backref, object_mapper
 from sqlalchemy import Column, Integer, BigInteger, String, schema
-from sqlalchemy import ForeignKey, DateTime, Boolean, Text, Float
+from sqlalchemy import ForeignKey, DateTime, Boolean, Text, Float, Index
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.schema import ForeignKeyConstraint
@@ -54,13 +54,17 @@ class BareMetalNode(BASE, models.NovaBase):
     task_state = Column(String(255))
     prov_vlan_id = Column(Integer)
     terminal_port = Column(Integer)
+    __table_args__ = (
+            Index('idx_service_host_deleted', 'service_host', 'deleted'),
+            Index('idx_instance_uuid_deleted', 'instance_uuid', 'deleted'),
+            )
 
 
 class BareMetalPxeIp(BASE, models.NovaBase):
     __tablename__ = 'bm_pxe_ips'
     id = Column(Integer, primary_key=True)
-    address = Column(String(255))
-    server_address = Column(String(255))
+    address = Column(String(255), unique=True)
+    server_address = Column(String(255), unique=True)
     bm_node_id = Column(Integer, ForeignKey('bm_nodes.id'), nullable=True)
 
 
@@ -71,7 +75,7 @@ class BareMetalInterface(BASE, models.NovaBase):
     address = Column(String(255), unique=True)
     datapath_id = Column(String(255))
     port_no = Column(Integer)
-    vif_uuid = Column(String(36))
+    vif_uuid = Column(String(36), unique=True)
 
 
 class BareMetalDeployment(BASE, models.NovaBase):
