@@ -232,7 +232,8 @@ class BareMetalDriver(driver.ComputeDriver):
         if node['terminal_port']:
             pm.start_console(node['terminal_port'], node['id'])
 
-    def reboot(self, instance, network_info, reboot_type):
+    def reboot(self, instance, network_info, reboot_type,
+               block_device_info=None):
         node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
 
         if not node:
