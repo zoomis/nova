@@ -104,7 +104,7 @@ def upgrade(migrate_engine):
     bm_deployments.create()
 
     Index('idx_service_host_deleted',
-          bm_nodes.c.servie_host, bm_nodes.c.deleted)\
+          bm_nodes.c.service_host, bm_nodes.c.deleted)\
           .create(migrate_engine)
     Index('idx_instance_uuid_deleted',
           bm_nodes.c.instance_uuid, bm_nodes.c.deleted)\
