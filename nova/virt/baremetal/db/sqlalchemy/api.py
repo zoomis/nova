@@ -204,7 +204,7 @@ def bm_pxe_ip_associate(context, bm_node_id, session=None):
             return ip_ref.id
         # with_lockmode('update') and filter_by(bm_node_id=None) will lock all
         # records. It may cause a performance problem in high-concurrency
-        # environment. 
+        # environment.
         ip_ref = model_query(context, models.BareMetalPxeIp,
                              read_deleted="no", session=session).\
                          filter_by(bm_node_id=None).\
