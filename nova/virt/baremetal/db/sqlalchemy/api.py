@@ -75,9 +75,16 @@ def model_query(context, *args, **kwargs):
     return query
 
 
+def _build_node_order_by(query):
+    query = query.order_by(asc(models.BareMetalNode.memory_mb))
+    query = query.order_by(asc(models.BareMetalNode.cpus))
+    query = query.order_by(asc(models.BareMetalNode.local_gb))
+    return query
+
+
 @require_admin_context
 def bm_node_get_all(context, service_host=None, instantiated=None,
-                    session=None):
+                    sort=False, session=None):
     query = model_query(context, models.BareMetalNode,
                         read_deleted="no", session=session)
     if service_host:
@@ -87,7 +94,28 @@ def bm_node_get_all(context, service_host=None, instantiated=None,
             query = query.filter(models.BareMetalNode.instance_uuid != None)
         else:
             query = query.filter(models.BareMetalNode.instance_uuid == None)
+    if sort:
+        query = _build_node_order_by(query)
     return query.all()
+
+
+@require_admin_context
+def bm_node_find_free(context, service_host=None,
+                      cpus=None, memory_mb=None, local_gb=None,
+                      session=None):
+    query = model_query(context, models.BareMetalNode,
+                        read_deleted="no", session=session)
+    query = query.filter(models.BareMetalNode.instance_uuid == None)
+    if service_host:
+        query = query.filter_by(service_host=service_host)
+    if cpus is not None:
+        query = query.filter(models.BareMetalNode.cpus >= cpus)
+    if memory_mb is not None:
+        query = query.filter(models.BareMetalNode.memory_mb >= memory_mb)
+    if local_gb is not None:
+        query = query.filter(models.BareMetalNode.local_gb >= local_gb)
+    query = _build_node_order_by(query)
+    return query.first()
 
 
 @require_admin_context

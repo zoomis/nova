@@ -27,108 +27,168 @@ class BareMetalNodesTestCase(base.BMDBTestCase):
     def setUp(self):
         super(BareMetalNodesTestCase, self).setUp()
 
-    def _create_hosts(self):
-        h1 = utils.new_bm_node(service_host="host1")
-        h2 = utils.new_bm_node(service_host="host2")
-        h3 = utils.new_bm_node(service_host="host2", instance_uuid='1')
-
-        h1_ref = db.bm_node_create(self.context, h1)
-        self.assertTrue(h1_ref['id'] is not None)
-
-        h2_ref = db.bm_node_create(self.context, h2)
-        self.assertTrue(h2_ref['id'] is not None)
-
-        h3_ref = db.bm_node_create(self.context, h3)
-        self.assertTrue(h3_ref['id'] is not None)
-
-        self.h1 = h1_ref
-        self.h2 = h2_ref
-        self.h3 = h3_ref
+    def _create_nodes(self):
+        nodes = [
+            utils.new_bm_node(pm_address='0', service_host="host1",
+                              memory_mb=100000, cpus=100, local_gb=10000),
+            utils.new_bm_node(pm_address='1', service_host="host2",
+                              instance_uuid='A',
+                              memory_mb=100000, cpus=100, local_gb=10000),
+            utils.new_bm_node(pm_address='2', service_host="host2",
+                               memory_mb=1000, cpus=1, local_gb=1000),
+            utils.new_bm_node(pm_address='3', service_host="host2",
+                               memory_mb=1000, cpus=2, local_gb=1000),
+            utils.new_bm_node(pm_address='4', service_host="host2",
+                               memory_mb=2000, cpus=1, local_gb=1000),
+            utils.new_bm_node(pm_address='5', service_host="host2",
+                               memory_mb=2000, cpus=2, local_gb=1000),
+        ]
+        self.ids = []
+        for n in nodes:
+            ref = db.bm_node_create(self.context, n)
+            self.ids.append(ref['id'])
 
     def test_get_all(self):
         r = db.bm_node_get_all(self.context)
         self.assertEquals(r, [])
 
-        self._create_hosts()
+        self._create_nodes()
 
         r = db.bm_node_get_all(self.context)
-        self.assertEquals(len(r), 3)
+        self.assertEquals(len(r), 6)
 
     def test_get(self):
-        self._create_hosts()
+        self._create_nodes()
 
-        r = db.bm_node_get(self.context, self.h1['id'])
-        self.assertEquals(self.h1['id'], r['id'])
+        r = db.bm_node_get(self.context, self.ids[0])
+        self.assertEquals(r['pm_address'], '0')
 
-        r = db.bm_node_get(self.context, self.h2['id'])
-        self.assertEquals(self.h2['id'], r['id'])
+        r = db.bm_node_get(self.context, self.ids[1])
+        self.assertEquals(r['pm_address'], '1')
 
-        r = db.bm_node_get(self.context, self.h3['id'])
-        self.assertEquals(self.h3['id'], r['id'])
-
-        r = db.bm_node_get(self.context, 0)
+        r = db.bm_node_get(self.context, -1)
         self.assertTrue(r is None)
 
     def test_get_by_service_host(self):
-        self._create_hosts()
+        self._create_nodes()
 
         r = db.bm_node_get_all(self.context, service_host=None)
-        self.assertEquals(len(r), 3)
+        self.assertEquals(len(r), 6)
 
         r = db.bm_node_get_all(self.context, service_host="host1")
         self.assertEquals(len(r), 1)
-        self.assertEquals(r[0]['id'], self.h1['id'])
+        self.assertEquals(r[0]['pm_address'], '0')
 
         r = db.bm_node_get_all(self.context, service_host="host2")
-        self.assertEquals(len(r), 2)
-        ids = [x['id'] for x in r]
-        self.assertIn(self.h2['id'], ids)
-        self.assertIn(self.h3['id'], ids)
+        self.assertEquals(len(r), 5)
+        pmaddrs = [x['pm_address'] for x in r]
+        self.assertIn('1', pmaddrs)
+        self.assertIn('2', pmaddrs)
+        self.assertIn('3', pmaddrs)
+        self.assertIn('4', pmaddrs)
+        self.assertIn('5', pmaddrs)
 
         r = db.bm_node_get_all(self.context, service_host="host3")
         self.assertEquals(r, [])
 
     def test_get_by_instantiated(self):
-        self._create_hosts()
+        self._create_nodes()
 
         r = db.bm_node_get_all(self.context, instantiated=None)
-        self.assertEquals(len(r), 3)
+        self.assertEquals(len(r), 6)
 
         r = db.bm_node_get_all(self.context, instantiated=True)
         self.assertEquals(len(r), 1)
-        self.assertEquals(r[0]['id'], self.h3['id'])
+        self.assertEquals(r[0]['pm_address'], '1')
 
         r = db.bm_node_get_all(self.context, instantiated=False)
-        ids = [x['id'] for x in r]
-        self.assertIn(self.h1['id'], ids)
-        self.assertIn(self.h2['id'], ids)
-        self.assertEquals(len(r), 2)
+        self.assertEquals(len(r), 5)
+        pmaddrs = [x['pm_address'] for x in r]
+        self.assertIn('0', pmaddrs)
+        self.assertIn('2', pmaddrs)
+        self.assertIn('3', pmaddrs)
+        self.assertIn('4', pmaddrs)
+        self.assertIn('5', pmaddrs)
 
     def test_get_by_service_host_and_instantiated(self):
-        self._create_hosts()
+        self._create_nodes()
 
-        r = db.bm_node_get_all(self.context, service_host='host1', instantiated=True)
+        r = db.bm_node_get_all(self.context, service_host='host1',
+                               instantiated=True)
         self.assertEquals(len(r), 0)
 
-        r = db.bm_node_get_all(self.context, service_host='host1', instantiated=False)
+        r = db.bm_node_get_all(self.context, service_host='host1',
+                               instantiated=False)
         self.assertEquals(len(r), 1)
-        self.assertEquals(r[0]['id'], self.h1['id'])
+        self.assertEquals(r[0]['pm_address'], '0')
 
-        r = db.bm_node_get_all(self.context, service_host='host2', instantiated=True)
+        r = db.bm_node_get_all(self.context, service_host='host2',
+                               instantiated=True)
         self.assertEquals(len(r), 1)
-        self.assertEquals(r[0]['id'], self.h3['id'])
+        self.assertEquals(r[0]['pm_address'], '1')
 
-        r = db.bm_node_get_all(self.context, service_host='host2', instantiated=False)
-        self.assertEquals(len(r), 1)
-        self.assertEquals(r[0]['id'], self.h2['id'])
+        r = db.bm_node_get_all(self.context, service_host='host2',
+                               instantiated=False)
+        self.assertEquals(len(r), 4)
+        pmaddrs = [x['pm_address'] for x in r]
+        self.assertIn('2', pmaddrs)
+        self.assertIn('3', pmaddrs)
+        self.assertIn('4', pmaddrs)
+        self.assertIn('5', pmaddrs)
 
     def test_destroy(self):
-        self._create_hosts()
+        self._create_nodes()
 
-        db.bm_node_destroy(self.context, self.h1['id'])
+        db.bm_node_destroy(self.context, self.ids[0])
 
-        r = db.bm_node_get(self.context, self.h1['id'])
+        r = db.bm_node_get(self.context, self.ids[0])
         self.assertTrue(r is None)
 
         r = db.bm_node_get_all(self.context)
-        self.assertEquals(len(r), 2)
+        self.assertEquals(len(r), 5)
+
+    def test_sort(self):
+        self._create_nodes()
+        l = db.bm_node_get_all(self.context, 'host2', sort=True)
+        self.assertEqual(len(l), 5)
+        self.assertEqual(l[0]['pm_address'], '2')
+        self.assertEqual(l[1]['pm_address'], '3')
+        self.assertEqual(l[2]['pm_address'], '4')
+        self.assertEqual(l[3]['pm_address'], '5')
+        self.assertEqual(l[4]['pm_address'], '1')
+
+    def test_find_free(self):
+        self._create_nodes()
+        fn = db.bm_node_find_free(self.context, 'host2')
+        self.assertEqual(fn['pm_address'], '2')
+
+        fn = db.bm_node_find_free(self.context, 'host2',
+                                  memory_mb=500, cpus=2, local_gb=100)
+        self.assertEqual(fn['pm_address'], '3')
+
+        fn = db.bm_node_find_free(self.context, 'host2',
+                                  memory_mb=1001, cpus=1, local_gb=1000)
+        self.assertEqual(fn['pm_address'], '4')
+
+        fn = db.bm_node_find_free(self.context, 'host2',
+                                  memory_mb=2000, cpus=1, local_gb=1000)
+        self.assertEqual(fn['pm_address'], '4')
+
+        fn = db.bm_node_find_free(self.context, 'host2',
+                                  memory_mb=2000, cpus=2, local_gb=1000)
+        self.assertEqual(fn['pm_address'], '5')
+
+        # check memory_mb
+        fn = db.bm_node_find_free(self.context, 'host2',
+                                  memory_mb=2001, cpus=2, local_gb=1000)
+        self.assertTrue(fn is None)
+
+        # check cpus
+        fn = db.bm_node_find_free(self.context, 'host2',
+                                  memory_mb=2000, cpus=3, local_gb=1000)
+        self.assertTrue(fn is None)
+
+        # check local_gb
+        fn = db.bm_node_find_free(self.context, 'host2',
+                                  memory_mb=2000, cpus=2, local_gb=1001)
+        self.assertTrue(fn is None)
