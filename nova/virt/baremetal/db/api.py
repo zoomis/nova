@@ -61,10 +61,24 @@ IMPL = utils.LazyPluggable(
         sqlalchemy='nova.virt.baremetal.db.sqlalchemy.api')
 
 
-def bm_node_get_all(context, service_host=None, session=None):
+def bm_node_get_all(context, service_host=None, instantiated=None,
+                    sort=None, session=None):
     return IMPL.bm_node_get_all(context,
                                 service_host=service_host,
+                                instantiated=instantiated,
+                                sort=sort,
                                 session=session)
+
+
+def bm_node_find_free(context, service_host=None,
+                      memory_mb=None, cpus=None, local_gb=None,
+                      session=None):
+    return IMPL.bm_node_find_free(context,
+                                  service_host=service_host,
+                                  memory_mb=memory_mb,
+                                  cpus=cpus,
+                                  local_gb=local_gb,
+                                  session=session)
 
 
 def bm_node_get(context, bm_node_id, session=None):
