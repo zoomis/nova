@@ -23,7 +23,7 @@ def new_bm_node(**kwargs):
     h = models.BareMetalNode()
     h.id = kwargs.pop('id', None)
     h.service_host = kwargs.pop('service_host', None)
-    h.instance_id = kwargs.pop('instance_id', None)
+    h.instance_uuid = kwargs.pop('instance_uuid', None)
     h.cpus = kwargs.pop('cpus', 1)
     h.memory_mb = kwargs.pop('memory_mb', 1024)
     h.local_gb = kwargs.pop('local_gb', 64)
