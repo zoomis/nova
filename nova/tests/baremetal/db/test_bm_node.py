@@ -30,7 +30,7 @@ class BareMetalNodesTestCase(base.BMDBTestCase):
     def _create_hosts(self):
         h1 = utils.new_bm_node(service_host="host1")
         h2 = utils.new_bm_node(service_host="host2")
-        h3 = utils.new_bm_node(service_host="host2")
+        h3 = utils.new_bm_node(service_host="host2", instance_uuid='1')
 
         h1_ref = db.bm_node_create(self.context, h1)
         self.assertTrue(h1_ref['id'] is not None)
@@ -72,6 +72,9 @@ class BareMetalNodesTestCase(base.BMDBTestCase):
     def test_get_by_service_host(self):
         self._create_hosts()
 
+        r = db.bm_node_get_all(self.context, service_host=None)
+        self.assertEquals(len(r), 3)
+
         r = db.bm_node_get_all(self.context, service_host="host1")
         self.assertEquals(len(r), 1)
         self.assertEquals(r[0]['id'], self.h1['id'])
@@ -84,6 +87,40 @@ class BareMetalNodesTestCase(base.BMDBTestCase):
 
         r = db.bm_node_get_all(self.context, service_host="host3")
         self.assertEquals(r, [])
+
+    def test_get_by_instantiated(self):
+        self._create_hosts()
+
+        r = db.bm_node_get_all(self.context, instantiated=None)
+        self.assertEquals(len(r), 3)
+
+        r = db.bm_node_get_all(self.context, instantiated=True)
+        self.assertEquals(len(r), 1)
+        self.assertEquals(r[0]['id'], self.h3['id'])
+
+        r = db.bm_node_get_all(self.context, instantiated=False)
+        ids = [x['id'] for x in r]
+        self.assertIn(self.h1['id'], ids)
+        self.assertIn(self.h2['id'], ids)
+        self.assertEquals(len(r), 2)
+
+    def test_get_by_service_host_and_instantiated(self):
+        self._create_hosts()
+
+        r = db.bm_node_get_all(self.context, service_host='host1', instantiated=True)
+        self.assertEquals(len(r), 0)
+
+        r = db.bm_node_get_all(self.context, service_host='host1', instantiated=False)
+        self.assertEquals(len(r), 1)
+        self.assertEquals(r[0]['id'], self.h1['id'])
+
+        r = db.bm_node_get_all(self.context, service_host='host2', instantiated=True)
+        self.assertEquals(len(r), 1)
+        self.assertEquals(r[0]['id'], self.h3['id'])
+
+        r = db.bm_node_get_all(self.context, service_host='host2', instantiated=False)
+        self.assertEquals(len(r), 1)
+        self.assertEquals(r[0]['id'], self.h2['id'])
 
     def test_destroy(self):
         self._create_hosts()

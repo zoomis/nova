@@ -76,11 +76,17 @@ def model_query(context, *args, **kwargs):
 
 
 @require_admin_context
-def bm_node_get_all(context, service_host=None, session=None):
+def bm_node_get_all(context, service_host=None, instantiated=None,
+                    session=None):
     query = model_query(context, models.BareMetalNode,
                         read_deleted="no", session=session)
     if service_host:
         query = query.filter_by(service_host=service_host)
+    if instantiated is not None:
+        if instantiated:
+            query = query.filter(models.BareMetalNode.instance_uuid != None)
+        else:
+            query = query.filter(models.BareMetalNode.instance_uuid == None)
     return query.all()
 
 
