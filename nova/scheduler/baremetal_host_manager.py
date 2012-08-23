@@ -60,6 +60,9 @@ def _map_nodes(nodes):
         nodes_map[n['id']] = n
     return (nodes_map, instances)
 
+def _get_instances_from_db(context, host):
+    insts = db.instance_get_all_by_host(context, host)
+    return insts
 
 def _get_deleted_instances_from_db(context, host, since):
     if not isinstance(since, datetime.datetime):
@@ -107,9 +110,10 @@ class BaremetalHostState(host_manager.HostState):
         # compute_node info is not used.
         nodes, instances = _map_nodes(self._nodes_from_capabilities)
 
+        context = nova_context.get_admin_context()
+
         # Remove terminated insts from instances
         if self._cap_timestamp is not None:
-            context = nova_context.get_admin_context()
             deleted = _get_deleted_instances_from_db(context,
                                                      self.host,
                                                      self._cap_timestamp)
@@ -127,6 +131,10 @@ class BaremetalHostState(host_manager.HostState):
         self._nodes = nodes
         self._instances = instances
         self._update()
+
+        running = _get_instances_from_db(context, self.host)
+        for inst in running:
+            self.consume_from_instance(inst)
 
     def consume_from_instance(self, instance):
         instance_uuid = instance.get('uuid', None)

@@ -292,22 +292,22 @@ BAREMETAL_COMPUTE_NODES = [
              vcpus_used=0,
              free_ram_mb=10240,
              free_disk_gb=10240,
-             service=dict(host='host1', disabled=True)),
+             service=dict(host='host1')),
         dict(id=2, service_id=2, local_gb=2048, memory_mb=1024, vcpus=2,
              vcpus_used=0,
              free_ram_mb=1024,
              free_disk_gb=2048,
-             service=dict(host='host2', disabled=True)),
+             service=dict(host='host2')),
         dict(id=3, service_id=3, local_gb=2048, memory_mb=2048, vcpus=2,
              vcpus_used=0,
              free_ram_mb=2048,
              free_disk_gb=2048,
-             service=dict(host='host3', disabled=True)),
+             service=dict(host='host3')),
         dict(id=4, service_id=4, local_gb=2048, memory_mb=2048, vcpus=7,
              vcpus_used=0,
              free_ram_mb=2048,
              free_disk_gb=2048,
-             service=dict(host='host4', disabled=False)),
+             service=dict(host='host4')),
         # Broken entry
         dict(id=5, service_id=5, local_gb=1024, memory_mb=1024, vcpus=1,
              vcpus_used=0,
@@ -509,21 +509,30 @@ class BaremetalHostManagerTestCase(test.TestCase):
         self.flags(reserved_host_memory_mb=512,
                 reserved_host_disk_mb=1024)
 
+        def fake_get_instances_from_db(context, host):
+            l = []
+            for i in BAREMETAL_INSTANCES:
+                if i['host'] == host:
+                    l.append(i)
+            return l
+        
+        def fake_get_deleted_instances_from_db(context, host, since):
+            return []
+
         context = 'fake_context'
         topic = 'compute'
-        host = 'fakehost-1'
         self.mox.StubOutWithMock(db, 'compute_node_get_all')
         self.mox.StubOutWithMock(host_manager.LOG, 'warn')
         #self.mox.StubOutWithMock(db, 'instance_get_all')
         self.stubs.Set(timeutils, 'utcnow', lambda: 31337)
+        self.stubs.Set(bhm, '_get_instances_from_db',
+                       fake_get_instances_from_db)
+        self.stubs.Set(bhm, '_get_deleted_instances_from_db',
+                       fake_get_deleted_instances_from_db)
 
         db.compute_node_get_all(context).AndReturn(BAREMETAL_COMPUTE_NODES)
-
         # Invalid service
         host_manager.LOG.warn("No service for compute ID 5")
-        #db.instance_get_all(context,
-        #        columns_to_join=['instance_type']).\
-        #        AndReturn(BAREMETAL_INSTANCES)
         self.mox.ReplayAll()
 
         host1_compute_capabs = dict(
