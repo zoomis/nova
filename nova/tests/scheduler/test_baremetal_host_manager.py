@@ -289,16 +289,31 @@ class BaremetalHostStateTestCase(test.TestCase):
 
 BAREMETAL_COMPUTE_NODES = [
         dict(id=1, service_id=1, local_gb=10240, memory_mb=10240, vcpus=10,
-                service=dict(host='host1', disabled=True)),
+             vcpus_used=0,
+             free_ram_mb=10240,
+             free_disk_gb=10240,
+             service=dict(host='host1', disabled=True)),
         dict(id=2, service_id=2, local_gb=2048, memory_mb=1024, vcpus=2,
-                service=dict(host='host2', disabled=True)),
+             vcpus_used=0,
+             free_ram_mb=1024,
+             free_disk_gb=2048,
+             service=dict(host='host2', disabled=True)),
         dict(id=3, service_id=3, local_gb=2048, memory_mb=2048, vcpus=2,
-                service=dict(host='host3', disabled=True)),
+             vcpus_used=0,
+             free_ram_mb=2048,
+             free_disk_gb=2048,
+             service=dict(host='host3', disabled=True)),
         dict(id=4, service_id=4, local_gb=2048, memory_mb=2048, vcpus=7,
-                service=dict(host='host4', disabled=False)),
+             vcpus_used=0,
+             free_ram_mb=2048,
+             free_disk_gb=2048,
+             service=dict(host='host4', disabled=False)),
         # Broken entry
         dict(id=5, service_id=5, local_gb=1024, memory_mb=1024, vcpus=1,
-                service=None),
+             vcpus_used=0,
+             free_ram_mb=1024,
+             free_local_gb=1024,
+             service=None),
 ]
 
 
@@ -499,16 +514,16 @@ class BaremetalHostManagerTestCase(test.TestCase):
         host = 'fakehost-1'
         self.mox.StubOutWithMock(db, 'compute_node_get_all')
         self.mox.StubOutWithMock(host_manager.LOG, 'warn')
-        self.mox.StubOutWithMock(db, 'instance_get_all')
+        #self.mox.StubOutWithMock(db, 'instance_get_all')
         self.stubs.Set(timeutils, 'utcnow', lambda: 31337)
 
         db.compute_node_get_all(context).AndReturn(BAREMETAL_COMPUTE_NODES)
 
         # Invalid service
         host_manager.LOG.warn("No service for compute ID 5")
-        db.instance_get_all(context,
-                columns_to_join=['instance_type']).\
-                AndReturn(BAREMETAL_INSTANCES)
+        #db.instance_get_all(context,
+        #        columns_to_join=['instance_type']).\
+        #        AndReturn(BAREMETAL_INSTANCES)
         self.mox.ReplayAll()
 
         host1_compute_capabs = dict(
@@ -540,6 +555,11 @@ class BaremetalHostManagerTestCase(test.TestCase):
                 'host4', host4_compute_capabs)
 
         host_states = self.bhm.get_all_host_states(context, topic)
+
+        for i in BAREMETAL_INSTANCES:
+            if i['host'] not in host_states:
+                continue
+            host_states[i['host']].consume_from_instance(i)
 
         num_bm_nodes = len(BAREMETAL_COMPUTE_NODES)
 
