@@ -515,7 +515,7 @@ class BaremetalHostManagerTestCase(test.TestCase):
                 if i['host'] == host:
                     l.append(i)
             return l
-        
+
         def fake_get_deleted_instances_from_db(context, host, since):
             return []
 

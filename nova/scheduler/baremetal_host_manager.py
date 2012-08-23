@@ -60,9 +60,11 @@ def _map_nodes(nodes):
         nodes_map[n['id']] = n
     return (nodes_map, instances)
 
+
 def _get_instances_from_db(context, host):
     insts = db.instance_get_all_by_host(context, host)
     return insts
+
 
 def _get_deleted_instances_from_db(context, host, since):
     if not isinstance(since, datetime.datetime):
