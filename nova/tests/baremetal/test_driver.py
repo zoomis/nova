@@ -90,15 +90,11 @@ class BaremetalDriverTestCase(test_virt_drivers._VirtDriverTestCase):
                                    nic['address'],
                                    nic['datapath_id'],
                                    nic['port_no'])
-        # _VirtDriverTestCase forget to restore imagesbackend in tearDown()
-        self.__imagebackend_save = nova.virt.libvirt.driver.imagebackend
         super(BaremetalDriverTestCase, self).setUp()
         fake_image.stub_out_image_service(self.stubs)
 
     def tearDown(self):
         super(BaremetalDriverTestCase, self).tearDown()
-        # _VirtDriverTestCase forget to restore imagesbackend in tearDown()
-        nova.virt.libvirt.driver.imagebackend = self.__imagebackend_save
         fake_image.FakeImageService_reset()
 
     def test_loading_baremetal_drivers(self):

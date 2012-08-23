@@ -345,37 +345,14 @@ class BareMetalDriver(driver.ComputeDriver):
     def refresh_instance_security_rules(self, instance):
         self._firewall_driver.refresh_instance_security_rules(instance)
 
-    def update_available_resource(self, ctxt, host):
-        """Updates compute manager resource info on ComputeNode table.
-
-        This method is called when nova-coompute launches, and
-        whenever admin executes "nova-manage service update_resource".
-
-        :param ctxt: security context
-        :param host: hostname that compute manager is currently running
-
-        """
-
-        dic = self._max_baremetal_resources(ctxt)
+    def get_available_resource(self):
+        context = nova_context.get_admin_context()
+        dic = self._max_baremetal_resources(context)
         #dic = self._sum_baremetal_resources(ctxt)
         dic['hypervisor_type'] = self.get_hypervisor_type()
         dic['hypervisor_version'] = self.get_hypervisor_version()
         dic['cpu_info'] = 'baremetal cpu'
-
-        try:
-            service_ref = db.service_get_all_compute_by_host(ctxt, host)[0]
-        except exception.NotFound:
-            raise exception.ComputeServiceUnavailable(host=host)
-
-        dic['service_id'] = service_ref['id']
-
-        compute_node_ref = service_ref['compute_node']
-        if not compute_node_ref:
-            LOG.info(_('Compute_service record created for %s ') % host)
-            db.compute_node_create(ctxt, dic)
-        else:
-            LOG.info(_('Compute_service record updated for %s ') % host)
-            db.compute_node_update(ctxt, compute_node_ref[0]['id'], dic)
+        return dic
 
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
         self._firewall_driver.setup_basic_filtering(instance_ref, network_info)

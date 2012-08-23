@@ -254,6 +254,7 @@ def create_local_srs():
                   other_config={'i18n-original-value-name_label':
                                 'Local storage',
                                 'i18n-key': 'local-storage'},
+                  physical_size=40000,
                   physical_utilisation=20000,
                   virtual_allocation=10000,
                   host_ref=host_ref)
@@ -262,6 +263,7 @@ def create_local_srs():
                   other_config={'i18n-original-value-name_label':
                                 'Local storage ISO',
                                 'i18n-key': 'local-storage-iso'},
+                  physical_size=80000,
                   physical_utilisation=40000,
                   virtual_allocation=80000,
                   host_ref=host_ref)
@@ -411,6 +413,21 @@ class SessionBase(object):
             raise Failure(['DEVICE_ALREADY_DETACHED', ref])
         rec['currently_attached'] = False
         rec['device'] = ''
+
+    def VBD_add_to_other_config(self, _1, vbd_ref, key, value):
+        db_ref = _db_content['VBD'][vbd_ref]
+        if not 'other_config' in db_ref:
+            db_ref['other_config'] = {}
+        if key in db_ref['other_config']:
+            raise Failure(['MAP_DUPLICATE_KEY', 'VBD', 'other_config',
+                           vbd_ref, key])
+        db_ref['other_config'][key] = value
+
+    def VBD_get_other_config(self, _1, vbd_ref):
+        db_ref = _db_content['VBD'][vbd_ref]
+        if not 'other_config' in db_ref:
+            return {}
+        return db_ref['other_config']
 
     def PBD_create(self, _1, pbd_rec):
         pbd_ref = _create_object('PBD', pbd_rec)
