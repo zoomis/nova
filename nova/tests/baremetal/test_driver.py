@@ -31,7 +31,6 @@ from nova.virt.baremetal import db
 from nova.virt.baremetal import driver as c
 from nova.virt.baremetal import volume_driver
 from nova.virt.firewall import NoopFirewallDriver
-import nova.virt.libvirt.driver
 
 
 FLAGS = flags.FLAGS
@@ -74,7 +73,7 @@ class BaremetalDriverTestCase(test_virt_drivers._VirtDriverTestCase):
                    baremetal_driver='nova.virt.baremetal.fake.Fake',
                    power_manager='nova.virt.baremetal.ipmi.DummyIpmi',
                    baremetal_vif_driver=class_path(FakeVifDriver),
-                   baremetal_firewall_driver=class_path(FakeFirewallDriver),
+                   firewall_driver=class_path(FakeFirewallDriver),
                    baremetal_volume_driver=class_path(FakeVolumeDriver),
                    instance_type_extra_specs=['cpu_arch:test'],
                    host=NODE['service_host'],
