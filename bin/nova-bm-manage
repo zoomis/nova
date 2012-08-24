@@ -261,8 +261,7 @@ class BareMetalPxeIpCommands(object):
             help='ID of PXE IP address')
     def delete(self, ip_id):
         ctx = context.get_admin_context()
-        ref = bmdb.bm_pxe_ip_create(ctx, address, server_address)
-        print "id=%s" % ref['id']
+        ref = bmdb.bm_pxe_ip_destroy(ctx, ip_id)
 
     def list(self):
         fmt = "%-8s  %-15s  %-15s  %-8s"
