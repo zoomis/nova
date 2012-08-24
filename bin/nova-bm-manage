@@ -347,10 +347,10 @@ def main():
     category = argv.pop(0)
     if category == "bash-completion":
         if len(argv) < 1:
-            print " ".join([k for (k, v) in                                                                                                                                   CATEGORIES])
+            print " ".join([k for (k, v) in CATEGORIES])
         else:
             query_category = argv.pop(0)
-            matches = lazy_match(query_category,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   )
+            matches = lazy_match(query_category, CATEGORIES)
             # instantiate the command group object
             category, fn = matches[0]
             command_object = fn()
