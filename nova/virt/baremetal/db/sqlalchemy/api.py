@@ -202,6 +202,23 @@ def bm_pxe_ip_destroy(context, ip_id, session=None):
 
 
 @require_admin_context
+def bm_pxe_ip_destroy_by_address(context, address, session=None):
+    # Delete physically since it has unique columns
+    if not session:
+        session = get_session()
+    with session.begin():
+        ip_ref = model_query(context, models.BareMetalPxeIp,
+                             read_deleted="no", session=session).\
+                         filter_by(address=address).\
+                         with_lockmode('update').\
+                         first()
+        if not ip_ref:
+            return None
+        session.delete(ip_ref)
+        return ip_ref
+
+
+@require_admin_context
 def bm_pxe_ip_get(context, ip_id, session=None):
     ref = model_query(context, models.BareMetalPxeIp,
                       read_deleted="no", session=session).\
