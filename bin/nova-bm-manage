@@ -236,7 +236,11 @@ class BareMetalInterfaceCommands(object):
                     _('DATAPATH_ID'),
                     _('PORT_NO'))
         ctx = context.get_admin_context()
-        for pif in bmdb.bm_interface_get_all(ctx):
+        if not node_id:
+            pifs = bmdb.bm_interface_get_all(ctx)
+        else:
+            pifs = bmdb.bm_interface_get_all_by_bm_node_id(ctx, node_id)
+        for pif in pifs:
             print fmt % (pif['id'], pif['bm_node_id'],
                          pif['address'], pif['datapath_id'], pif['port_no'])
         print
