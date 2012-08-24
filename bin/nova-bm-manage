@@ -1,0 +1,411 @@
+#!/usr/bin/env python
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright (c) 2011 X.commerce, a business unit of eBay Inc.
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+# Interactive shell based on Django:
+#
+# Copyright (c) 2005, the Lawrence Journal-World
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#     1. Redistributions of source code must retain the above copyright notice,
+#        this list of conditions and the following disclaimer.
+#
+#     2. Redistributions in binary form must reproduce the above copyright
+#        notice, this list of conditions and the following disclaimer in the
+#        documentation and/or other materials provided with the distribution.
+#
+#     3. Neither the name of Django nor the names of its contributors may be
+#        used to endorse or promote products derived from this software without
+#        specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+"""
+  CLI interface for nova management.
+"""
+
+import ast
+import errno
+import gettext
+import math
+import netaddr
+import optparse
+import os
+import sys
+
+
+# If ../nova/__init__.py exists, add ../ to Python search path, so that
+# it will override what happens to be installed in /usr/(local/)lib/python...
+POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
+                                   os.pardir,
+                                   os.pardir))
+if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
+    sys.path.insert(0, POSSIBLE_TOPDIR)
+
+gettext.install('nova', unicode=1)
+
+from nova.compat import flagfile
+from nova import context
+from nova import exception
+from nova import flags
+from nova.openstack.common import cfg
+from nova.openstack.common import importutils
+from nova.openstack.common import log as logging
+from nova.openstack.common import rpc
+from nova.openstack.common import timeutils
+from nova import utils
+from nova.virt.baremetal import db as bmdb
+from nova.virt.baremetal.db import migration as bmdb_migration
+
+FLAGS = flags.FLAGS
+
+
+# Decorators for actions
+def args(*args, **kwargs):
+    def _decorator(func):
+        func.__dict__.setdefault('options', []).insert(0, (args, kwargs))
+        return func
+    return _decorator
+
+
+class BareMetalDbCommands(object):
+
+    @args('--version', dest='version', metavar='<version>',
+            help='Bare-metal Database version')
+    def sync(self, version=None):
+        """Sync the database up to the most recent version."""
+        return bmdb_migration.db_sync(version)
+
+    def version(self):
+        """Print the current database version."""
+        print bmdb_migration.db_version()
+
+
+class BareMetalNodeCommands(object):
+
+    @args('--host', dest='host', metavar='<host>',
+          help='Compute service\'s hostname')
+    @args('--cpus', dest='cpus', metavar='<cpus>',
+          help='CPU count')
+    @args('--memory_mb', dest='memory_mb', metavar='<memory_mb>',
+          help='Memory size in MB')
+    @args('--local_gb', dest='local_gb', metavar='<local_gb>',
+          help='Disk size in GB')
+    @args('--pm_address', dest='pm_address', metavar='<pm_address>',
+          help='Power manager address')
+    @args('--pm_user', dest='pm_user', metavar='<pm_user>',
+          help='Power manager username')
+    @args('--pm_password', dest='pm_password', metavar='<pm_password>',
+          help='Power manager password')
+    @args('--terminal_port', dest='terminal_port', metavar='<terminal_port>',
+          help='TCP port for terminal access')
+    @args('--prov_mac_address', dest='prov_mac_address', metavar='<prov_mac_address>',
+          help='MAC address of provisioning interface in the form of xx:xx:xx:xx:xx:xx')
+    @args('--prov_vlan_id', dest='prov_vlan_id', metavar='<prov_vlan_id>',
+          help='VLAN ID (optional)')
+    def create(self, host, cpus, memory_mb, local_gb, pm_address, pm_user,
+               pm_password, prov_mac_address, prov_vlan_id=None, terminal_port=None):
+        values = {
+            'service_host': host,
+            'cpus': cpus,
+            'memory_mb': memory_mb,
+            'local_gb': local_gb,
+            'pm_address': pm_address,
+            'pm_user': pm_user,
+            'pm_password': pm_password,
+            'prov_mac_address': prov_mac_address,
+            'prov_vlan_id': prov_vlan_id,
+            'terminal_port': terminal_port,
+            'registration_status': 'done',
+            'task_state': None,
+        }
+        ctx = context.get_admin_context()
+        r = db.bm_node_create(ctx, values)
+        print r.id
+
+    @args('--id', dest='node_id', metavar='<id>',
+            help='ID of bare-metal node')
+    def delete(self, node_id):
+        ctx = context.get_admin_context()
+        bmdb.bm_node_destroy(ctx, node_id)
+
+    def list(self):
+        fmt = "%-8s  %-12s  %-36s  %-6s  %-8s  %-8s  %-16s  %-16s " + \
+              "%-5s  %-18s  %-4s"
+        print fmt % (
+                    _('ID'),
+                    _('SERVICE_HOST'),
+                    _('INSTANCE_UUID'),
+                    _('CPUS'),
+                    _('Memory'),
+                    _('Disk'),
+                    _('PM_Address'),
+                    _('PM_User'),
+                    _('TERMINAL_PORT'),
+                    _('PROV_MAC'),
+                    _('PROV_VLAN'))
+        ctxt = context.get_admin_context()
+        for node in db.bm_node_get_all(ctxt):
+            print fmt % (node['id'], node['service_host'],
+                         node['instance_uuid'],
+                         node['cpus'], node['memory_mb'], node['local_gb'],
+                         node['pm_address'], node['pm_user'],
+                         node['terminal_port'],
+                         node['prov_mac_address'], node['prov_vlan_id'])
+        print
+
+
+class BareMetalInterfaceCommands(object):
+
+    @args('--node_id', dest='node_id', metavar='<node_id>',
+            help='ID of bare-metal node')
+    @args('--mac_address', dest='mac_address', metavar='<mac_address>',
+            help='MAC address in the form of xx:xx:xx:xx:xx:xx')
+    @args('--datapath_id', dest='datapath_id', metavar='<datapath_id>',
+            help='OpenFlow datapath ID')
+    @args('--port_no', dest='port_no', metavar='<port_no>',
+            help='OpenFlow port number')
+    def create(self, node_id, mac_address, datapath_id, port_no):
+        datapath_id = datapath_id.lower()
+        if not datapath_id.startswith("0x"):
+            datapath_id = "0x" + datapath_id
+        ctx = context.get_admin_context()
+        node_ref = db.bm_node_get(ctx, node_id)
+        if not node_ref:
+            print >> sys.stderr, 'node_id %s is not found' % node_id
+            sys.exit(1)
+        if mac_address.lower() == node_ref['prov_mac_address'].lower():
+            print >> sys.stderr,\
+                     'mac_address %s is already used as prov_mac_address'\
+                      % mac_address
+            sys.exit(1)
+    
+        id = db.bm_interface_create(
+                 ctx,
+                 bm_node_id=node_id,
+                 address=mac_address,
+                 datapath_id=datapath_id,
+                 port_no=port_no)
+        print id
+
+    @args('--id', dest='if_id', metavar='<id>',
+            help='ID of interface')
+    def delete(self, if_id):
+        ctx = context.get_admin_context()
+        bmdb.bm_interface_destroy(ctx, if_id)
+
+    @args('--node_id', dest='node_id', metavar='<node_id>',
+            help='ID of bare-metal node')
+    def list(self, node_id=None):
+        fmt = "%-8s  %-16s  %-18s  %-16s  %-4s"
+        print fmt % (
+                    _('ID'),
+                    _('BM_NODE_ID'),
+                    _('MAC_ADDRESS'),
+                    _('DATAPATH_ID'),
+                    _('PORT_NO'))
+        ctx = context.get_admin_context()
+        for pif in bmdb.bm_interface_get_all(ctx):
+            print fmt % (pif['id'], pif['bm_node_id'],
+                         pif['address'], pif['datapath_id'], pif['port_no'])
+        print
+
+
+class BareMetalPxeIpCommands(object):
+
+    @args('--address', dest='address', metavar='<address>',
+            help='Address leased to client')
+    @args('--server_address', dest='server_address', metavar='<server_address>',
+            help='Address used by server')
+    def create(self, address, server_address):
+        ctx = context.get_admin_context()
+        ref = db.bm_pxe_ip_create(ctx, address, server_address)
+        print "id=%s" % ref['id']
+
+    @args('--id', dest='ip_id', metavar='<id>',
+            help='ID of PXE IP address')
+    def delete(self, ip_id):
+        ctx = context.get_admin_context()
+        ref = db.bm_pxe_ip_create(ctx, address, server_address)
+        print "id=%s" % ref['id']
+
+    def list(self):
+        fmt = "%-8s  %-15s  %-15s  %-8s"
+        print fmt % (
+                    _('ID'),
+                    _('ADDRESS'),
+                    _('SERVER_ADDRESS'),
+                    _('BM_NODE_ID'))
+        ctxt = context.get_admin_context()
+        for ip in db.bm_pxe_ip_get_all(ctxt):
+            print fmt % (ip['id'], ip['address'], ip['server_address'], ip['bm_node_id'])
+        print
+
+
+CATEGORIES = [
+    ('db', BareMetalDbCommands),
+    ('node', BareMetalNodeCommands),
+    ('interface', BareMetalInterfaceCommands),
+    ('pxe_ip', BareMetalPxeIpCommands),
+]
+
+
+def lazy_match(name, key_value_tuples):
+    """Finds all objects that have a key that case insensitively contains
+    [name] key_value_tuples is a list of tuples of the form (key, value)
+    returns a list of tuples of the form (key, value)"""
+    result = []
+    for (k, v) in key_value_tuples:
+        if k.lower().find(name.lower()) == 0:
+            result.append((k, v))
+    if len(result) == 0:
+        print "%s does not match any options:" % name
+        for k, _v in key_value_tuples:
+            print "\t%s" % k
+        sys.exit(2)
+    if len(result) > 1:
+        print "%s matched multiple options:" % name
+        for k, _v in result:
+            print "\t%s" % k
+        sys.exit(2)
+    return result
+
+
+def methods_of(obj):
+    """Get all callable methods of an object that don't start with underscore
+    returns a list of tuples of the form (method_name, method)"""
+    result = []
+    for i in dir(obj):
+        if callable(getattr(obj, i)) and not i.startswith('_'):
+            result.append((i, getattr(obj, i)))
+    return result
+
+
+def main():
+    """Parse options and call the appropriate class/method."""
+
+    try:
+        argv = flags.parse_args(sys.argv)
+        logging.setup("nova")
+    except cfg.ConfigFilesNotFoundError:
+        cfgfile = FLAGS.config_file[-1] if FLAGS.config_file else None
+        if cfgfile and not os.access(cfgfile, os.R_OK):
+            st = os.stat(cfgfile)
+            print _("Could not read %s. Re-running with sudo") % cfgfile
+            try:
+                os.execvp('sudo', ['sudo', '-u', '#%s' % st.st_uid] + sys.argv)
+            except Exception:
+                print _('sudo failed, continuing as if nothing happened')
+
+        print _('Please re-run nova-manage as root.')
+        sys.exit(2)
+
+    script_name = argv.pop(0)
+    if len(argv) < 1:
+        print (_("\nOpenStack Nova version: %(version)s (%(vcs)s)\n") %
+               {'version': version.version_string(),
+                'vcs': version.version_string_with_vcs()})
+        print script_name + " category action [<args>]"
+        print _("Available categories:")
+        for k, _v in CATEGORIES:
+            print "\t%s" % k
+        sys.exit(2)
+    category = argv.pop(0)
+    if category == "bash-completion":
+        if len(argv) < 1:
+            print " ".join([k for (k, v) in                                                                                                                                   CATEGORIES])
+        else:
+            query_category = argv.pop(0)
+            matches = lazy_match(query_category,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   )
+            # instantiate the command group object
+            category, fn = matches[0]
+            command_object = fn()
+            actions = methods_of(command_object)
+            print " ".join([k for (k, v) in actions])
+        sys.exit(0)
+    matches = lazy_match(category, CATEGORIES)
+    # instantiate the command group object
+    category, fn = matches[0]
+    command_object = fn()
+    actions = methods_of(command_object)
+    if len(argv) < 1:
+        if hasattr(command_object, '__call__'):
+            action = ''
+            fn = command_object.__call__
+        else:
+            print script_name + " category action [<args>]"
+            print _("Available actions for %s category:") % category
+            for k, _v in actions:
+                print "\t%s" % k
+            sys.exit(2)
+    else:
+        action = argv.pop(0)
+        matches = lazy_match(action, actions)
+        action, fn = matches[0]
+
+    # For not decorated methods
+    options = getattr(fn, 'options', [])
+
+    usage = "%%prog %s %s <args> [options]" % (category, action)
+    parser = optparse.OptionParser(usage=usage)
+    for ar, kw in options:
+        parser.add_option(*ar, **kw)
+    (opts, fn_args) = parser.parse_args(argv)
+    fn_kwargs = vars(opts)
+
+    for k, v in fn_kwargs.items():
+        if v is None:
+            del fn_kwargs[k]
+        elif isinstance(v, basestring):
+            fn_kwargs[k] = v.decode('utf-8')
+        else:
+            fn_kwargs[k] = v
+
+    fn_args = [arg.decode('utf-8') for arg in fn_args]
+
+    # call the action with the remaining arguments
+    try:
+        fn(*fn_args, **fn_kwargs)
+        rpc.cleanup()
+        sys.exit(0)
+    except TypeError:
+        print _("Possible wrong number of arguments supplied")
+        print fn.__doc__
+        parser.print_help()
+        raise
+    except Exception:
+        print _("Command failed, please check log for more info")
+        raise
+
+if __name__ == '__main__':
+    main()
