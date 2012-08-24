@@ -134,7 +134,7 @@ Example::
 
 Create tables::
 
-	$ bm_db_sync
+	$ nova-bm-manage db sync
 
 
 Create Baremetal Instance Type
@@ -187,33 +187,33 @@ Ensure the NIC is PXE-enabled and the NIC is selected as a primary boot device i
 
 Next, register all the NICs except the PXE NIC specified in the first step.
 
-To register a baremetal node, use 'bm_node_create'.
-'bm_node_create' takes the parameters listed below.
+To register a baremetal node, use 'nova-bm-manage node create'.
+It takes the parameters listed below.
 
-* --service_host: baremetal nova-compute's hostname
-* --cpus=: number of CPU cores
+* --host: baremetal nova-compute's hostname
+* --cpus: number of CPU cores
 * --memory_mb: memory size in MegaBytes
 * --local_gb: local disk size in GigaBytes
 * --pm_address: IPMI address
 * --pm_user: IPMI username
 * --pm_password: IPMI password
-* --prov_mac: PXE NIC's MAC address
+* --prov_mac_address: PXE NIC's MAC address
 * --terminal_port: TCP port for ShellInABox. Each node must use unique TCP port. If you do not need console access, use 0.
 
 Example::
 
-	$ bm_node_create --service_host=bm1 --cpus=4 --memory_mb=6144 --local_gb=64 --pm_address=172.27.2.116 --pm_user=test --pm_password=password --prov_mac=98:4b:e1:67:9a:4c --terminal_port=8000
+	$ nova-bm-manage node create --host=bm1 --cpus=4 --memory_mb=6144 --local_gb=64 --pm_address=172.27.2.116 --pm_user=test --pm_password=password --prov_mac_address=98:4b:e1:67:9a:4c --terminal_port=8000
 
-To verify the node registration, run 'bm_node_list'::
+To verify the node registration, run 'nova-bm-manage node list'::
 
-	$ bm_node_list
+	$ nova-bm-manage node list
 	ID        SERVICE_HOST  INSTANCE_ID   CPUS    Memory    Disk      PM_Address        PM_User           TERMINAL_PORT  PROV_MAC            PROV_VLAN
 	1         bm1           None          4       6144      64        172.27.2.116      test              8000   98:4b:e1:67:9a:4c   None
 
-To register a common NIC, use 'bm_interface_create'.
-'bm_interface_create' takes the parameters listed below.
+To register a NIC, use 'nova-bm-manage interface create'.
+It takes the parameters listed below.
 
-* --bm_node_id: ID of the baremetal node owns this NIC (the first column of 'bm_node_list')
+* --node_id: ID of the baremetal node owns this NIC (the first column of 'nova-bm-manage node list')
 * --mac_address: this NIC's MAC address in the form of xx:xx:xx:xx:xx:xx
 * --datapath_id: datapath ID of OpenFlow switch this NIC is connected to
 * --port_no: OpenFlow port number this NIC is connected to
@@ -222,11 +222,11 @@ To register a common NIC, use 'bm_interface_create'.
 
 Example::
 
-	$ bm_interface_create --bm_node_id=1 --mac_address=98:4b:e1:67:9a:4e --datapath_id=0x123abc --port_no=24
+	$ nova-bm-manage interface create --node_id=1 --mac_address=98:4b:e1:67:9a:4e --datapath_id=0x123abc --port_no=24
 
-To verify the NIC registration, run 'bm_interface_list'::
+To verify the NIC registration, run 'nova-bm-manage interface list'::
 
-	$ bm_interface_list
+	$ nova-bm-manage interface list
 	ID        BM_NODE_ID        MAC_ADDRESS         DATAPATH_ID       PORT_NO
 	1         1                 98:4b:e1:67:9a:4e   0x123abc          24
 
