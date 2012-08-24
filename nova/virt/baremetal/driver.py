@@ -32,6 +32,7 @@ from nova.openstack.common import log as logging
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import db as bmdb
 from nova.virt import driver
+from nova.virt import firewall
 from nova.virt.libvirt import imagecache
 
 opts = [
@@ -44,9 +45,6 @@ opts = [
     cfg.StrOpt('baremetal_vif_driver',
                default='nova.virt.baremetal.vif_driver.BareMetalVIFDriver',
                help='Baremetal VIF driver.'),
-    cfg.StrOpt('baremetal_firewall_driver',
-                default='nova.virt.firewall.NoopFirewallDriver',
-                help='Baremetal firewall driver.'),
     cfg.StrOpt('baremetal_volume_driver',
                default='nova.virt.baremetal.volume_driver.LibvirtVolumeDriver',
                help='Baremetal volume driver.'),
@@ -71,6 +69,10 @@ FLAGS = flags.FLAGS
 FLAGS.register_opts(opts)
 
 LOG = logging.getLogger(__name__)
+
+DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
+    firewall.__name__,
+    firewall.NoopFirewallDriver.__name__)
 
 
 class NoSuitableBareMetalNode(exception.NovaException):
@@ -141,8 +143,8 @@ class BareMetalDriver(driver.ComputeDriver):
                 FLAGS.baremetal_driver)
         self._vif_driver = importutils.import_object(
                 FLAGS.baremetal_vif_driver)
-        self._firewall_driver = importutils.import_object(
-                FLAGS.baremetal_firewall_driver)
+        self._firewall_driver = firewall.load_driver(
+                default=DEFAULT_FIREWALL_DRIVER)
         self._volume_driver = importutils.import_object(
                 FLAGS.baremetal_volume_driver)
         self._image_cache_manager = imagecache.ImageCacheManager()
