@@ -140,21 +140,19 @@ def bm_node_get_by_instance_uuid(context, instance_uuid, session=None):
 def bm_node_create(context, values, session=None):
     if not session:
         session = get_session()
-    with session.begin():
-        bm_node_ref = models.BareMetalNode()
-        bm_node_ref.update(values)
-        bm_node_ref.save(session=session)
-        return bm_node_ref
+    bm_node_ref = models.BareMetalNode()
+    bm_node_ref.update(values)
+    bm_node_ref.save(session=session)
+    return bm_node_ref
 
 
 @require_admin_context
 def bm_node_update(context, bm_node_id, values, session=None):
     if not session:
         session = get_session()
-    with session.begin():
-        bm_node_ref = bm_node_get(context, bm_node_id, session=session)
-        bm_node_ref.update(values)
-        bm_node_ref.save(session=session)
+    bm_node_ref = bm_node_get(context, bm_node_id, session=session)
+    bm_node_ref.update(values)
+    bm_node_ref.save(session=session)
 
 
 @require_admin_context
@@ -177,12 +175,11 @@ def bm_pxe_ip_get_all(context, session=None):
 def bm_pxe_ip_create(context, address, server_address, session=None):
     if not session:
         session = get_session()
-    with session.begin():
-        ref = models.BareMetalPxeIp()
-        ref.address = address
-        ref.server_address = server_address
-        ref.save(session=session)
-        return ref
+    ref = models.BareMetalPxeIp()
+    ref.address = address
+    ref.server_address = server_address
+    ref.save(session=session)
+    return ref
 
 
 @require_admin_context
@@ -202,6 +199,23 @@ def bm_pxe_ip_destroy(context, ip_id, session=None):
     with session.begin():
         ip_ref = bm_pxe_ip_get(context, ip_id, session)
         session.delete(ip_ref)
+
+
+@require_admin_context
+def bm_pxe_ip_destroy_by_address(context, address, session=None):
+    # Delete physically since it has unique columns
+    if not session:
+        session = get_session()
+    with session.begin():
+        ip_ref = model_query(context, models.BareMetalPxeIp,
+                             read_deleted="no", session=session).\
+                         filter_by(address=address).\
+                         with_lockmode('update').\
+                         first()
+        if not ip_ref:
+            return None
+        session.delete(ip_ref)
+        return ip_ref
 
 
 @require_admin_context
@@ -292,14 +306,13 @@ def bm_interface_create(context, bm_node_id, address, datapath_id, port_no,
                         session=None):
     if not session:
         session = get_session()
-    with session.begin():
-        ref = models.BareMetalInterface()
-        ref.bm_node_id = bm_node_id
-        ref.address = address
-        ref.datapath_id = datapath_id
-        ref.port_no = port_no
-        ref.save(session=session)
-        return ref.id
+    ref = models.BareMetalInterface()
+    ref.bm_node_id = bm_node_id
+    ref.address = address
+    ref.datapath_id = datapath_id
+    ref.port_no = port_no
+    ref.save(session=session)
+    return ref.id
 
 
 @require_admin_context
@@ -341,15 +354,14 @@ def bm_deployment_create(context, key, image_path, pxe_config_path, root_mb,
                          swap_mb, session=None):
     if not session:
         session = get_session()
-    with session.begin():
-        ref = models.BareMetalDeployment()
-        ref.key = key
-        ref.image_path = image_path
-        ref.pxe_config_path = pxe_config_path
-        ref.root_mb = root_mb
-        ref.swap_mb = swap_mb
-        ref.save(session=session)
-        return ref.id
+    ref = models.BareMetalDeployment()
+    ref.key = key
+    ref.image_path = image_path
+    ref.pxe_config_path = pxe_config_path
+    ref.root_mb = root_mb
+    ref.swap_mb = swap_mb
+    ref.save(session=session)
+    return ref.id
 
 
 @require_admin_context

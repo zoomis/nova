@@ -116,6 +116,10 @@ def bm_pxe_ip_destroy(context, ip_id, session=None):
     return IMPL.bm_pxe_ip_destroy(context, ip_id, session=session)
 
 
+def bm_pxe_ip_destroy_by_address(context, address, session=None):
+    return IMPL.bm_pxe_ip_destroy_by_address(context, address, session=session)
+
+
 def bm_pxe_ip_get_all(context, session=None):
     return IMPL.bm_pxe_ip_get_all(context, session=session)
 
