@@ -68,5 +68,6 @@ setuptools.setup(name='nova',
                'bin/bm_node_list',
                'bin/bm_pxe_ip_create',
                'bin/bm_pxe_ip_list',
+               'bin/nova-bm-manage',
               ],
         py_modules=[])
