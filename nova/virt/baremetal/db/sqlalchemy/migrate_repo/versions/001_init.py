@@ -103,11 +103,15 @@ def upgrade(migrate_engine):
     bm_pxe_ips.create()
     bm_deployments.create()
 
-    Index('idx_service_host_deleted',
+    Index('idx_bm_nodes_service_host_deleted',
           bm_nodes.c.service_host, bm_nodes.c.deleted)\
           .create(migrate_engine)
-    Index('idx_instance_uuid_deleted',
+    Index('idx_bm_nodes_instance_uuid_deleted',
           bm_nodes.c.instance_uuid, bm_nodes.c.deleted)\
+          .create(migrate_engine)
+    Index('idx_bm_nodes_hmcld',
+          bm_nodes.c.service_host, bm_nodes.c.memory_mb, bm_nodes.c.cpus,
+          bm_nodes.c.local_gb, bm_nodes.c.deleted)\
           .create(migrate_engine)
 
 
