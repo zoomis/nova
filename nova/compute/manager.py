@@ -290,7 +290,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _get_rt(self, nodename):
         if not nodename:
-           nodename = ''
+            nodename = ''
         rt = self._rt_dict.get(nodename)
         if not rt:
             rt = resource_tracker.ResourceTracker(self.host, self.driver, nodename)
