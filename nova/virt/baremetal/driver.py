@@ -315,14 +315,10 @@ class BareMetalDriver(driver.ComputeDriver):
     def refresh_provider_fw_rules(self):
         self._firewall_driver.refresh_provider_fw_rules()
 
-    def _node_resources(self, ctxt, node_id):
+    def _node_resources(self, node):
         vcpus_used = 0
         memory_mb_used = 0
         local_gb_used = 0
-
-        node = bmdb.bm_node_get(ctxt, node_id)
-        if not node:
-            raise Exception()
 
         vcpus = node['cpus']
         memory_mb = node['memory_mb']
@@ -368,35 +364,21 @@ class BareMetalDriver(driver.ComputeDriver):
                }
         return dic
 
-    def _max_baremetal_resources(self, ctxt):
-        n = sched_utils.find_biggest_node(_get_baremetal_nodes(ctxt))
-        dic = {'vcpus': n['cpus'],
-               'memory_mb': n['memory_mb'],
-               'local_gb': n['local_gb'],
-               'vcpus_used': 0,
-               'memory_mb_used': 0,
-               'local_gb_used': 0,
-               }
-        return dic
-
     def refresh_instance_security_rules(self, instance):
         self._firewall_driver.refresh_instance_security_rules(instance)
 
     def get_available_resource(self):
-        context = nova_context.get_admin_context()
-        dic = self._max_baremetal_resources(context)
-        #dic = self._sum_baremetal_resources(ctxt)
-        dic['hypervisor_type'] = self.get_hypervisor_type()
-        dic['hypervisor_version'] = self.get_hypervisor_version()
-        dic['cpu_info'] = 'baremetal cpu'
-        return dic
+        raise exception.NovaException('should never called')
 
     # Instead of add new method, should add 'nodename' parameter to
     # get_available_resource()?
     def get_available_node_resource(self, nodename):
         context = nova_context.get_admin_context()
         node_id = int(nodename)
-        dic = self._node_resources(context, node_id)
+        node = bmdb.bm_node_get(context, node_id)
+        if not node:
+            raise Exception()
+        dic = self._node_resources(node)
         dic['hypervisor_type'] = self.get_hypervisor_type()
         dic['hypervisor_version'] = self.get_hypervisor_version()
         dic['cpu_info'] = 'baremetal cpu'
@@ -411,52 +393,23 @@ class BareMetalDriver(driver.ComputeDriver):
         self._firewall_driver.unfilter_instance(instance_ref,
                                                 network_info=network_info)
 
-    def _get_host_stats(self):
-        dic = self._max_baremetal_resources(nova_context.get_admin_context())
-        memory_total = dic['memory_mb'] * 1024 * 1024
-        memory_free = (dic['memory_mb'] - dic['memory_mb_used']) * 1024 * 1024
-        disk_total = dic['local_gb'] * 1024 * 1024 * 1024
-        disk_used = dic['local_gb_used'] * 1024 * 1024 * 1024
-
-        return {
-          'host_name-description': 'baremetal ' + FLAGS.host,
-          'host_hostname': FLAGS.host,
-          'host_memory_total': memory_total,
-          'host_memory_overhead': 0,
-          'host_memory_free': memory_free,
-          'host_memory_free_computed': memory_free,
-          'host_other_config': {},
-          'disk_available': disk_total - disk_used,
-          'disk_total': disk_total,
-          'disk_used': disk_used,
-          'host_name_label': FLAGS.host,
-          'cpu_arch': self._extra_specs.get('cpu_arch'),
-          'instance_type_extra_specs': self._extra_specs,
-          'supported_instances': self._supported_instances,
-          }
-
-    def update_host_status(self):
-        return self._get_host_stats()
-    
     def _create_node_cap(self, node):
-        return {
-          'node': node,
-          'cpu_arch': self._extra_specs.get('cpu_arch'),
-          'instance_type_extra_specs': self._extra_specs,
-          'supported_instances': self._supported_instances,
-          }
+        dic = self._node_resources(node)
+        dic['host'] = '%s/%s' % (FLAGS.host, node['id'])
+        dic['cpu_arch'] = self._extra_specs.get('cpu_arch')
+        dic['instance_type_extra_specs'] = self._extra_specs
+        dic['supported_instances'] = self._supported_instances
+        # TODO: put node's extra specs
+        return dic
 
     def get_host_stats(self, refresh=False):
-        caps = self._get_host_stats()
-        node_caps = []
+        caps = []
         context = nova_context.get_admin_context()
         nodes = bmdb.bm_node_get_all(context,
-                                     service_host=FLAGS.host,
-                                     sort=True)
+                                     service_host=FLAGS.host)
         for node in nodes:
             node_cap = self._create_node_cap(node)
-            node_caps.append(node_cap)
-        caps['nodes'] = node_caps
+            caps.append(node_cap)
         return caps
 
     def plug_vifs(self, instance, network_info):
