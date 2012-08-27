@@ -981,7 +981,7 @@ def quota_usage_get_all_by_project(context, project_id):
     return IMPL.quota_usage_get_all_by_project(context, project_id)
 
 
-def quota_usage_update(context, class_name, resource, in_use, reserved,
+def quota_usage_update(context, project_id, resource, in_use, reserved,
                        until_refresh):
     """Update a quota usage or raise if it does not exist."""
     return IMPL.quota_usage_update(context, project_id, resource,
@@ -1443,6 +1443,21 @@ def instance_type_get_by_flavor_id(context, id):
 def instance_type_destroy(context, name):
     """Delete an instance type."""
     return IMPL.instance_type_destroy(context, name)
+
+
+def instance_type_access_get_by_flavor_id(context, flavor_id):
+    """Get flavor access by flavor id."""
+    return IMPL.instance_type_access_get_by_flavor_id(context, flavor_id)
+
+
+def instance_type_access_add(context, flavor_id, project_id):
+    """Add flavor access for project."""
+    return IMPL.instance_type_access_add(context, flavor_id, project_id)
+
+
+def instance_type_access_remove(context, flavor_id, project_id):
+    """Remove flavor access for project."""
+    return IMPL.instance_type_access_remove(context, flavor_id, project_id)
 
 
 ####################

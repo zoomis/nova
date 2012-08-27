@@ -1756,29 +1756,30 @@ def instance_update_and_get_original(context, instance_uuid, values):
 def _instance_update(context, instance_uuid, values, copy_old_instance=False):
     session = get_session()
 
-    if utils.is_uuid_like(instance_uuid):
-        instance_ref = instance_get_by_uuid(context, instance_uuid,
-                                            session=session)
-    else:
+    if not utils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(instance_uuid)
 
-    if copy_old_instance:
-        old_instance_ref = copy.copy(instance_ref)
-    else:
-        old_instance_ref = None
-
-    metadata = values.get('metadata')
-    if metadata is not None:
-        instance_metadata_update(
-            context, instance_ref['uuid'], values.pop('metadata'), delete=True)
-
-    system_metadata = values.get('system_metadata')
-    if system_metadata is not None:
-        instance_system_metadata_update(
-             context, instance_ref['uuid'], values.pop('system_metadata'),
-             delete=True)
-
     with session.begin():
+        instance_ref = instance_get_by_uuid(context, instance_uuid,
+                                            session=session)
+
+        if copy_old_instance:
+            old_instance_ref = copy.copy(instance_ref)
+        else:
+            old_instance_ref = None
+
+        metadata = values.get('metadata')
+        if metadata is not None:
+            instance_metadata_update(context, instance_ref['uuid'],
+                                     values.pop('metadata'), True,
+                                     session=session)
+
+        system_metadata = values.get('system_metadata')
+        if system_metadata is not None:
+            instance_system_metadata_update(
+                 context, instance_ref['uuid'], values.pop('system_metadata'),
+                 delete=True, session=session)
+
         instance_ref.update(values)
         instance_ref.save(session=session)
 
@@ -3871,6 +3872,19 @@ def instance_type_get_all(context, inactive=False, filters=None):
         query = query.filter(
                 models.InstanceTypes.disabled == filters['disabled'])
 
+    if 'is_public' in filters and filters['is_public'] is not None:
+        the_filter = [models.InstanceTypes.is_public == filters['is_public']]
+        if filters['is_public'] and context.project_id is not None:
+            the_filter.extend([
+                models.InstanceTypes.projects.any(
+                    project_id=context.project_id, deleted=False)
+            ])
+        if len(the_filter) > 1:
+            query = query.filter(or_(*the_filter))
+        else:
+            query = query.filter(the_filter[0])
+        del filters['is_public']
+
     inst_types = query.order_by("name").all()
 
     return [_dict_with_extra_specs(i) for i in inst_types]
@@ -3935,6 +3949,71 @@ def instance_type_destroy(context, name):
                         'updated_at': literal_column('updated_at')})
 
 
+@require_context
+def _instance_type_access_query(context, session=None):
+    return model_query(context, models.InstanceTypeProjects, session=session,
+                       read_deleted="yes")
+
+
+@require_admin_context
+def instance_type_access_get_by_flavor_id(context, flavor_id):
+    """Get flavor access list by flavor id"""
+    instance_type_ref = _instance_type_get_query(context).\
+                    filter_by(flavorid=flavor_id).\
+                    first()
+
+    return [r for r in instance_type_ref.projects]
+
+
+@require_admin_context
+def instance_type_access_add(context, flavor_id, project_id):
+    """Add given tenant to the flavor access list"""
+    session = get_session()
+    with session.begin():
+        instance_type_ref = instance_type_get_by_flavor_id(context, flavor_id,
+                                                           session=session)
+        instance_type_id = instance_type_ref['id']
+        access_ref = _instance_type_access_query(context, session=session).\
+                        filter_by(instance_type_id=instance_type_id).\
+                        filter_by(project_id=project_id).first()
+
+        if not access_ref:
+            access_ref = models.InstanceTypeProjects()
+            access_ref.instance_type_id = instance_type_id
+            access_ref.project_id = project_id
+            access_ref.save(session=session)
+        elif access_ref.deleted:
+            access_ref.update({'deleted': False,
+                               'deleted_at': None})
+            access_ref.save(session=session)
+        else:
+            raise exception.FlavorAccessExists(flavor_id=flavor_id,
+                                               project_id=project_id)
+
+        return access_ref
+
+
+@require_admin_context
+def instance_type_access_remove(context, flavor_id, project_id):
+    """Remove given tenant from the flavor access list"""
+    session = get_session()
+    with session.begin():
+        instance_type_ref = instance_type_get_by_flavor_id(context, flavor_id,
+                                                           session=session)
+        instance_type_id = instance_type_ref['id']
+        access_ref = _instance_type_access_query(context, session=session).\
+                        filter_by(instance_type_id=instance_type_id).\
+                        filter_by(project_id=project_id).first()
+
+        if access_ref:
+            access_ref.update({'deleted': True,
+                               'deleted_at': timeutils.utcnow(),
+                               'updated_at': literal_column('updated_at')})
+        else:
+            raise exception.FlavorAccessNotFound(flavor_id=flavor_id,
+                                                 project_id=project_id)
+
+
 ########################
 # User-provided metadata
 
@@ -3945,8 +4024,9 @@ def _instance_metadata_get_query(context, instance_uuid, session=None):
 
 
 @require_context
-def instance_metadata_get(context, instance_uuid):
-    rows = _instance_metadata_get_query(context, instance_uuid).all()
+def instance_metadata_get(context, instance_uuid, session=None):
+    rows = _instance_metadata_get_query(context, instance_uuid,
+                                        session=session).all()
 
     result = {}
     for row in rows:
@@ -3979,12 +4059,14 @@ def instance_metadata_get_item(context, instance_uuid, key, session=None):
 
 
 @require_context
-def instance_metadata_update(context, instance_uuid, metadata, delete):
-    session = get_session()
-
+def instance_metadata_update(context, instance_uuid, metadata, delete,
+                             session=None):
+    if session is None:
+        session = get_session()
     # Set existing metadata to deleted if delete argument is True
     if delete:
-        original_metadata = instance_metadata_get(context, instance_uuid)
+        original_metadata = instance_metadata_get(context, instance_uuid,
+                                                  session=session)
         for meta_key, meta_value in original_metadata.iteritems():
             if meta_key not in metadata:
                 meta_ref = instance_metadata_get_item(context, instance_uuid,
@@ -4023,8 +4105,9 @@ def _instance_system_metadata_get_query(context, instance_uuid, session=None):
 
 
 @require_context
-def instance_system_metadata_get(context, instance_uuid):
-    rows = _instance_system_metadata_get_query(context, instance_uuid).all()
+def instance_system_metadata_get(context, instance_uuid, session=None):
+    rows = _instance_system_metadata_get_query(context, instance_uuid,
+                                               session=session).all()
 
     result = {}
     for row in rows:
@@ -4057,13 +4140,15 @@ def _instance_system_metadata_get_item(context, instance_uuid, key,
 
 
 @require_context
-def instance_system_metadata_update(context, instance_uuid, metadata, delete):
-    session = get_session()
+def instance_system_metadata_update(context, instance_uuid, metadata, delete,
+                                    session=None):
+    if session is None:
+        session = get_session()
 
     # Set existing metadata to deleted if delete argument is True
     if delete:
         original_metadata = instance_system_metadata_get(
-                context, instance_uuid)
+                context, instance_uuid, session=session)
         for meta_key, meta_value in original_metadata.iteritems():
             if meta_key not in metadata:
                 meta_ref = _instance_system_metadata_get_item(
