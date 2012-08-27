@@ -30,12 +30,6 @@ FLAGS = flags.FLAGS
 
 class BaremetalTILERATestCase(test.TestCase):
 
-    def setUp(self):
-        super(BaremetalTILERATestCase, self).setUp()
-
-    def tearDown(self):
-        super(BaremetalTILERATestCase, self).tearDown()
-
     def test_init(self):
         self.flags(
                 tile_monitor="x",
