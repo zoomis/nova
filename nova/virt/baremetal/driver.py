@@ -75,10 +75,6 @@ DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     firewall.NoopFirewallDriver.__name__)
 
 
-class NoSuitableBareMetalNode(exception.NovaException):
-    message = _("Failed to find suitable BareMetalNode")
-
-
 def _get_baremetal_nodes(context):
     nodes = bmdb.bm_node_get_all(context, service_host=FLAGS.host)
     return nodes
@@ -324,33 +320,6 @@ class BareMetalDriver(driver.ComputeDriver):
             vcpus_used = node['cpus']
             memory_mb_used = node['memory_mb']
             local_gb_used = node['local_gb']
-
-        dic = {'vcpus': vcpus,
-               'memory_mb': memory_mb,
-               'local_gb': local_gb,
-               'vcpus_used': vcpus_used,
-               'memory_mb_used': memory_mb_used,
-               'local_gb_used': local_gb_used,
-               }
-        return dic
-
-    def _sum_baremetal_resources(self, ctxt):
-        vcpus = 0
-        vcpus_used = 0
-        memory_mb = 0
-        memory_mb_used = 0
-        local_gb = 0
-        local_gb_used = 0
-        for node in _get_baremetal_nodes(ctxt):
-            if node['registration_status'] != 'done':
-                continue
-            vcpus += node['cpus']
-            memory_mb += node['memory_mb']
-            local_gb += node['local_gb']
-            if node['instance_uuid']:
-                vcpus_used += node['cpus']
-                memory_mb_used += node['memory_mb']
-                local_gb_used += node['local_gb']
 
         dic = {'vcpus': vcpus,
                'memory_mb': memory_mb,
