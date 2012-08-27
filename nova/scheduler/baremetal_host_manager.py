@@ -33,6 +33,19 @@ class BaremetalNodeState(host_manager.HostState):
     previously used and lock down access.
     """
 
+    def update_from_compute_node(self, compute):
+        """Update information about a host from its compute_node info."""
+        all_ram_mb = compute['memory_mb']
+
+        free_disk_mb = compute['free_disk_gb'] * 1024
+        free_ram_mb = compute['free_ram_mb']
+
+        self.free_ram_mb = free_ram_mb
+        self.total_usable_ram_mb = all_ram_mb
+        self.free_disk_mb = free_disk_mb
+        self.vcpus_total = compute['vcpus']
+        self.vcpus_used = compute['vcpus_used']
+
     def consume_from_instance(self, instance):
         self.free_ram_mb = 0
         self.free_disk_mb = 0
