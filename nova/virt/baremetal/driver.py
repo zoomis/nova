@@ -29,7 +29,6 @@ from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
-from nova.scheduler import baremetal_utils as sched_utils
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import db as bmdb
 from nova.virt import driver
