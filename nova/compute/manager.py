@@ -245,6 +245,13 @@ def _get_image_meta(context, image_ref):
     return image_service.show(context, image_id)
 
 
+def _get_nodename(instance):
+    for m in instance.get('system_metadata', []):
+        if m['key'] == 'node':
+            return m['value']
+    return None
+
+
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
@@ -295,7 +302,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         (old_ref, instance_ref) = self.db.instance_update_and_get_original(
                 context, instance_uuid, kwargs)
-        nodename = instance_ref['system_metadata'].get('node', '')
+        nodename = _get_nodename(instance_ref)
         self._get_rt(nodename).update_load_stats_for_instance(context, old_ref,
                 instance_ref)
         notifications.send_update(context, old_ref, instance_ref)
@@ -533,8 +540,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                     extra_usage_info=extra_usage_info)
             network_info = self._allocate_network(context, instance,
                                                   requested_networks)
-            nodename = instance.get('system_metadata', {}).get('node', '')
-            rt = self.rt_dict.get(nodename)
+            nodename = _get_nodename(instance)
+            rt = self._get_rt(nodename)
             try:
                 memory_mb_limit = filter_properties.get('memory_mb_limit',
                         None)
@@ -933,9 +940,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                                          task_state=None,
                                          terminated_at=timeutils.utcnow())
         self.db.instance_destroy(context, instance_uuid)
-        system_meta = self.db.instance_system_metadata_get(context,
-            instance_uuid)
-        nodename = system_meta.get('node', '')
+        if 'system_metadata' in instance:
+            nodename = _get_nodename(instance)
+        else:
+            system_meta = self.db.instance_system_metadata_get(context,
+                instance_uuid)
+            nodename = None
+            for m in system_meta:
+                if m['key'] == 'node':
+                    nodename = m['value']
+                    break
         # mark resources free
         rt = self._get_rt(nodename)
         rt.free_resources(context)
@@ -2767,7 +2781,11 @@ class ComputeManager(manager.SchedulerDependentManager):
             # This will grab info about the host and queue it
             # to be sent to the Schedulers.
             capabilities = self.driver.get_host_stats(refresh=True)
-            capabilities['host_ip'] = FLAGS.my_ip
+            if not isinstance(capabilities, list):
+                capabilities['host_ip'] = FLAGS.my_ip
+            else:
+                for c in capabilities:
+                    c['host_ip'] = FLAGS.my_ip
             self.update_service_capabilities(capabilities)
 
     @manager.periodic_task(ticks_between_runs=10)

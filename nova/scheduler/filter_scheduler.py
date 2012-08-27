@@ -198,12 +198,14 @@ class FilterScheduler(driver.Scheduler):
                         payload)
 
         system_metadata = None
-        if weighted_host.node is not None:
-            system_metadata = {'node': weighted_host.node}
+        if weighted_host.host_state.nodename is not None:
+            system_metadata = {'node': weighted_host.host_state.nodename}
 
         updated_instance = driver.instance_update_db(context,
                 instance_uuid, weighted_host.host_state.host,
                 system_metadata=system_metadata)
+        if not updated_instance.get('system_metadata'):
+            updated_instance['system_metadata'] = db.instance_system_metadata_get(context, instance_uuid)
 
         self.compute_rpcapi.run_instance(context, instance=updated_instance,
                 host=weighted_host.host_state.host,

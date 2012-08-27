@@ -172,21 +172,19 @@ class BareMetalDriver(driver.ComputeDriver):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
-        def n0(v):
-            if v is None:
-                return 0
-            return v
-        instance_local_gb = n0(instance.get('root_gb')) \
-                            + n0(instance.get('ephemeral_gb'))
-        node = bmdb.bm_node_find_free(context,
-                                      FLAGS.service_host,
-                                      cpus=instance['vcpus'],
-                                      memory_mb=instance['memory_mb'],
-                                      local_gb=instance_local_gb)
-
+        nodename = None
+        for m in instance['system_metadata']:
+            if m['key'] == 'node':
+                nodename = m['value']
+                break
+        if not nodename:
+            raise exception.NovaException("")
+        node_id = int(nodename)
+        node = bmdb.bm_node_get(context, node_id)
         if not node:
-            LOG.info("no suitable baremetal node found")
-            raise NoSuitableBareMetalNode()
+            raise exception.NovaException("")
+        if node['instance_uuid']:
+            raise exception.NovaException("")
 
         _update_baremetal_state(context, node, instance,
                                 baremetal_states.BUILDING)

@@ -176,8 +176,8 @@ class HostState(object):
         return True
 
     def __repr__(self):
-        return ("host '%s': free_ram_mb:%s free_disk_mb:%s" %
-                (self.host, self.free_ram_mb, self.free_disk_mb))
+        return ("host '%s' / nodename '%s': free_ram_mb:%s free_disk_mb:%s" %
+                (self.host, self.nodename, self.free_ram_mb, self.free_disk_mb))
 
 
 class HostManager(object):
@@ -270,13 +270,15 @@ class HostManager(object):
                 continue
             host = service['host']
             if compute['nodename']:
-                host = '%s/%s' % (host, compute['nodename'])
-            capabilities = self.service_states.get(host, None)
+                host_node = '%s/%s' % (host, compute['nodename'])
+            else:
+                host_node = host
+            capabilities = self.service_states.get(host_node, None)
             host_state = self.host_state_cls(host, topic,
                     capabilities=capabilities,
                     service=dict(service.iteritems()),
                     nodename=compute['nodename'])
             host_state.update_from_compute_node(compute)
-            host_state_map[host] = host_state
+            host_state_map[host_node] = host_state
 
         return host_state_map
