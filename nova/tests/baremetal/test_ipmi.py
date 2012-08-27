@@ -34,12 +34,6 @@ FLAGS = flags.FLAGS
 
 class BaremetalIPMITestCase(test.TestCase):
 
-    def setUp(self):
-        super(BaremetalIPMITestCase, self).setUp()
-
-    def tearDown(self):
-        super(BaremetalIPMITestCase, self).tearDown()
-
     def test_ipmi(self):
         n1 = utils.new_bm_node(
                 pm_address='10.1.1.1',

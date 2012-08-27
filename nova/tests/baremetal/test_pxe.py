@@ -30,12 +30,6 @@ FLAGS = flags.FLAGS
 
 class BaremetalPXETestCase(test.TestCase):
 
-    def setUp(self):
-        super(BaremetalPXETestCase, self).setUp()
-
-    def tearDown(self):
-        super(BaremetalPXETestCase, self).tearDown()
-
     def test_init(self):
         self.flags(
                 baremetal_deploy_kernel="x",

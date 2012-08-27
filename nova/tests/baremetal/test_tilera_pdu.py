@@ -30,12 +30,6 @@ FLAGS = flags.FLAGS
 
 class BaremetalPduTestCase(test.TestCase):
 
-    def setUp(self):
-        super(BaremetalPduTestCase, self).setUp()
-
-    def tearDown(self):
-        super(BaremetalPduTestCase, self).tearDown()
-
     def test_get_power_manager(self):
         n1 = utils.new_bm_node(
                 pm_address='10.1.1.1',

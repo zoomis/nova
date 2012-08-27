@@ -24,9 +24,6 @@ from nova.virt.baremetal import db
 
 class BareMetalNodesTestCase(base.BMDBTestCase):
 
-    def setUp(self):
-        super(BareMetalNodesTestCase, self).setUp()
-
     def _create_nodes(self):
         nodes = [
             utils.new_bm_node(pm_address='0', service_host="host1",
