@@ -281,13 +281,22 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self.resource_tracker = resource_tracker.ResourceTracker(self.host,
                 self.driver)
+        self._rt_dict = {}
 
+    def _get_rt(self, node):
+        rt = self._rt_dict.get(node)
+        if not rt:
+            rt = resource_tracker.ResourceTracker(self.host, self.driver, node)
+            self._rt_dict[node] = rt
+        return rt
+    
     def _instance_update(self, context, instance_uuid, **kwargs):
         """Update an instance in the database using kwargs as value."""
 
         (old_ref, instance_ref) = self.db.instance_update_and_get_original(
                 context, instance_uuid, kwargs)
-        self.resource_tracker.update_load_stats_for_instance(context, old_ref,
+        node = instance_ref['system_metadata'].get('node', '')
+        self._get_rt(node).update_load_stats_for_instance(context, old_ref,
                 instance_ref)
         notifications.send_update(context, old_ref, instance_ref)
 
@@ -524,10 +533,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                     extra_usage_info=extra_usage_info)
             network_info = self._allocate_network(context, instance,
                                                   requested_networks)
+            node = instance.get('system_metadata', {}).get('node', '')
+            rt = self.rt_dict.get(node)
             try:
                 memory_mb_limit = filter_properties.get('memory_mb_limit',
                         None)
-                with self.resource_tracker.instance_resource_claim(context,
+                with rt.instance_resource_claim(context,
                         instance, memory_mb_limit=memory_mb_limit):
                     block_device_info = self._prep_block_device(context,
                             instance)
@@ -924,8 +935,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.db.instance_destroy(context, instance_uuid)
         system_meta = self.db.instance_system_metadata_get(context,
             instance_uuid)
+        node = system_meta.get('node', '')
         # mark resources free
-        self.resource_tracker.free_resources(context)
+        rt = self._get_rt(node)
+        rt.free_resources(context)
         self._notify_about_instance_usage(context, instance, "delete.end",
                 system_metadata=system_meta)
 
@@ -2924,7 +2937,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         :param context: security context
         """
-        self.resource_tracker.update_available_resource(context)
+        for nodename in self.driver.get_available_nodes():
+            self._get_rt(nodename).update_available_resource(context)
 
     def _add_instance_fault_from_exc(self, context, instance_uuid, fault,
                                     exc_info=None):

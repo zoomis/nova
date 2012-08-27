@@ -120,9 +120,10 @@ class ResourceTracker(object):
     are built and destroyed.
     """
 
-    def __init__(self, host, driver):
+    def __init__(self, host, driver, node):
         self.host = host
         self.driver = driver
+        self.node = node
         self.compute_node = None
         self.next_claim_id = 1
         self.claims = {}
@@ -310,7 +311,7 @@ class ResourceTracker(object):
         """
         # ask hypervisor for its view of resource availability &
         # usage:
-        resources = self.driver.get_available_resource()
+        resources = self.driver.get_available_resource(self.node)
         if not resources:
             # The virt driver does not support this function
             LOG.warn(_("Virt driver does not support "
@@ -347,11 +348,15 @@ class ResourceTracker(object):
 
             compute_node_ref = service['compute_node']
             if compute_node_ref:
-                self.compute_node = compute_node_ref[0]
+                for cn in compute_node_ref:
+                    if self.compute_node['nodename'] == self.node:
+                        self.compute_node = cn
+                        break
 
         if not self.compute_node:
             # Need to create the ComputeNode record:
             resources['service_id'] = service['id']
+            resources['nodename'] = self.node
             self.compute_node = self._create(context, resources)
             LOG.info(_('Compute_service record created for %s ') % self.host)
 

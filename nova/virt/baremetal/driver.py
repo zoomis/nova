@@ -172,8 +172,17 @@ class BareMetalDriver(driver.ComputeDriver):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
-        node = sched_utils.find_suitable_node(instance,
-                                              _get_baremetal_nodes(context))
+        def n0(v):
+            if v is None:
+                return 0
+            return v
+        instance_local_gb = n0(instance.get('root_gb')) \
+                            + n0(instance.get('ephemeral_gb'))
+        node = bmdb.bm_node_find_free(context,
+                                      FLAGS.service_host,
+                                      cpus=instance['vcpus'],
+                                      memory_mb=instance['memory_mb'],
+                                      local_gb=instance_local_gb)
 
         if not node:
             LOG.info("no suitable baremetal node found")
@@ -306,6 +315,34 @@ class BareMetalDriver(driver.ComputeDriver):
     def refresh_provider_fw_rules(self):
         self._firewall_driver.refresh_provider_fw_rules()
 
+    def _node_resources(self, ctxt, node_id):
+        vcpus_used = 0
+        memory_mb_used = 0
+        local_gb_used = 0
+
+        node = bmdb.bm_node_get(ctxt, node_id)
+        if not node:
+            raise Exception()
+
+        if node['registration_status'] != 'done':
+            continue
+        vcpus = node['cpus']
+        memory_mb = node['memory_mb']
+        local_gb = node['local_gb']
+        if node['instance_uuid']:
+            vcpus_used = node['cpus']
+            memory_mb_used = node['memory_mb']
+            local_gb_used = node['local_gb']
+
+        dic = {'vcpus': vcpus,
+               'memory_mb': memory_mb,
+               'local_gb': local_gb,
+               'vcpus_used': vcpus_used,
+               'memory_mb_used': memory_mb_used,
+               'local_gb_used': local_gb_used,
+               }
+        return dic
+
     def _sum_baremetal_resources(self, ctxt):
         vcpus = 0
         vcpus_used = 0
@@ -347,10 +384,14 @@ class BareMetalDriver(driver.ComputeDriver):
     def refresh_instance_security_rules(self, instance):
         self._firewall_driver.refresh_instance_security_rules(instance)
 
-    def get_available_resource(self):
+    def get_available_resource(self, node=None):
         context = nova_context.get_admin_context()
-        dic = self._max_baremetal_resources(context)
-        #dic = self._sum_baremetal_resources(ctxt)
+        if not node:
+            dic = self._max_baremetal_resources(context)
+            #dic = self._sum_baremetal_resources(ctxt)
+        else:
+            node_id = int(node)
+            dic = self._node_resources(context, node_id)
         dic['hypervisor_type'] = self.get_hypervisor_type()
         dic['hypervisor_version'] = self.get_hypervisor_version()
         dic['cpu_info'] = 'baremetal cpu'
@@ -391,11 +432,26 @@ class BareMetalDriver(driver.ComputeDriver):
 
     def update_host_status(self):
         return self._get_host_stats()
+    
+    def _create_node_cap(self, node):
+        return {
+          'node': node,
+          'cpu_arch': self._extra_specs.get('cpu_arch'),
+          'instance_type_extra_specs': self._extra_specs,
+          'supported_instances': self._supported_instances,
+          }
 
     def get_host_stats(self, refresh=False):
         caps = self._get_host_stats()
+        node_caps = []
         context = nova_context.get_admin_context()
-        caps['nodes'] = _get_baremetal_nodes(context)
+        nodes = bmdb.bm_node_get_all(context,
+                                     service_host=FLAGS.host,
+                                     sort=True)
+        for node in nodes:
+            node_cap = self._create_node_cap(node)
+            node_caps.append(node_cap)
+        caps['nodes'] = node_caps
         return caps
 
     def plug_vifs(self, instance, network_info):
@@ -425,3 +481,6 @@ class BareMetalDriver(driver.ComputeDriver):
     def get_console_output(self, instance):
         node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
         return self.baremetal_nodes.get_console_output(node, instance)
+
+    def get_available_nodes(self):
+        return [str(n['id']) for n in _get_baremetal_nodes()]
