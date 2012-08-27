@@ -120,10 +120,10 @@ class ResourceTracker(object):
     are built and destroyed.
     """
 
-    def __init__(self, host, driver, node):
+    def __init__(self, host, driver, nodename):
         self.host = host
         self.driver = driver
-        self.node = node
+        self.nodename = nodename
         self.compute_node = None
         self.next_claim_id = 1
         self.claims = {}
@@ -311,11 +311,17 @@ class ResourceTracker(object):
         """
         # ask hypervisor for its view of resource availability &
         # usage:
-        resources = self.driver.get_available_resource(self.node)
+        if not self.nodename:
+            resources = self.driver.get_available_resource()
+        else:
+            resources = self.driver.get_available_node_resource(self.nodename)
         if not resources:
             # The virt driver does not support this function
+            method = 'get_available_resource'
+            if self.nodename:
+                method = 'get_available_node_resource'
             LOG.warn(_("Virt driver does not support "
-                "'get_available_resource'  Compute tracking is disabled."))
+                "'%s'  Compute tracking is disabled.") % method)
             self.compute_node = None
             self.claims = {}
             return
@@ -349,14 +355,14 @@ class ResourceTracker(object):
             compute_node_ref = service['compute_node']
             if compute_node_ref:
                 for cn in compute_node_ref:
-                    if self.compute_node['nodename'] == self.node:
+                    if cn['nodename'] == self.nodename:
                         self.compute_node = cn
                         break
 
         if not self.compute_node:
             # Need to create the ComputeNode record:
             resources['service_id'] = service['id']
-            resources['nodename'] = self.node
+            resources['nodename'] = self.nodename
             self.compute_node = self._create(context, resources)
             LOG.info(_('Compute_service record created for %s ') % self.host)
 

@@ -281,11 +281,13 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self._rt_dict = {}
 
-    def _get_rt(self, node):
-        rt = self._rt_dict.get(node)
+    def _get_rt(self, nodename):
+        if not nodename:
+           nodename = ''
+        rt = self._rt_dict.get(nodename)
         if not rt:
-            rt = resource_tracker.ResourceTracker(self.host, self.driver, node)
-            self._rt_dict[node] = rt
+            rt = resource_tracker.ResourceTracker(self.host, self.driver, nodename)
+            self._rt_dict[nodename] = rt
         return rt
     
     def _instance_update(self, context, instance_uuid, **kwargs):
@@ -293,8 +295,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         (old_ref, instance_ref) = self.db.instance_update_and_get_original(
                 context, instance_uuid, kwargs)
-        node = instance_ref['system_metadata'].get('node', '')
-        self._get_rt(node).update_load_stats_for_instance(context, old_ref,
+        nodename = instance_ref['system_metadata'].get('node', '')
+        self._get_rt(nodename).update_load_stats_for_instance(context, old_ref,
                 instance_ref)
         notifications.send_update(context, old_ref, instance_ref)
 
@@ -531,8 +533,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                     extra_usage_info=extra_usage_info)
             network_info = self._allocate_network(context, instance,
                                                   requested_networks)
-            node = instance.get('system_metadata', {}).get('node', '')
-            rt = self.rt_dict.get(node)
+            nodename = instance.get('system_metadata', {}).get('node', '')
+            rt = self.rt_dict.get(nodename)
             try:
                 memory_mb_limit = filter_properties.get('memory_mb_limit',
                         None)
@@ -933,9 +935,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.db.instance_destroy(context, instance_uuid)
         system_meta = self.db.instance_system_metadata_get(context,
             instance_uuid)
-        node = system_meta.get('node', '')
+        nodename = system_meta.get('node', '')
         # mark resources free
-        rt = self._get_rt(node)
+        rt = self._get_rt(nodename)
         rt.free_resources(context)
         self._notify_about_instance_usage(context, instance, "delete.end",
                 system_metadata=system_meta)

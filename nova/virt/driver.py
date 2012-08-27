@@ -325,7 +325,7 @@ class ComputeDriver(object):
         """Power on the specified instance"""
         raise NotImplementedError()
 
-    def get_available_resource(self, node=None):
+    def get_available_resource(self):
         """Retrieve resource information.
 
         This method is called when nova-compute launches, and
@@ -679,3 +679,6 @@ class ComputeDriver(object):
 
     def get_available_nodes(self):
         return ['']
+
+    def get_available_node_resource(self, nodename):
+        raise NotImplementedError()

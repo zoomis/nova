@@ -324,12 +324,10 @@ class BareMetalDriver(driver.ComputeDriver):
         if not node:
             raise Exception()
 
-        if node['registration_status'] != 'done':
-            continue
         vcpus = node['cpus']
         memory_mb = node['memory_mb']
         local_gb = node['local_gb']
-        if node['instance_uuid']:
+        if node['registration_status'] != 'done' or node['instance_uuid']:
             vcpus_used = node['cpus']
             memory_mb_used = node['memory_mb']
             local_gb_used = node['local_gb']
@@ -384,14 +382,21 @@ class BareMetalDriver(driver.ComputeDriver):
     def refresh_instance_security_rules(self, instance):
         self._firewall_driver.refresh_instance_security_rules(instance)
 
-    def get_available_resource(self, node=None):
+    def get_available_resource(self):
         context = nova_context.get_admin_context()
-        if not node:
-            dic = self._max_baremetal_resources(context)
-            #dic = self._sum_baremetal_resources(ctxt)
-        else:
-            node_id = int(node)
-            dic = self._node_resources(context, node_id)
+        dic = self._max_baremetal_resources(context)
+        #dic = self._sum_baremetal_resources(ctxt)
+        dic['hypervisor_type'] = self.get_hypervisor_type()
+        dic['hypervisor_version'] = self.get_hypervisor_version()
+        dic['cpu_info'] = 'baremetal cpu'
+        return dic
+
+    # Instead of add new method, should add 'nodename' parameter to
+    # get_available_resource()?
+    def get_available_node_resource(self, nodename):
+        context = nova_context.get_admin_context()
+        node_id = int(nodename)
+        dic = self._node_resources(context, node_id)
         dic['hypervisor_type'] = self.get_hypervisor_type()
         dic['hypervisor_version'] = self.get_hypervisor_version()
         dic['cpu_info'] = 'baremetal cpu'
@@ -483,4 +488,5 @@ class BareMetalDriver(driver.ComputeDriver):
         return self.baremetal_nodes.get_console_output(node, instance)
 
     def get_available_nodes(self):
-        return [str(n['id']) for n in _get_baremetal_nodes()]
+        context = nova_context.get_admin_context()
+        return [str(n['id']) for n in _get_baremetal_nodes(context)]
