@@ -55,8 +55,13 @@ class BareMetalNode(BASE, models.NovaBase):
     prov_vlan_id = Column(Integer)
     terminal_port = Column(Integer)
     __table_args__ = (
-            Index('idx_service_host_deleted', 'service_host', 'deleted'),
-            Index('idx_instance_uuid_deleted', 'instance_uuid', 'deleted'),
+            Index('idx_bm_nodes_service_host_deleted',
+                  'service_host', 'deleted'),
+            Index('idx_bm_nodes_instance_uuid_deleted',
+                  'instance_uuid', 'deleted'),
+            # maybe enough...
+            Index('idx_bm_nodes_hmcld', 'service_host', 'memory_mb',
+                  'cpus', 'local_gb', 'deleted'),
             )
 
 
