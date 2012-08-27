@@ -279,8 +279,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
 
-        self.resource_tracker = resource_tracker.ResourceTracker(self.host,
-                self.driver)
         self._rt_dict = {}
 
     def _get_rt(self, node):
