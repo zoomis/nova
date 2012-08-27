@@ -98,9 +98,10 @@ class HostState(object):
     previously used and lock down access.
     """
 
-    def __init__(self, host, topic, capabilities=None, service=None):
+    def __init__(self, host, topic, capabilities=None, service=None, nodename=None):
         self.host = host
         self.topic = topic
+        self.nodename = nodename
 
         # Read-only capability dicts
 
@@ -268,10 +269,13 @@ class HostManager(object):
                 LOG.warn(_("No service for compute ID %s") % compute['id'])
                 continue
             host = service['host']
+            if compute['nodename']:
+                host = '%s/%s' % (host, compute['nodename'])
             capabilities = self.service_states.get(host, None)
             host_state = self.host_state_cls(host, topic,
                     capabilities=capabilities,
-                    service=dict(service.iteritems()))
+                    service=dict(service.iteritems()),
+                    nodename=compute['nodename'])
             host_state.update_from_compute_node(compute)
             host_state_map[host] = host_state
 

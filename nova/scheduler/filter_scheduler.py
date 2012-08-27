@@ -21,6 +21,7 @@ Weighing Functions.
 
 import operator
 
+from nova import db
 from nova import exception
 from nova import flags
 from nova.openstack.common import importutils
@@ -196,8 +197,13 @@ class FilterScheduler(driver.Scheduler):
                         'scheduler.run_instance.scheduled', notifier.INFO,
                         payload)
 
+        system_metadata = None
+        if weighted_host.node is not None:
+            system_metadata = {'node': weighted_host.node}
+
         updated_instance = driver.instance_update_db(context,
-                instance_uuid, weighted_host.host_state.host)
+                instance_uuid, weighted_host.host_state.host,
+                system_metadata=system_metadata)
 
         self.compute_rpcapi.run_instance(context, instance=updated_instance,
                 host=weighted_host.host_state.host,
