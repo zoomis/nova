@@ -217,6 +217,8 @@ class SchedulerDependentManager(Manager):
 
     def update_service_capabilities(self, capabilities):
         """Remember these capabilities to send on next periodic update."""
+        if not isinstance(capabilities, list):
+            capabilities = [capabilities]
         self.last_capabilities = capabilities
 
     @periodic_task
@@ -224,5 +226,8 @@ class SchedulerDependentManager(Manager):
         """Pass data back to the scheduler at a periodic interval."""
         if self.last_capabilities:
             LOG.debug(_('Notifying Schedulers of capabilities ...'))
-            self.scheduler_rpcapi.update_service_capabilities(context,
-                    self.service_name, self.host, self.last_capabilities)
+            for capability_item in self.last_capabilities:
+                name = capability_item.get('service_name', self.service_name)
+                host = capability_item.get('host', self.host)
+                self.scheduler_rpcapi.update_service_capabilities(context,
+                        name, host, capability_item)
