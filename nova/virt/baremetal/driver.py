@@ -76,15 +76,15 @@ DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
 
 
 class NodeNotSpecified(exception.NovaException):
-    pass
+    message = _("Node is not specified.")
 
 
 class NodeNotFound(exception.NovaException):
-    pass
+    message = _("Node %(nodename) is not found in bare-metal db.")
 
 
 class NodeInUse(exception.NovaException):
-    pass
+    message = _("Node %(nodename) is used by %(instance_uuid)s.")
 
 
 def _get_baremetal_nodes(context):
@@ -189,9 +189,9 @@ class BareMetalDriver(driver.ComputeDriver):
         node_id = int(nodename)
         node = bmdb.bm_node_get(context, node_id)
         if not node:
-            raise NodeNotFound()
+            raise NodeNotFound(nodename=nodename)
         if node['instance_uuid']:
-            raise NodeInUse()
+            raise NodeInUse(nodename=nodename, instance_uuid=instance['uuid'])
 
         _update_baremetal_state(context, node, instance,
                                 baremetal_states.BUILDING)
