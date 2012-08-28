@@ -142,20 +142,21 @@ def _cache_image_x(context, target, image_id,
                                   user_id, project_id)
 
 
-def _build_pxe_config(deployment_id, deployment_key, iscsi_iqn,
-                      deploy_aki_path, deploy_ari_path, aki_path, ari_path,
+def _build_pxe_config(deployment_id, deployment_key, deployment_iscsi_iqn,
+                      deployment_aki_path, deployment_ari_path,
+                      aki_path, ari_path,
                       iscsi_portal):
     # 'default deploy' will be replaced to 'default boot' by bm_deploy_server
     pxeconf = "default deploy\n"
     pxeconf += "\n"
 
     pxeconf += "label deploy\n"
-    pxeconf += "kernel %s\n" % deploy_aki_path
+    pxeconf += "kernel %s\n" % deployment_aki_path
     pxeconf += "append"
-    pxeconf += " initrd=%s" % deploy_ari_path
+    pxeconf += " initrd=%s" % deployment_ari_path
     pxeconf += " selinux=0"
     pxeconf += " disk=cciss/c0d0,sda,hda"
-    pxeconf += " iscsi_target_iqn=%s" % iscsi_iqn
+    pxeconf += " iscsi_target_iqn=%s" % deployment_iscsi_iqn
     pxeconf += " deployment_id=%s" % deployment_id
     pxeconf += " deployment_key=%s" % deployment_key
     if FLAGS.baremetal_pxe_append_params:
@@ -460,15 +461,19 @@ class PXE(object):
         deployment_id = bmdb.bm_deployment_create(context, deployment_key,
                                                   image_path, pxe_config_path,
                                                   root_mb, swap_mb)
-        iscsi_iqn = "iqn-%s" % str(instance['uuid'])
+        deployment_iscsi_iqn = "iqn-%s" % str(instance['uuid'])
         iscsi_portal = None
         if FLAGS.baremetal_pxe_append_iscsi_portal:
             if pxe_ip:
                 iscsi_portal = pxe_ip['server_address']
-        pxeconf = _build_pxe_config(deployment_id, deployment_key, iscsi_iqn,
-            tftp_paths[0], tftp_paths[1], tftp_paths[2], tftp_paths[3],
-            iscsi_portal)
-
+        pxeconf = _build_pxe_config(deployment_id,
+                                    deployment_key,
+                                    deployment_iscsi_iqn,
+                                    deployment_aki_path=tftp_paths[0],
+                                    deployment_ari_path=tftp_paths[1],
+                                    aki_path=tftp_paths[2],
+                                    ari_path=tftp_paths[3],
+                                    iscsi_portal=iscsi_portal)
         utils.ensure_tree(pxe_config_dir)
         libvirt_utils.write_to_file(pxe_config_path, pxeconf)
 
