@@ -154,7 +154,8 @@ class BaremetalDriverSpawnTestCase(test.TestCase):
         self.instance['system_metadata'] = [
                 _system_metadata('node', str(self.node_id)),
                 ]
-        db.bm_node_update(self.context, self.node_id, {'instance_uuid': 'something'})
+        db.bm_node_update(self.context, self.node_id,
+                          {'instance_uuid': 'something'})
         self.assertRaises(
                 bm_driver.NodeInUse,
                 self.driver.spawn,

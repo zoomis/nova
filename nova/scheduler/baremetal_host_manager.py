@@ -52,7 +52,8 @@ class BaremetalNodeState(host_manager.HostState):
         self.vcpus_used = self.vcpus_total
 
 
-def new_host_state(self, host, topic, capabilities=None, service=None, nodename=None):
+def new_host_state(self, host, topic, capabilities=None, service=None,
+                   nodename=None):
     """Returns an instance of BaremetalHostState or HostState according to
     capabilities. If 'baremetal_driver' is in capabilities, it returns an
     instance of BaremetalHostState. If not, returns an instance of HostState.
@@ -62,9 +63,11 @@ def new_host_state(self, host, topic, capabilities=None, service=None, nodename=
     cap = capabilities.get(topic, {})
     cap_extra_specs = cap.get('instance_type_extra_specs', {})
     if bool(cap_extra_specs.get('baremetal_driver')):
-        return BaremetalNodeState(host, topic, capabilities, service, nodename=nodename)
+        return BaremetalNodeState(host, topic, capabilities, service,
+                                  nodename=nodename)
     else:
-        return host_manager.HostState(host, topic, capabilities, service, nodename=nodename)
+        return host_manager.HostState(host, topic, capabilities, service,
+                                      nodename=nodename)
 
 
 class BaremetalHostManager(host_manager.HostManager):

@@ -98,7 +98,8 @@ class HostState(object):
     previously used and lock down access.
     """
 
-    def __init__(self, host, topic, capabilities=None, service=None, nodename=None):
+    def __init__(self, host, topic, capabilities=None, service=None,
+                 nodename=None):
         self.host = host
         self.topic = topic
         self.nodename = nodename
@@ -177,7 +178,8 @@ class HostState(object):
 
     def __repr__(self):
         return ("host '%s' / nodename '%s': free_ram_mb:%s free_disk_mb:%s" %
-                (self.host, self.nodename, self.free_ram_mb, self.free_disk_mb))
+                (self.host, self.nodename,
+                 self.free_ram_mb, self.free_disk_mb))
 
 
 class HostManager(object):

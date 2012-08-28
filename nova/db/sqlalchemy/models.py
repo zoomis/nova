@@ -164,6 +164,7 @@ class ComputeNode(BASE, NovaBase):
 
     nodename = Column(String(255))
 
+
 class ComputeNodeStat(BASE, NovaBase):
     """Stats related to the current workload of a compute host that are
     intended to aid in making scheduler decisions."""

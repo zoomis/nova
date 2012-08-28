@@ -288,7 +288,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         except sqlexc.DetachedInstanceError:
             if not context:
                 context = nova.context.get_admin_context()
-            smd = self.db.instance_system_metadata_get(context, instance['uuid'])
+            smd = self.db.instance_system_metadata_get(context,
+                                                       instance['uuid'])
             return smd.get('node')
         else:
             for m in ls:
@@ -301,10 +302,12 @@ class ComputeManager(manager.SchedulerDependentManager):
             nodename = ''
         rt = self._rt_dict.get(nodename)
         if not rt:
-            rt = resource_tracker.ResourceTracker(self.host, self.driver, nodename)
+            rt = resource_tracker.ResourceTracker(self.host,
+                                                  self.driver,
+                                                  nodename)
             self._rt_dict[nodename] = rt
         return rt
-    
+
     def _get_default_resource_tracker(self):
         return self._get_rt('')
 
@@ -313,7 +316,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     resource_tracker = property(_get_default_resource_tracker,
                                 _set_default_resource_tracker)
-    
+
     def _instance_update(self, context, instance_uuid, **kwargs):
         """Update an instance in the database using kwargs as value."""
 

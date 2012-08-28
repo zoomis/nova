@@ -78,8 +78,10 @@ DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
 class NodeNotSpecified(exception.NovaException):
     pass
 
+
 class NodeNotFound(exception.NovaException):
     pass
+
 
 class NodeInUse(exception.NovaException):
     pass
@@ -375,7 +377,7 @@ class BareMetalDriver(driver.ComputeDriver):
         dic['cpu_arch'] = self._extra_specs.get('cpu_arch')
         dic['instance_type_extra_specs'] = self._extra_specs
         dic['supported_instances'] = self._supported_instances
-        # TODO: put node's extra specs
+        # TODO(NTTdocomo): put node's extra specs here
         return dic
 
     def get_host_stats(self, refresh=False):
