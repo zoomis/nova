@@ -75,6 +75,16 @@ DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     firewall.NoopFirewallDriver.__name__)
 
 
+class NodeNotSpecified(exception.NovaException):
+    pass
+
+class NodeNotFound(exception.NovaException):
+    pass
+
+class NodeInUse(exception.NovaException):
+    pass
+
+
 def _get_baremetal_nodes(context):
     nodes = bmdb.bm_node_get_all(context, service_host=FLAGS.host)
     return nodes
@@ -173,13 +183,13 @@ class BareMetalDriver(driver.ComputeDriver):
                 nodename = m['value']
                 break
         if not nodename:
-            raise exception.NovaException("")
+            raise NodeNotSpecified()
         node_id = int(nodename)
         node = bmdb.bm_node_get(context, node_id)
         if not node:
-            raise exception.NovaException("")
+            raise NodeNotFound()
         if node['instance_uuid']:
-            raise exception.NovaException("")
+            raise NodeInUse()
 
         _update_baremetal_state(context, node, instance,
                                 baremetal_states.BUILDING)
