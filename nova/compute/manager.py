@@ -42,6 +42,7 @@ import time
 import traceback
 
 from eventlet import greenthread
+from sqlalchemy.orm import exc as sqlexc
 
 from nova import block_device
 from nova import compute
@@ -245,13 +246,6 @@ def _get_image_meta(context, image_ref):
     return image_service.show(context, image_id)
 
 
-def _get_nodename(instance):
-    for m in instance.get('system_metadata', []):
-        if m['key'] == 'node':
-            return m['value']
-    return None
-
-
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
@@ -288,6 +282,20 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self._rt_dict = {}
 
+    def _get_nodename(self, instance, context=None):
+        try:
+            ls = instance.get('system_metadata', [])
+        except sqlexc.DetachedInstanceError:
+            if not context:
+                context = nova.context.get_admin_context()
+            smd = self.db.instance_system_metadata_get(context, instance['uuid'])
+            return smd.get('node')
+        else:
+            for m in ls:
+                if m['key'] == 'node':
+                    return m['value']
+            return None
+
     def _get_rt(self, nodename):
         if not nodename:
             nodename = ''
@@ -297,12 +305,21 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._rt_dict[nodename] = rt
         return rt
     
+    def _get_default_resource_tracker(self):
+        return self._get_rt('')
+
+    def _set_default_resource_tracker(self, rt):
+        self._rt_dict[''] = rt
+
+    resource_tracker = property(_get_default_resource_tracker,
+                                _set_default_resource_tracker)
+    
     def _instance_update(self, context, instance_uuid, **kwargs):
         """Update an instance in the database using kwargs as value."""
 
         (old_ref, instance_ref) = self.db.instance_update_and_get_original(
                 context, instance_uuid, kwargs)
-        nodename = _get_nodename(instance_ref)
+        nodename = self._get_nodename(instance_ref, context=context)
         self._get_rt(nodename).update_load_stats_for_instance(context, old_ref,
                 instance_ref)
         notifications.send_update(context, old_ref, instance_ref)
@@ -540,7 +557,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     extra_usage_info=extra_usage_info)
             network_info = self._allocate_network(context, instance,
                                                   requested_networks)
-            nodename = _get_nodename(instance)
+            nodename = self._get_nodename(instance, context=context)
             rt = self._get_rt(nodename)
             try:
                 memory_mb_limit = filter_properties.get('memory_mb_limit',
@@ -940,16 +957,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                          task_state=None,
                                          terminated_at=timeutils.utcnow())
         self.db.instance_destroy(context, instance_uuid)
-        if 'system_metadata' in instance:
-            nodename = _get_nodename(instance)
-        else:
-            system_meta = self.db.instance_system_metadata_get(context,
-                instance_uuid)
-            nodename = None
-            for m in system_meta:
-                if m['key'] == 'node':
-                    nodename = m['value']
-                    break
+        system_meta = self.db.instance_system_metadata_get(context,
+            instance_uuid)
+        nodename = system_meta.get('node')
         # mark resources free
         rt = self._get_rt(nodename)
         rt.free_resources(context)

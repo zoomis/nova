@@ -120,7 +120,7 @@ class ResourceTracker(object):
     are built and destroyed.
     """
 
-    def __init__(self, host, driver, nodename):
+    def __init__(self, host, driver, nodename=None):
         self.host = host
         self.driver = driver
         self.nodename = nodename
@@ -355,7 +355,7 @@ class ResourceTracker(object):
             compute_node_ref = service['compute_node']
             if compute_node_ref:
                 for cn in compute_node_ref:
-                    if cn['nodename'] == self.nodename:
+                    if cn.get('nodename') == self.nodename:
                         self.compute_node = cn
                         break
 
