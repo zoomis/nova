@@ -30,6 +30,8 @@ import nova.flags as flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 
+from nova.db.sqlalchemy.session import add_regexp_listener
+from nova.db.sqlalchemy.session import debug_mysql_do_query
 from nova.db.sqlalchemy.session import get_maker
 from nova.db.sqlalchemy.session import is_db_connection_error
 from nova.db.sqlalchemy.session import ping_listener
@@ -99,6 +101,13 @@ def get_engine():
             if not FLAGS.sqlite_synchronous:
                 sqlalchemy.event.listen(_ENGINE, 'connect',
                                         synchronous_switch_listener)
+            sqlalchemy.event.listen(_ENGINE, 'connect', add_regexp_listener)
+
+        if (FLAGS.sql_connection_trace and
+                _ENGINE.dialect.dbapi.__name__ == 'MySQLdb'):
+            import MySQLdb.cursors
+            _do_query = debug_mysql_do_query()
+            setattr(MySQLdb.cursors.BaseCursor, '_do_query', _do_query)
 
         try:
             _ENGINE.connect()
