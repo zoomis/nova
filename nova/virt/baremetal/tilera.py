@@ -172,7 +172,7 @@ class TILERA(object):
         network_info = var['network_info']
 
         ami_id = str(image_meta['id'])
-        libvirt_utils.ensure_tree(image_root)
+        utils.ensure_tree(image_root)
         image_path = os.path.join(image_root, 'disk')
         LOG.debug("fetching image id=%s target=%s", ami_id, image_path)
 

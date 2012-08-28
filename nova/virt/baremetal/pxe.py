@@ -207,7 +207,7 @@ def _start_per_host_pxe_server(tftp_root, vlan_id,
 
     shutil.copyfile(FLAGS.baremetal_pxelinux_path,
                     os.path.join(tftp_root, 'pxelinux.0'))
-    libvirt_utils.ensure_tree(os.path.join(tftp_root, 'pxelinux.cfg'))
+    utils.ensure_tree(os.path.join(tftp_root, 'pxelinux.cfg'))
 
     _start_dnsmasq(interface=pxe_interface,
                    tftp_root=tftp_root,
@@ -375,7 +375,7 @@ class PXE(object):
         network_info = var['network_info']
 
         ami_id = str(image_meta['id'])
-        libvirt_utils.ensure_tree(image_root)
+        utils.ensure_tree(image_root)
         image_path = os.path.join(image_root, 'disk')
         LOG.debug("fetching image id=%s target=%s", ami_id, image_path)
 
@@ -416,13 +416,13 @@ class PXE(object):
                   (ari_id, 'ramdisk'),
                   ]
 
-        libvirt_utils.ensure_tree(tftp_root)
+        utils.ensure_tree(tftp_root)
         if FLAGS.baremetal_pxe_vlan_per_host:
             tftp_paths = [i[1] for i in images]
         else:
             tftp_paths = [os.path.join(str(instance['uuid']), i[1])
                     for i in images]
-            libvirt_utils.ensure_tree(
+            utils.ensure_tree(
                     os.path.join(tftp_root, str(instance['uuid'])))
 
         LOG.debug("tftp_paths=%s", tftp_paths)
@@ -469,7 +469,7 @@ class PXE(object):
             tftp_paths[0], tftp_paths[1], tftp_paths[2], tftp_paths[3],
             iscsi_portal)
 
-        libvirt_utils.ensure_tree(pxe_config_dir)
+        utils.ensure_tree(pxe_config_dir)
         libvirt_utils.write_to_file(pxe_config_path, pxeconf)
 
         if FLAGS.baremetal_pxe_vlan_per_host:
