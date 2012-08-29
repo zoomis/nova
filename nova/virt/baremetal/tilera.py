@@ -199,8 +199,9 @@ class TILERA(object):
         disk_path = os.path.join(image_root, 'disk')
         image_path = tftp_root + "/disk_" + str(node['id'])
         target_path = tftp_root + "/fs_" + str(node['id'])
-        utils.execute('sudo', 'mv', disk_path, image_path)
-        utils.execute('sudo', 'mount', '-o', 'loop', image_path, target_path)
+        utils.execute('mv', disk_path, image_path, run_as_root=True)
+        utils.execute('mount', '-o', 'loop', image_path, target_path,
+                      run_as_root=True)
 
         root_mb = instance['root_gb'] * 1024
 
@@ -216,10 +217,10 @@ class TILERA(object):
     def deactivate_bootloader(self, var, context, node, instance):
         tftp_root = var['tftp_root']
         image_path = tftp_root + "/disk_" + str(node['id'])
-        utils.execute('sudo', '/usr/sbin/rpc.mountd')
+        utils.execute('/usr/sbin/rpc.mountd', run_as_root=True)
         try:
-            utils.execute('sudo', 'umount', '-f', image_path)
-            utils.execute('sudo', 'rm', '-f', image_path)
+            utils.execute('umount', '-f', image_path, run_as_root=True)
+            utils.execute('rm', '-f', image_path, run_as_root=True)
         except Exception:
             LOG.debug(_("rootfs is already removed"))
 
