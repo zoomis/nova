@@ -63,7 +63,7 @@ class Pdu(object):
         time.sleep(5)
         file = open(tile_output, "r")
         out = file.readline().find("Unreachable")
-        utils.execute('sudo', 'rm', tile_output)
+        utils.execute('rm', tile_output, run_as_root=True)
         return out
 
     def activate_node(self):

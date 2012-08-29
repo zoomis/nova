@@ -58,7 +58,6 @@ setuptools.setup(name='nova',
                'bin/nova-volume-usage-audit',
                'bin/nova-xvpvncproxy',
                'bin/bm_deploy_server',
-               'bin/bm_kill_dnsmasq',
                'bin/nova-bm-manage',
               ],
         py_modules=[])
