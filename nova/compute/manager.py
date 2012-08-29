@@ -561,6 +561,13 @@ class ComputeManager(manager.SchedulerDependentManager):
             network_info = self._allocate_network(context, instance,
                                                   requested_networks)
             nodename = self._get_nodename(instance, context=context)
+            if nodename is None:
+                nodename = self.driver.get_nodename_for_new_instance(context,
+                                                                     instance)
+                self.db.instance_system_metadata_update(
+                        context, instance['uuid'],
+                        {'node': nodename},
+                        delete=False)
             rt = self._get_rt(nodename)
             try:
                 memory_mb_limit = filter_properties.get('memory_mb_limit',

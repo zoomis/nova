@@ -87,6 +87,10 @@ class NodeInUse(exception.NovaException):
     message = _("Node %(nodename) is used by %(instance_uuid)s.")
 
 
+class NoSuitableNode(exception.NovaException):
+    message = _("No node is suitable to run %(instance_uuid)s.")
+
+
 def _get_baremetal_nodes(context):
     nodes = bmdb.bm_node_get_all(context, service_host=FLAGS.host)
     return nodes
@@ -421,3 +425,19 @@ class BareMetalDriver(driver.ComputeDriver):
     def get_available_nodes(self):
         context = nova_context.get_admin_context()
         return [str(n['id']) for n in _get_baremetal_nodes(context)]
+
+    def get_nodename_for_new_instance(self, context, instance):
+        def none_to_0(x):
+            if x is None:
+                return 0
+            else:
+                return x
+        local_gb = none_to_0(instance.get('root_gb')) + \
+                    none_to_0(instance.get('ephemeral_gb'))
+        node = bmdb.bm_node_find_free(context, FLAGS.host,
+                                      memory_mb=instance['memory_mb'],
+                                      cpus=instance['vcpus'],
+                                      local_gb=local_gb)
+        if not node:
+            raise NoSuitableNode(instance_uuid=instance['uuid'])
+        return str(node['id'])

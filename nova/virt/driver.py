@@ -682,3 +682,6 @@ class ComputeDriver(object):
 
     def get_available_node_resource(self, nodename):
         raise NotImplementedError()
+
+    def get_nodename_for_new_instance(self, context, instance):
+        return None
