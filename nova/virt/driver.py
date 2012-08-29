@@ -685,3 +685,6 @@ class ComputeDriver(object):
 
     def get_nodename_for_new_instance(self, context, instance):
         return None
+
+    def get_claim_class(self):
+        return None

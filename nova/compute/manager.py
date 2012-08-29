@@ -302,9 +302,11 @@ class ComputeManager(manager.SchedulerDependentManager):
             nodename = ''
         rt = self._rt_dict.get(nodename)
         if not rt:
+            claim_class = self.driver.get_claim_class()
             rt = resource_tracker.ResourceTracker(self.host,
                                                   self.driver,
-                                                  nodename)
+                                                  nodename=nodename,
+                                                  claim_class=claim_class)
             self._rt_dict[nodename] = rt
         return rt
 

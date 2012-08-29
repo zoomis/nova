@@ -22,6 +22,7 @@ A driver for Bare-metal platform.
 """
 
 from nova.compute import power_state
+from nova.compute import resource_tracker
 from nova import context as nova_context
 from nova import db
 from nova import exception
@@ -89,6 +90,25 @@ class NodeInUse(exception.NovaException):
 
 class NoSuitableNode(exception.NovaException):
     message = _("No node is suitable to run %(instance_uuid)s.")
+
+
+class BareMetalClaim(resource_tracker.Claim):
+    def _apply(self, resources, sign=1):
+        if sign < 0:
+            ratio = 0
+        else:
+            ratio = 1
+        mem = resources.get('memory_mb', 2147483647)
+        disk = resources.get('local_gb', 2147483647)
+        print mem
+        print ratio
+        values = {}
+        values['memory_mb_used'] = mem * ratio
+        values['free_ram_mb'] = mem * (1 - ratio)
+        values['local_gb_used'] = disk * ratio
+        values['free_disk_gb'] = disk * (1 - ratio)
+        print values
+        return values
 
 
 def _get_baremetal_nodes(context):
@@ -441,3 +461,6 @@ class BareMetalDriver(driver.ComputeDriver):
         if not node:
             raise NoSuitableNode(instance_uuid=instance['uuid'])
         return str(node['id'])
+
+    def get_claim_class(self):
+        return BareMetalClaim

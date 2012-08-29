@@ -213,3 +213,34 @@ class BaremetalDriverTestCase(test_virt_drivers._VirtDriverTestCase):
         self.assertEqual(es['baremetal_driver'],
                          'nova.virt.baremetal.fake.Fake')
         self.assertEqual(len(es), 5)
+
+
+class BareMetalClaimTestCase(test.TestCase):
+    def setUp(self):
+        super(BareMetalClaimTestCase, self).setUp()
+        self.claim = bm_driver.BareMetalClaim(claim_id=1,
+                                              memory_mb=2,
+                                              disk_gb=3,
+                                              timeout=100000)
+        self.resources = {'memory_mb': 2048,
+                          'memory_mb_used': 0,
+                          'free_ram_mb': 2048,
+                          'local_gb': 64,
+                          'local_gb_used': 0,
+                          'free_disk_gb': 64,
+                          }
+
+    def test_consume(self):
+        r = self.claim._apply(self.resources)
+        self.assertEqual(r['memory_mb_used'], 2048)
+        self.assertEqual(r['free_ram_mb'], 0)
+        self.assertEqual(r['local_gb_used'], 64)
+        self.assertEqual(r['free_disk_gb'], 0)
+        return r
+
+    def test_release(self):
+        r = self.claim._apply(self.resources, sign=-1)
+        self.assertEqual(r['memory_mb_used'], 0)
+        self.assertEqual(r['free_ram_mb'], 2048)
+        self.assertEqual(r['local_gb_used'], 0)
+        self.assertEqual(r['free_disk_gb'], 64)
