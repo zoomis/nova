@@ -53,9 +53,6 @@ pxe_opts = [
     cfg.StrOpt('baremetal_dnsmasq_lease_dir',
                default='/var/lib/nova/baremetal/dnsmasq',
                help='path to directory stores leasefiles of dnsmasq'),
-    cfg.StrOpt('baremetal_kill_dnsmasq_path',
-               default='bm_kill_dnsmasq',
-               help='path to bm_kill_dnsmasq'),
     cfg.StrOpt('baremetal_deploy_kernel',
                help='kernel image ID used in deployment phase'),
     cfg.StrOpt('baremetal_deploy_ramdisk',
@@ -222,9 +219,7 @@ def _stop_per_host_pxe_server(tftp_root, vlan_id):
 
     dnsmasq_pid = _dnsmasq_pid(pxe_interface)
     if dnsmasq_pid:
-        utils.execute(FLAGS.baremetal_kill_dnsmasq_path,
-                      str(dnsmasq_pid),
-                      run_as_root=True)
+        utils.execute('kill', '-TERM', str(dnsmasq_pid), run_as_root=True)
     _unlink_without_raise(_dnsmasq_pid_path(pxe_interface))
     _unlink_without_raise(_dnsmasq_lease_path(pxe_interface))
 
