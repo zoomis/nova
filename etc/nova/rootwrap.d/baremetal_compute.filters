@@ -1,0 +1,42 @@
+# nova-rootwrap command filters for compute nodes
+# This file should be owned by (and only-writeable by) the root user
+
+[Filters]
+# nova/virt/baremetal/ipmi.py: 'ipmitool', ..
+ipmitool: CommandFilter, /usr/bin/ipmitool, root
+
+# nova/virt/baremetal/pxe.py: 'ip', 'address', 'add', ..
+# nova/virt/baremetal/pxe.py: 'ip', 'route', 'add', ..
+# nova/virt/baremetal/vlan.py: 'ip', 'link', 'show', 'dev', device,
+# nova/virt/baremetal/vlan.py: 'ip', 'link', 'set', parent_interface, 'up'
+# nova/virt/baremetal/vlan.py: 'ip', 'link', 'set', vlan_interface, 'address,..
+# nova/virt/baremetal/vlan.py: 'ip', 'link', 'set', vlan_interface, 'up'
+# nova/virt/baremetal/vlan.py: 'ip', 'link', 'set', vlan_interface, 'down'
+ip: CommandFilter, /sbin/ip, root
+
+# nova/virt/baremetal/pxe.py: 'kill', '-TERM', str(dnsmasq_pid)
+kill_dnsmasq: KillFilter, root, /usr/sbin/dnsmasq, -15, -TERM
+
+# nova/virt/baremetal/tilera.py: 'mv', disk_path, image_path
+mv: CommandFilter, /bin/mv, root
+
+# nova/virt/baremetal/tilera.py: 'mount', '-o', 'loop', image_path, target_path,
+mount: CommandFilter, /bin/mount, root
+
+# nova/virt/baremetal/tilera.py: '/usr/sbin/rpc.mountd'
+rpc.mountd: CommandFilter, /usr/sbin/rpc.mountd, root
+
+# nova/virt/baremetal/tilera.py: 'umount', '-f', image_path
+umount: CommandFilter, /bin/umount, root
+
+# nova/virt/baremetal/tilera.py: 'rm', '-f', image_path
+# nova/virt/baremetal/tilera_pdu.py: 'rm', tile_output
+rm: CommandFilter, /bin/rm, root
+
+# nova/virt/baremetal/vlan.py: 'vconfig', 'set_name_type', ..
+# nova/virt/baremetal/vlan.py: 'vconfig', 'add', parent_interface, vlan_num
+# nova/virt/baremetal/vlan.py: 'vconfig', 'rem', vlan_interface
+vconfig: CommandFilter, /sbin/vconfig, root
+
+# nova/virt/baremetal/volume_driver.py: 'tgtadm', '--lld', 'iscsi', ...
+tgtadm: CommandFilter, /usr/sbin/tgtadm, root
