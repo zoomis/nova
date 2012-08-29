@@ -917,7 +917,9 @@ def bool_from_str(val):
     try:
         return True if int(val) else False
     except ValueError:
-        return val.lower() == 'true'
+        return val.lower() == 'true' or \
+               val.lower() == 'yes' or \
+               val.lower() == 'y'
 
 
 def is_valid_ipv4(address):
@@ -1225,15 +1227,6 @@ def strcmp_const_time(s1, s2):
     return result == 0
 
 
-def sys_platform_translate(arch):
-    """Translate cpu architecture into supported platforms."""
-    if (arch[0] == 'i' and arch[1].isdigit() and arch[2:4] == '86'):
-        arch = 'i686'
-    elif arch.startswith('arm'):
-        arch = 'arm'
-    return arch
-
-
 def walk_class_hierarchy(clazz, encountered=None):
     """Walk class hierarchy, yielding most derived classes first"""
     if not encountered:
@@ -1272,3 +1265,18 @@ class UndoManager(object):
                 LOG.exception(msg, **kwargs)
 
             self._rollback()
+
+
+def ensure_tree(path):
+    """Create a directory (and any ancestor directories required)
+
+    :param path: Directory to create
+    """
+    try:
+        os.makedirs(path)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST:
+            if not os.path.isdir(path):
+                raise
+        else:
+            raise
