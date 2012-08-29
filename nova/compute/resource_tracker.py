@@ -120,7 +120,7 @@ class ResourceTracker(object):
     are built and destroyed.
     """
 
-    def __init__(self, host, driver, nodename=None):
+    def __init__(self, host, driver, nodename=None, claim_class=None):
         self.host = host
         self.driver = driver
         self.nodename = nodename
@@ -128,6 +128,9 @@ class ResourceTracker(object):
         self.next_claim_id = 1
         self.claims = {}
         self.stats = importutils.import_object(FLAGS.compute_stats_class)
+        if not claim_class:
+            claim_class = Claim
+        self.claim_class = claim_class
 
     def resource_claim(self, context, *args, **kwargs):
         claim = self.begin_resource_claim(context, *args, **kwargs)
@@ -232,7 +235,8 @@ class ResourceTracker(object):
             return None
 
         claim_id = self._get_next_id()
-        c = Claim(claim_id, memory_mb, disk_gb, timeout, *args, **kwargs)
+        c = self.claim_class(claim_id, memory_mb, disk_gb, timeout,
+                             *args, **kwargs)
 
         # adjust compute node usage values and save so scheduler will see it:
         values = c.apply_claim(self.compute_node)
