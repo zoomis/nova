@@ -2977,8 +2977,12 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         :param context: security context
         """
+        nodenames_to_remove = set(self._rt_dict.keys())
         for nodename in self.driver.get_available_nodes():
             self._get_rt(nodename).update_available_resource(context)
+            nodenames_to_remove.discard(nodename)
+        for nodename in nodenames_to_remove:
+            self._rt_dict.pop(nodename, None)
 
     def _add_instance_fault_from_exc(self, context, instance_uuid, fault,
                                     exc_info=None):
