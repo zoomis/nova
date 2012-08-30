@@ -5009,4 +5009,3 @@ class MultiNodeComputeTestCase(test.TestCase):
         self.compute.update_available_resource(ctx)
         self.assertEqual(sorted(self.compute._rt_dict.keys()),
                          ['A', 'B', 'Z'])
-        
