@@ -379,7 +379,7 @@ class BareMetalDriver(driver.ComputeDriver):
         node_id = int(nodename)
         node = bmdb.bm_node_get(context, node_id)
         if not node:
-            raise Exception()
+            raise NodeNotFound(nodename=nodename)
         dic = self._node_resources(node)
         dic['hypervisor_type'] = self.get_hypervisor_type()
         dic['hypervisor_version'] = self.get_hypervisor_version()
