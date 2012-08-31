@@ -158,7 +158,7 @@ def deploy_work(address, port, iqn, lun, image_path, pxe_config_path, root_mb,
     root_part = "%s-part1" % dev
     swap_part = "%s-part2" % dev
 
-    mb = 1024 * 1024    
+    mb = 1024 * 1024
     image_byte = os.path.getsize(image_path)
     image_mb = int((image_byte + mb - 1) / mb)
     if image_mb > root_mb:
