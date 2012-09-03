@@ -401,6 +401,9 @@ class BareMetalDriver(driver.ComputeDriver):
         dic['cpu_arch'] = self._extra_specs.get('cpu_arch')
         dic['instance_type_extra_specs'] = self._extra_specs
         dic['supported_instances'] = self._supported_instances
+        dic['required_extra_specs'] = {
+            'cpu_arch': self._extra_specs.get('cpu_arch')
+            }
         # TODO(NTTdocomo): put node's extra specs here
         return dic
 
