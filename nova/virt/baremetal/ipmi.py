@@ -205,7 +205,7 @@ class Ipmi(object):
         if console_pid:
             utils.execute('kill', str(console_pid),
                           run_as_root=True,
-                          check_exit_code=[0, 1])
+                          check_exit_code=False)
         _unlink_without_raise(self._console_pidfile(node_id))
 
     def _console_pidfile(self, node_id):
