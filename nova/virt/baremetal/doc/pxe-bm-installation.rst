@@ -105,7 +105,7 @@ Set these flags in nova.conf::
 	power_manager = nova.virt.baremetal.ipmi.Ipmi
 
 	# instance_type_extra_specs this baremetal compute
-	instanse_type_extra_specs = cpu_arch:x86_64
+	instance_type_extra_specs = cpu_arch:x86_64
 
 	# TFTP root
 	baremetal_tftp_root = /tftpboot
