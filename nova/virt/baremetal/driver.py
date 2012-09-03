@@ -306,6 +306,22 @@ class BareMetalDriver(driver.ComputeDriver):
 
         _update_baremetal_state(ctx, node, None, state)
 
+    def power_off(self, instance):
+        """Power off the specified instance."""
+        node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
+        if not node:
+            raise exception.InstanceNotFound(instance_id=instance['uuid'])
+        pm = get_power_manager(node)
+        pm.deactivate_node()
+
+    def power_on(self, instance):
+        """Power on the specified instance"""
+        node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
+        if not node:
+            raise exception.InstanceNotFound(instance_id=instance['uuid'])
+        pm = get_power_manager(node)
+        pm.activate_node()
+
     def get_volume_connector(self, instance):
         return self._volume_driver.get_volume_connector(instance)
 
