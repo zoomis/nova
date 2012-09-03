@@ -92,7 +92,7 @@ Set these flags in nova.conf::
 	power_manager = nova.virt.baremetal.tilera_pdu.Pdu
 
 	# instance_type_extra_specs this baremetal compute
-	instanse_type_extra_specs = cpu_arch:tilepro64
+	instance_type_extra_specs = cpu_arch:tilepro64
 
 	# TFTP root
 	baremetal_tftp_root = /tftpboot
