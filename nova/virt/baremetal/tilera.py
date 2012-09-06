@@ -259,7 +259,7 @@ class TILERA(object):
         """
         tftp_root = var['tftp_root']
         rule_path = tftp_root + "/iptables_rule"
-        if user_data != None:
+        if user_data is not None:
             open_ip = base64.b64decode(user_data)
             utils.execute(rule_path, node_ip, open_ip)
 
