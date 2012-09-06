@@ -193,7 +193,6 @@ class BareMetalDriver(driver.ComputeDriver):
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
         node = _find_suitable_baremetal_node(context, instance)
-
         if not node:
             LOG.info("no suitable baremetal node found")
             raise NoSuitableBareMetalNode()

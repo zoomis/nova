@@ -565,7 +565,9 @@ class LibvirtDriver(driver.ComputeDriver):
             def fullpath(name):
                 return os.path.join(vg, name)
 
-            disk_names = filter(belongs_to_instance, os.listdir(vg))
+            logical_volumes = libvirt_utils.list_logical_volumes(vg)
+
+            disk_names = filter(belongs_to_instance, logical_volumes)
             disks = map(fullpath, disk_names)
             return disks
         return []
@@ -784,8 +786,7 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             metadata['disk_format'] = image_format
 
-        if 'container_format' in base:
-            metadata['container_format'] = base['container_format']
+        metadata['container_format'] = base.get('container_format', 'bare')
 
         # Find the disk
         xml_desc = virt_dom.XMLDesc(0)
@@ -1261,17 +1262,17 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if disk_images['kernel_id']:
             fname = disk_images['kernel_id']
-            raw('kernel').cache(fn=libvirt_utils.fetch_image,
+            raw('kernel').cache(fetch_func=libvirt_utils.fetch_image,
                                 context=context,
-                                fname=fname,
+                                filename=fname,
                                 image_id=disk_images['kernel_id'],
                                 user_id=instance['user_id'],
                                 project_id=instance['project_id'])
             if disk_images['ramdisk_id']:
                 fname = disk_images['ramdisk_id']
-                raw('ramdisk').cache(fn=libvirt_utils.fetch_image,
+                raw('ramdisk').cache(fetch_func=libvirt_utils.fetch_image,
                                      context=context,
-                                     fname=fname,
+                                     filename=fname,
                                      image_id=disk_images['ramdisk_id'],
                                      user_id=instance['user_id'],
                                      project_id=instance['project_id'])
@@ -1286,9 +1287,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if not self._volume_in_mapping(self.default_root_device,
                                        block_device_info):
-            image('disk').cache(fn=libvirt_utils.fetch_image,
+            image('disk').cache(fetch_func=libvirt_utils.fetch_image,
                                 context=context,
-                                fname=root_fname,
+                                filename=root_fname,
                                 size=size,
                                 image_id=disk_images['image_id'],
                                 user_id=instance['user_id'],
@@ -1305,8 +1306,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                             ephemeral_gb,
                                             instance["os_type"])
             size = ephemeral_gb * 1024 * 1024 * 1024
-            image('disk.local').cache(fn=fn,
-                                      fname=fname,
+            image('disk.local').cache(fetch_func=fn,
+                                      filename=fname,
                                       size=size,
                                       ephemeral_size=ephemeral_gb)
         else:
@@ -1320,8 +1321,8 @@ class LibvirtDriver(driver.ComputeDriver):
             fname = "ephemeral_%s_%s_%s" % (eph['num'],
                                             eph['size'],
                                             instance["os_type"])
-            image(_get_eph_disk(eph)).cache(fn=fn,
-                                            fname=fname,
+            image(_get_eph_disk(eph)).cache(fetch_func=fn,
+                                            fileman=fname,
                                             size=size,
                                             ephemeral_size=eph['size'])
 
@@ -1336,8 +1337,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if swap_mb > 0:
             size = swap_mb * 1024 * 1024
-            image('disk.swap').cache(fn=self._create_swap,
-                                     fname="swap_%s" % swap_mb,
+            image('disk.swap').cache(fetch_func=self._create_swap,
+                                     filename="swap_%s" % swap_mb,
                                      size=size,
                                      swap_mb=swap_mb)
 
@@ -1996,6 +1997,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 total += 1
             else:
                 total += len(vcpus[1])
+            # NOTE(gtt116): give change to do other task.
+            greenthread.sleep(0)
         return total
 
     def get_memory_mb_used(self):
@@ -2548,9 +2551,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 image = self.image_backend.image(instance['name'],
                                                  instance_disk,
                                                  FLAGS.libvirt_images_type)
-                image.cache(fn=libvirt_utils.fetch_image,
+                image.cache(fetch_func=libvirt_utils.fetch_image,
                             context=ctxt,
-                            fname=cache_name,
+                            filename=cache_name,
                             image_id=instance['image_ref'],
                             user_id=instance['user_id'],
                             project_id=instance['project_id'],
@@ -2690,7 +2693,8 @@ class LibvirtDriver(driver.ComputeDriver):
             except exception.InstanceNotFound:
                 # Instance was deleted during the check so ignore it
                 pass
-
+            # NOTE(gtt116): give change to do other task.
+            greenthread.sleep(0)
         # Disk available least size
         available_least_size = dk_sz_gb * (1024 ** 3) - instances_sz
         return (available_least_size / 1024 / 1024 / 1024)
