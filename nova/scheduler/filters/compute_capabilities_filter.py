@@ -65,4 +65,3 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
                     "requirements"), locals())
             return False
         return True
-
