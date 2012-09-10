@@ -85,8 +85,8 @@ def logout_iscsi(portal_address, portal_port, target_iqn):
 
 def make_partitions(dev, root_mb, swap_mb):
     commands = ['o,w',
-                'n,p,1,,+%dMB,t,1,82,w' % root_mb,
-                'n,p,2,,+%dMB,t,2,83,w' % swap_mb,
+                'n,p,1,,+%dM,t,1,82,w' % root_mb,
+                'n,p,2,,+%dM,t,2,83,w' % swap_mb,
                 'a,1,w',
                 ]
     for command in commands:
@@ -95,6 +95,8 @@ def make_partitions(dev, root_mb, swap_mb):
                       process_input=command,
                       run_as_root=True,
                       check_exit_code=[0])
+        # avoid busy
+        time.sleep(2)
 
 
 def is_block_device(dev):
@@ -155,6 +157,12 @@ def deploy_work(address, port, iqn, lun, image_path, pxe_config_path, root_mb,
 
     root_part = "%s-part1" % dev
     swap_part = "%s-part2" % dev
+
+    mb = 1024 * 1024
+    image_byte = os.path.getsize(image_path)
+    image_mb = int((image_byte + mb - 1) / mb)
+    if image_mb > root_mb:
+        root_mb = image_mb
 
     discovery(address, port)
     login_iscsi(address, port, iqn)

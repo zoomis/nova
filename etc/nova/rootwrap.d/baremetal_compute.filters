@@ -40,3 +40,11 @@ vconfig: CommandFilter, /sbin/vconfig, root
 
 # nova/virt/baremetal/volume_driver.py: 'tgtadm', '--lld', 'iscsi', ...
 tgtadm: CommandFilter, /usr/sbin/tgtadm, root
+
+# bm_deploy_server
+iscsiadm: CommandFilter, /sbin/iscsiadm, root
+fdisk: CommandFilter, /sbin/fdisk, root
+dd: CommandFilter, /sbin/fdisk, root
+fdisk: CommandFilter, /bin/dd, root
+mkswap: CommandFilter, /sbin/mkswap, root
+blkid: CommandFilter, /sbin/blkid, root
