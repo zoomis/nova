@@ -137,7 +137,17 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             if not isinstance(result, list):
                 raise NoMatch(
                         _('Result: %(result)s is not a list.') % locals())
-            for ex_obj, res_obj in zip(sorted(expected), sorted(result)):
+            # NOTE(maurosr): sort the list of dicts by their __tag__ element
+            # when using xml. This will avoid some fails in keypairs api sample
+            # which order in different way when using a private key itself or
+            # its regular expression, and after all doesn't interfere with
+            # other tests.
+            # Should we define a criteria when ordering json? Doesn't seems
+            # necessary so far.
+            for ex_obj, res_obj in zip(sorted(expected, key=lambda k:
+                                                        k.get('__tag__', k)),
+                                       sorted(result, key=lambda k:
+                                                        k.get('__tag__', k))):
                 res = self._compare_result(subs, ex_obj, res_obj)
                 matched_value = res or matched_value
 
@@ -157,6 +167,10 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             if match.groups():
                 matched_value = match.groups()[0]
         else:
+            if isinstance(expected, basestring):
+                # NOTE(danms): Ignore whitespace in this comparison
+                expected = expected.strip()
+                result = result.strip()
             if expected != result:
                 raise NoMatch(_('Values do not match:\n'
                         '%(expected)s\n%(result)s') % locals())
@@ -217,9 +231,12 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
     def _do_put(self, url, name, subs):
         return self._do_post(url, name, subs, method='PUT')
 
+    def _do_delete(self, url):
+        return self._get_response(url, 'DELETE')
+
 
 class VersionsSampleJsonTest(ApiSampleTestBase):
-    def test_servers_get(self):
+    def test_versions_get(self):
         response = self._do_get('', strip_version=True)
         subs = self._get_regexes()
         return self._verify_response('versions-get-resp', subs, response)
@@ -229,8 +246,8 @@ class VersionsSampleXmlTest(VersionsSampleJsonTest):
     ctype = 'xml'
 
 
-class ServersSampleJsonTest(ApiSampleTestBase):
-    def test_servers_post(self):
+class ServersSampleBase(ApiSampleTestBase):
+    def _post_server(self):
         subs = {
             'image_id': fake.get_valid_image_id(),
             'host': self._get_host(),
@@ -240,12 +257,35 @@ class ServersSampleJsonTest(ApiSampleTestBase):
         subs = self._get_regexes()
         return self._verify_response('server-post-resp', subs, response)
 
+
+class ServersSampleJsonTest(ServersSampleBase):
+    def test_servers_post(self):
+        return self._post_server()
+
     def test_servers_get(self):
         uuid = self.test_servers_post()
         response = self._do_get('servers/%s' % uuid)
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
+        subs['id'] = uuid
         return self._verify_response('server-get-resp', subs, response)
+
+    def test_servers_list(self):
+        uuid = self._post_server()
+        response = self._do_get('servers')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs['id'] = uuid
+        return self._verify_response('servers-list-resp', subs, response)
+
+    def test_servers_details(self):
+        uuid = self._post_server()
+        response = self._do_get('servers/detail')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs['hostid'] = '[a-f0-9]+'
+        subs['id'] = uuid
+        return self._verify_response('servers-details-resp', subs, response)
 
 
 class ServersSampleXmlTest(ServersSampleJsonTest):
@@ -258,6 +298,73 @@ class ServersSampleAllExtensionJsonTest(ServersSampleJsonTest):
 
 class ServersSampleAllExtensionXmlTest(ServersSampleXmlTest):
     all_extensions = True
+
+
+class ServersMetadataJsonTest(ServersSampleBase):
+    def _create_and_set(self, subs):
+        uuid = self._post_server()
+        response = self._do_put('servers/%s/metadata' % uuid,
+                                'server-metadata-all-req',
+                                subs)
+        self.assertEqual(response.status, 200)
+        self._verify_response('server-metadata-all-resp', subs, response)
+
+        return uuid
+
+    def test_metadata_put_all(self):
+        """Test setting all metadata for a server"""
+        subs = {'value': 'Foo Value'}
+        return self._create_and_set(subs)
+
+    def test_metadata_post_all(self):
+        """Test updating all metadata for a server"""
+        subs = {'value': 'Foo Value'}
+        uuid = self._create_and_set(subs)
+        subs['value'] = 'Bar Value'
+        response = self._do_post('servers/%s/metadata' % uuid,
+                                 'server-metadata-all-req',
+                                 subs)
+        self.assertEqual(response.status, 200)
+        self._verify_response('server-metadata-all-resp', subs, response)
+
+    def test_metadata_get_all(self):
+        """Test getting all metadata for a server"""
+        subs = {'value': 'Foo Value'}
+        uuid = self._create_and_set(subs)
+        response = self._do_get('servers/%s/metadata' % uuid)
+        self.assertEqual(response.status, 200)
+        self._verify_response('server-metadata-all-resp', subs, response)
+
+    def test_metadata_put(self):
+        """Test putting an individual metadata item for a server"""
+        subs = {'value': 'Foo Value'}
+        uuid = self._create_and_set(subs)
+        subs['value'] = 'Bar Value'
+        response = self._do_put('servers/%s/metadata/foo' % uuid,
+                                'server-metadata-req',
+                                subs)
+        self.assertEqual(response.status, 200)
+        return self._verify_response('server-metadata-resp', subs, response)
+
+    def test_metadata_get(self):
+        """Test getting an individual metadata item for a server"""
+        subs = {'value': 'Foo Value'}
+        uuid = self._create_and_set(subs)
+        response = self._do_get('servers/%s/metadata/foo' % uuid)
+        self.assertEqual(response.status, 200)
+        return self._verify_response('server-metadata-resp', subs, response)
+
+    def test_metadata_delete(self):
+        """Test deleting an individual metadata item for a server"""
+        subs = {'value': 'Foo Value'}
+        uuid = self._create_and_set(subs)
+        response = self._do_delete('servers/%s/metadata/foo' % uuid)
+        self.assertEqual(response.status, 204)
+        self.assertEqual(response.read(), '')
+
+
+class ServersMetadataXmlTest(ServersMetadataJsonTest):
+    ctype = 'xml'
 
 
 class ExtensionsSampleJsonTest(ApiSampleTestBase):
@@ -382,4 +489,67 @@ class LimitsSampleJsonTest(ApiSampleTestBase):
 
 
 class LimitsSampleXmlTest(LimitsSampleJsonTest):
+    ctype = 'xml'
+
+
+class ServerStartStopJsonTest(ServersSampleBase):
+    extension_name = "nova.api.openstack.compute.contrib" + \
+        ".server_start_stop.Server_start_stop"
+
+    def _test_server_action(self, uuid, action):
+        response = self._do_post('servers/%s/action' % uuid,
+                                 'server_start_stop',
+                                 {'action': action})
+        self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), "")
+
+    def test_server_start(self):
+        uuid = self._post_server()
+        self._test_server_action(uuid, 'os-stop')
+        self._test_server_action(uuid, 'os-start')
+
+    def test_server_stop(self):
+        uuid = self._post_server()
+        self._test_server_action(uuid, 'os-stop')
+
+
+class ServerStartStopXmlTest(ServerStartStopJsonTest):
+    ctype = 'xml'
+
+
+class FlavorsExtraDataJsonTest(ApiSampleTestBase):
+    extension_name = ('nova.api.openstack.compute.contrib.flavorextradata.'
+                      'Flavorextradata')
+
+    def _get_flags(self):
+        f = super(FlavorsExtraDataJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = FLAGS.osapi_compute_extension[:]
+        # Flavorextradata extension also needs Flavormanage to be loaded.
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.flavormanage.Flavormanage')
+        return f
+
+    def test_flavors_extra_data_get(self):
+        response = self._do_get('flavors/1')
+        subs = self._get_regexes()
+        return self._verify_response('flavors-extra-data-get-resp', subs,
+                                     response)
+
+    def test_flavors_extra_data_list(self):
+        response = self._do_get('flavors/detail')
+        subs = self._get_regexes()
+        return self._verify_response('flavors-extra-data-list-resp', subs,
+                                     response)
+
+    def test_flavors_extra_data_post(self):
+        response = self._do_post('flavors',
+                                 'flavors-extra-data-post-req',
+                                 {})
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('flavors-extra-data-post-resp',
+                                     subs, response)
+
+
+class FlavorsExtraDataXmlTest(FlavorsExtraDataJsonTest):
     ctype = 'xml'

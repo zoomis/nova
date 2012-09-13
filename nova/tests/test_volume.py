@@ -51,9 +51,8 @@ class VolumeTestCase(test.TestCase):
         self.compute = importutils.import_object(FLAGS.compute_manager)
         vol_tmpdir = tempfile.mkdtemp()
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
-                   volumes_dir=vol_tmpdir)
-        self.stubs.Set(nova.flags.FLAGS, 'notification_driver',
-                ['nova.openstack.common.notifier.test_notifier'])
+                   volumes_dir=vol_tmpdir,
+                   notification_driver=[test_notifier.__name__])
         self.stubs.Set(iscsi.TgtAdm, '_get_target', self.fake_get_target)
         self.volume = importutils.import_object(FLAGS.volume_manager)
         self.context = context.get_admin_context()
@@ -249,7 +248,7 @@ class VolumeTestCase(test.TestCase):
         self.assertEqual(vol['mountpoint'], mountpoint)
         self.assertEqual(vol['instance_uuid'], instance_uuid)
 
-        self.assertRaises(exception.NovaException,
+        self.assertRaises(exception.VolumeAttached,
                           self.volume.delete_volume,
                           self.context,
                           volume_id)
@@ -490,6 +489,17 @@ class VolumeTestCase(test.TestCase):
                           '2Gb',
                           'name',
                           'description')
+
+    def test_begin_roll_detaching_volume(self):
+        """Test begin_detaching and roll_detaching functions."""
+        volume = self._create_volume()
+        volume_api = nova.volume.api.API()
+        volume_api.begin_detaching(self.context, volume)
+        volume = db.volume_get(self.context, volume['id'])
+        self.assertEqual(volume['status'], "detaching")
+        volume_api.roll_detaching(self.context, volume)
+        volume = db.volume_get(self.context, volume['id'])
+        self.assertEqual(volume['status'], "in-use")
 
 
 class DriverTestCase(test.TestCase):

@@ -204,7 +204,7 @@ class VolumeApiTest(test.TestCase):
                           1)
 
     def test_admin_list_volumes_limited_to_project(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/volumes',
+        req = fakes.HTTPRequest.blank('/v1/fake/volumes',
                                       use_admin_context=True)
         res = self.controller.index(req)
 
@@ -212,20 +212,20 @@ class VolumeApiTest(test.TestCase):
         self.assertEqual(1, len(res['volumes']))
 
     def test_admin_list_volumes_all_tenants(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/volumes?all_tenants=1',
+        req = fakes.HTTPRequest.blank('/v1/fake/volumes?all_tenants=1',
                                       use_admin_context=True)
         res = self.controller.index(req)
         self.assertTrue('volumes' in res)
         self.assertEqual(3, len(res['volumes']))
 
     def test_all_tenants_non_admin_gets_all_tenants(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/volumes?all_tenants=1')
+        req = fakes.HTTPRequest.blank('/v1/fake/volumes?all_tenants=1')
         res = self.controller.index(req)
         self.assertTrue('volumes' in res)
         self.assertEqual(1, len(res['volumes']))
 
     def test_non_admin_get_by_project(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/volumes')
+        req = fakes.HTTPRequest.blank('/v1/fake/volumes')
         res = self.controller.index(req)
         self.assertTrue('volumes' in res)
         self.assertEqual(1, len(res['volumes']))
@@ -253,10 +253,10 @@ class VolumeSerializerTest(test.TestCase):
             elif child.tag == 'metadata':
                 not_seen = set(vol['metadata'].keys())
                 for gr_child in child:
-                    self.assertTrue(gr_child.tag in not_seen)
-                    self.assertEqual(str(vol['metadata'][gr_child.tag]),
+                    self.assertTrue(gr_child.get("key") in not_seen)
+                    self.assertEqual(str(vol['metadata'][gr_child.get("key")]),
                                      gr_child.text)
-                    not_seen.remove(gr_child.tag)
+                    not_seen.remove(gr_child.get("key"))
                 self.assertEqual(0, len(not_seen))
 
     def test_volume_show_create_serializer(self):
@@ -339,3 +339,134 @@ class VolumeSerializerTest(test.TestCase):
         self.assertEqual(len(raw_volumes), len(tree))
         for idx, child in enumerate(tree):
             self._verify_volume(raw_volumes[idx], child)
+
+
+class TestVolumeCreateRequestXMLDeserializer(test.TestCase):
+
+    def setUp(self):
+        super(TestVolumeCreateRequestXMLDeserializer, self).setUp()
+        self.deserializer = volumes.CreateDeserializer()
+
+    def test_minimal_volume(self):
+        self_request = """
+<volume xmlns="http://docs.openstack.org/compute/api/v1.1"
+        size="1"></volume>"""
+        request = self.deserializer.deserialize(self_request)
+        expected = {
+            "volume": {
+                "size": "1",
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_display_name(self):
+        self_request = """
+<volume xmlns="http://docs.openstack.org/compute/api/v1.1"
+        size="1"
+        display_name="Volume-xml"></volume>"""
+        request = self.deserializer.deserialize(self_request)
+        expected = {
+            "volume": {
+                "size": "1",
+                "display_name": "Volume-xml",
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_display_description(self):
+        self_request = """
+<volume xmlns="http://docs.openstack.org/compute/api/v1.1"
+        size="1"
+        display_name="Volume-xml"
+        display_description="description"></volume>"""
+        request = self.deserializer.deserialize(self_request)
+        expected = {
+            "volume": {
+                "size": "1",
+                "display_name": "Volume-xml",
+                "display_description": "description",
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_volume_type(self):
+        self_request = """
+<volume xmlns="http://docs.openstack.org/compute/api/v1.1"
+        size="1"
+        display_name="Volume-xml"
+        display_description="description"
+        volume_type="289da7f8-6440-407c-9fb4-7db01ec49164"></volume>"""
+        request = self.deserializer.deserialize(self_request)
+        expected = {
+            "volume": {
+                "display_name": "Volume-xml",
+                "size": "1",
+                "display_name": "Volume-xml",
+                "display_description": "description",
+                "volume_type": "289da7f8-6440-407c-9fb4-7db01ec49164",
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_availability_zone(self):
+        self_request = """
+<volume xmlns="http://docs.openstack.org/compute/api/v1.1"
+        size="1"
+        display_name="Volume-xml"
+        display_description="description"
+        volume_type="289da7f8-6440-407c-9fb4-7db01ec49164"
+        availability_zone="us-east1"></volume>"""
+        request = self.deserializer.deserialize(self_request)
+        expected = {
+            "volume": {
+                "size": "1",
+                "display_name": "Volume-xml",
+                "display_description": "description",
+                "volume_type": "289da7f8-6440-407c-9fb4-7db01ec49164",
+                "availability_zone": "us-east1",
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_metadata(self):
+        self_request = """
+<volume xmlns="http://docs.openstack.org/compute/api/v1.1"
+        display_name="Volume-xml"
+        size="1">
+        <metadata><meta key="Type">work</meta></metadata></volume>"""
+        request = self.deserializer.deserialize(self_request)
+        expected = {
+            "volume": {
+                "display_name": "Volume-xml",
+                "size": "1",
+                "metadata": {
+                    "Type": "work",
+                },
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_full_volume(self):
+        self_request = """
+<volume xmlns="http://docs.openstack.org/compute/api/v1.1"
+        size="1"
+        display_name="Volume-xml"
+        display_description="description"
+        volume_type="289da7f8-6440-407c-9fb4-7db01ec49164"
+        availability_zone="us-east1">
+        <metadata><meta key="Type">work</meta></metadata></volume>"""
+        request = self.deserializer.deserialize(self_request)
+        expected = {
+            "volume": {
+                "size": "1",
+                "display_name": "Volume-xml",
+                "display_description": "description",
+                "volume_type": "289da7f8-6440-407c-9fb4-7db01ec49164",
+                "availability_zone": "us-east1",
+                "metadata": {
+                    "Type": "work",
+                },
+            },
+        }
+        self.maxDiff = None
+        self.assertEquals(request['body'], expected)

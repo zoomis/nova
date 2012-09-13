@@ -1013,7 +1013,7 @@ class API(base.Base):
         return inst
 
     def get_all(self, context, search_opts=None, sort_key='created_at',
-                sort_dir='desc'):
+                sort_dir='desc', limit=None, marker=None):
         """Get all instances filtered by one of the given parameters.
 
         If there is no filter and the context is an admin, it will retrieve
@@ -1090,7 +1090,9 @@ class API(base.Base):
                         return []
 
         inst_models = self._get_instances_by_filters(context, filters,
-                                                     sort_key, sort_dir)
+                                                     sort_key, sort_dir,
+                                                     limit=limit,
+                                                     marker=marker)
 
         # Convert the models to dictionaries
         instances = []
@@ -1102,7 +1104,10 @@ class API(base.Base):
 
         return instances
 
-    def _get_instances_by_filters(self, context, filters, sort_key, sort_dir):
+    def _get_instances_by_filters(self, context, filters,
+                                  sort_key, sort_dir,
+                                  limit=None,
+                                  marker=None):
         if 'ip6' in filters or 'ip' in filters:
             res = self.network_api.get_instance_uuids_by_ip_filter(context,
                                                                    filters)
@@ -1111,8 +1116,9 @@ class API(base.Base):
             uuids = set([r['instance_uuid'] for r in res])
             filters['uuid'] = uuids
 
-        return self.db.instance_get_all_by_filters(context, filters, sort_key,
-                                                   sort_dir)
+        return self.db.instance_get_all_by_filters(context, filters,
+                                                   sort_key, sort_dir,
+                                                   limit=limit, marker=marker)
 
     @wrap_check_policy
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
@@ -1214,6 +1220,85 @@ class API(base.Base):
                 image_id=recv_meta['id'], image_type=image_type,
                 backup_type=backup_type, rotation=rotation)
         return recv_meta
+
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
+    def snapshot_volume_backed(self, context, instance, image_meta, name,
+                               extra_properties=None):
+        """Snapshot the given volume-backed instance.
+
+        :param instance: nova.db.sqlalchemy.models.Instance
+        :param image_meta: metadata for the new image
+        :param name: name of the backup or snapshot
+        :param extra_properties: dict of extra image properties to include
+
+        :returns: the new image metadata
+        """
+        image_meta['name'] = name
+        properties = image_meta['properties']
+        if instance['root_device_name']:
+            properties['root_device_name'] = instance['root_device_name']
+        properties.update(extra_properties or {})
+
+        bdms = self.get_instance_bdms(context, instance)
+
+        mapping = []
+        for bdm in bdms:
+            if bdm.no_device:
+                continue
+            m = {}
+            for attr in ('device_name', 'snapshot_id', 'volume_id',
+                         'volume_size', 'delete_on_termination', 'no_device',
+                         'virtual_name'):
+                val = getattr(bdm, attr)
+                if val is not None:
+                    m[attr] = val
+
+            volume_id = m.get('volume_id')
+            snapshot_id = m.get('snapshot_id')
+            if snapshot_id and volume_id:
+                # create snapshot based on volume_id
+                volume = self.volume_api.get(context, volume_id)
+                # NOTE(yamahata): Should we wait for snapshot creation?
+                #                 Linux LVM snapshot creation completes in
+                #                 short time, it doesn't matter for now.
+                name = _('snapshot for %s') % image_meta['name']
+                snapshot = self.volume_api.create_snapshot_force(
+                    context, volume, name, volume['display_description'])
+                m['snapshot_id'] = snapshot['id']
+                del m['volume_id']
+
+            if m:
+                mapping.append(m)
+
+        for m in block_device.mappings_prepend_dev(properties.get('mappings',
+                                                                  [])):
+            virtual_name = m['virtual']
+            if virtual_name in ('ami', 'root'):
+                continue
+
+            assert block_device.is_swap_or_ephemeral(virtual_name)
+            device_name = m['device']
+            if device_name in [b['device_name'] for b in mapping
+                               if not b.get('no_device', False)]:
+                continue
+
+            # NOTE(yamahata): swap and ephemeral devices are specified in
+            #                 AMI, but disabled for this instance by user.
+            #                 So disable those device by no_device.
+            mapping.append({'device_name': device_name, 'no_device': True})
+
+        if mapping:
+            properties['block_device_mapping'] = mapping
+
+        for attr in ('status', 'location', 'id'):
+            image_meta.pop(attr, None)
+
+        # the new image is simply a bucket of properties (particularly the
+        # block device mapping, kernel and ramdisk IDs) with no image data,
+        # hence the zero size
+        image_meta['size'] = 0
+
+        return self.image_service.create(context, image_meta, data='')
 
     def _get_minram_mindisk_params(self, context, instance):
         try:
@@ -1495,11 +1580,8 @@ class API(base.Base):
         # NOTE(markwash): look up the image early to avoid auth problems later
         image = self.image_service.show(context, instance['image_ref'])
 
-        current_memory_mb = current_instance_type['memory_mb']
-        new_memory_mb = new_instance_type['memory_mb']
-
-        if (current_memory_mb == new_memory_mb) and flavor_id:
-            raise exception.CannotResizeToSameSize()
+        if same_instance_type and flavor_id:
+            raise exception.CannotResizeToSameFlavor()
 
         # ensure there is sufficient headroom for upsizes
         deltas = self._upsize_quota_delta(context, new_instance_type,
@@ -1757,6 +1839,7 @@ class API(base.Base):
 
         volume = self.volume_api.get(context, volume_id)
         self.volume_api.check_detach(context, volume)
+        self.volume_api.begin_detaching(context, volume)
 
         self.compute_rpcapi.detach_volume(context, instance=instance,
                 volume_id=volume_id)
@@ -1853,8 +1936,13 @@ class API(base.Base):
     def live_migrate(self, context, instance, block_migration,
                      disk_over_commit, host):
         """Migrate a server lively to a new host."""
-        LOG.debug(_("Going to try to live migrate instance"),
-                  instance=instance)
+        LOG.debug(_("Going to try to live migrate instance to %s"),
+                  host, instance=instance)
+
+        instance = self.update(context, instance,
+                               task_state=task_states.MIGRATING,
+                               expected_task_state=None)
+
         self.scheduler_rpcapi.live_migration(context, block_migration,
                 disk_over_commit, instance, host)
 

@@ -230,6 +230,10 @@ class VolumeUnattached(Invalid):
     message = _("Volume %(volume_id)s is not attached to anything")
 
 
+class VolumeAttached(Invalid):
+    message = _("Volume %(volume_id)s is still attached, detach volume first.")
+
+
 class InvalidKeypair(Invalid):
     message = _("Keypair data is invalid")
 
@@ -292,6 +296,10 @@ class InvalidAggregateAction(Invalid):
 
 class InvalidGroup(Invalid):
     message = _("Group not valid. Reason: %(reason)s")
+
+
+class InvalidSortKey(Invalid):
+    message = _("Sort key supplied was not valid.")
 
 
 class InstanceInvalidState(Invalid):
@@ -901,8 +909,8 @@ class PasteAppNotFound(NovaException):
     message = _("Could not load paste app '%(name)s' from %(path)s")
 
 
-class CannotResizeToSameSize(NovaException):
-    message = _("When resizing, instances must change size!")
+class CannotResizeToSameFlavor(NovaException):
+    message = _("When resizing, instances must change flavor!")
 
 
 class ImageTooLarge(NovaException):
@@ -1018,7 +1026,7 @@ class VolumeTypeCreateFailed(NovaException):
 
 class VolumeBackendAPIException(NovaException):
     message = _("Bad or unexpected response from the storage volume "
-                "backend API: data=%(data)s")
+                "backend API: %(data)s")
 
 
 class InstanceTypeCreateFailed(NovaException):
@@ -1090,6 +1098,14 @@ class InstanceUserDataMalformed(NovaException):
 class UnexpectedTaskStateError(NovaException):
     message = _("unexpected task state: expecting %(expected)s but "
                 "the actual state is %(actual)s")
+
+
+class CryptoCAFileNotFound(FileNotFound):
+    message = _("The CA file for %(project)s could not be found")
+
+
+class CryptoCRLFileNotFound(FileNotFound):
+    message = _("The CRL file for %(project)s could not be found")
 
 
 def get_context_from_function_and_args(function, args, kwargs):
