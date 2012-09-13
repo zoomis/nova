@@ -274,6 +274,11 @@ def floating_ip_bulk_create(context, ips):
     return IMPL.floating_ip_bulk_create(context, ips)
 
 
+def floating_ip_bulk_destroy(context, ips):
+    """Destroy a lot of floating ips from the values dictionary."""
+    return IMPL.floating_ip_bulk_destroy(context, ips)
+
+
 def floating_ip_create(context, values):
     """Create a floating ip from the values dictionary."""
     return IMPL.floating_ip_create(context, values)
@@ -582,10 +587,11 @@ def instance_get_all(context, columns_to_join=None):
 
 
 def instance_get_all_by_filters(context, filters, sort_key='created_at',
-                                sort_dir='desc'):
+                                sort_dir='desc', limit=None, marker=None):
     """Get all instances that match all filters."""
     return IMPL.instance_get_all_by_filters(context, filters, sort_key,
-                                            sort_dir)
+                                            sort_dir, limit=limit,
+                                            marker=marker)
 
 
 def instance_get_active_by_window(context, begin, end=None, project_id=None,
