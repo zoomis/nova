@@ -27,6 +27,7 @@ from nova import compute
 from nova import exception
 from nova import flags
 from nova.openstack.common import log as logging
+from nova import utils
 from nova import volume
 from nova.volume import volume_types
 
@@ -159,7 +160,7 @@ class CreateDeserializer(CommonDeserializer):
         return {'body': {'volume': volume}}
 
 
-class VolumeController(object):
+class VolumeController(wsgi.Controller):
     """The Volumes API controller for the OpenStack API."""
 
     def __init__(self):
@@ -220,7 +221,7 @@ class VolumeController(object):
         context = req.environ['nova.context']
         authorize(context)
 
-        if not body:
+        if not self.is_valid_body(body, 'volume'):
             raise exc.HTTPUnprocessableEntity()
 
         vol = body['volume']
@@ -322,7 +323,7 @@ class VolumeAttachmentsTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1)
 
 
-class VolumeAttachmentController(object):
+class VolumeAttachmentController(wsgi.Controller):
     """The volume attachment API controller for the OpenStack API.
 
     A child resource of the server.  Note that we use the volume id
@@ -380,7 +381,7 @@ class VolumeAttachmentController(object):
         context = req.environ['nova.context']
         authorize(context)
 
-        if not body:
+        if not self.is_valid_body(body, 'volumeAttachment'):
             raise exc.HTTPUnprocessableEntity()
 
         volume_id = body['volumeAttachment']['volumeId']
@@ -524,7 +525,7 @@ class SnapshotsTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1)
 
 
-class SnapshotController(object):
+class SnapshotController(wsgi.Controller):
     """The Volumes API controller for the OpenStack API."""
 
     def __init__(self):
@@ -584,8 +585,8 @@ class SnapshotController(object):
         context = req.environ['nova.context']
         authorize(context)
 
-        if not body:
-            return exc.HTTPUnprocessableEntity()
+        if not self.is_valid_body(body, 'snapshot'):
+            raise exc.HTTPUnprocessableEntity()
 
         snapshot = body['snapshot']
         volume_id = snapshot['volume_id']
@@ -595,7 +596,11 @@ class SnapshotController(object):
         LOG.audit(_("Create snapshot from volume %s"), volume_id,
                 context=context)
 
-        if force:
+        if not utils.is_valid_boolstr(force):
+            msg = _("Invalid value '%s' for force. ") % force
+            raise exception.InvalidParameterValue(err=msg)
+
+        if utils.bool_from_str(force):
             new_snapshot = self.volume_api.create_snapshot_force(context,
                                         volume,
                                         snapshot.get('display_name'),

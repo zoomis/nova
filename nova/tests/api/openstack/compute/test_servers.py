@@ -16,6 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import base64
 import datetime
 import urlparse
 
@@ -92,6 +93,43 @@ class MockSetAdminPassword(object):
     def __call__(self, context, instance_id, password):
         self.instance_id = instance_id
         self.password = password
+
+
+class Base64ValidationTest(test.TestCase):
+    def setUp(self):
+        super(Base64ValidationTest, self).setUp()
+        self.ext_mgr = extensions.ExtensionManager()
+        self.ext_mgr.extensions = {}
+        self.controller = servers.Controller(self.ext_mgr)
+
+    def test_decode_base64(self):
+        value = "A random string"
+        result = self.controller._decode_base64(base64.b64encode(value))
+        self.assertEqual(result, value)
+
+    def test_decode_base64_binary(self):
+        value = "\x00\x12\x75\x99"
+        result = self.controller._decode_base64(base64.b64encode(value))
+        self.assertEqual(result, value)
+
+    def test_decode_base64_whitespace(self):
+        value = "A random string"
+        encoded = base64.b64encode(value)
+        white = "\n \n%s\t%s\n" % (encoded[:2], encoded[2:])
+        result = self.controller._decode_base64(white)
+        self.assertEqual(result, value)
+
+    def test_decode_base64_invalid(self):
+        invalid = "A random string"
+        result = self.controller._decode_base64(invalid)
+        self.assertEqual(result, None)
+
+    def test_decode_base64_illegal_bytes(self):
+        value = "A random string"
+        encoded = base64.b64encode(value)
+        white = ">\x01%s*%s()" % (encoded[:2], encoded[2:])
+        result = self.controller._decode_base64(white)
+        self.assertEqual(result, None)
 
 
 class ServersControllerTest(test.TestCase):
@@ -899,13 +937,6 @@ class ServersControllerTest(test.TestCase):
 
         self.assertEqual(len(servers), 1)
         self.assertEqual(servers[0]['id'], server_uuid)
-
-    def test_update_server_no_body(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
-        req.method = 'PUT'
-
-        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
-                          self.controller.update, req, FAKE_UUID, None)
 
     def test_update_server_all_attributes(self):
         self.stubs.Set(nova.db, 'instance_get',
@@ -2771,16 +2802,6 @@ class ServersControllerCreateTest(test.TestCase):
 
         # The fact that the action doesn't raise is enough validation
         self.controller.create(req, body)
-
-    def test_create_instance_malformed_entity(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/servers')
-        req.method = 'POST'
-        body = {'server': 'string'}
-        req.body = jsonutils.dumps(body)
-        req.headers['content-type'] = "application/json"
-
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, req, body)
 
     def test_create_location(self):
         selfhref = 'http://localhost/v2/fake/servers/%s' % FAKE_UUID
@@ -4791,6 +4812,22 @@ class ServerXMLSerializationTest(test.TestCase):
 class ServersAllExtensionsTestCase(test.TestCase):
     """
     Servers tests using default API router with all extensions enabled.
+
+    The intent here is to catch cases where extensions end up throwing
+    an exception because of a malformed request before the core API
+    gets a chance to validate the request and return a 422 response.
+
+    For example, ServerDiskConfigController extends servers.Controller:
+
+      @wsgi.extends
+      def create(self, req, body):
+          if 'server' in body:
+                self._set_disk_config(body['server'])
+          resp_obj = (yield)
+          self._show(req, resp_obj)
+
+    we want to ensure that the extension isn't barfing on an invalid
+    body.
     """
 
     def setUp(self):
@@ -4830,3 +4867,51 @@ class ServersAllExtensionsTestCase(test.TestCase):
         req.body = jsonutils.dumps(body)
         res = req.get_response(self.app)
         self.assertEqual(422, res.status_int)
+
+
+class ServersUnprocessableEntityTestCase(test.TestCase):
+    """
+    Tests of places we throw 422 Unprocessable Entity from
+    """
+
+    def setUp(self):
+        super(ServersUnprocessableEntityTestCase, self).setUp()
+        self.ext_mgr = extensions.ExtensionManager()
+        self.ext_mgr.extensions = {}
+        self.controller = servers.Controller(self.ext_mgr)
+
+    def _unprocessable_server_create(self, body):
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+
+        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+                          self.controller.create, req, body)
+
+    def test_create_server_no_body(self):
+        self._unprocessable_server_create(body=None)
+
+    def test_create_server_missing_server(self):
+        body = {'foo': {'a': 'b'}}
+        self._unprocessable_server_create(body=body)
+
+    def test_create_server_malformed_entity(self):
+        body = {'server': 'string'}
+        self._unprocessable_server_create(body=body)
+
+    def _unprocessable_server_update(self, body):
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
+        req.method = 'PUT'
+
+        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+                          self.controller.update, req, FAKE_UUID, body)
+
+    def test_update_server_no_body(self):
+        self._unprocessable_server_update(body=None)
+
+    def test_update_server_missing_server(self):
+        body = {'foo': {'a': 'b'}}
+        self._unprocessable_server_update(body=body)
+
+    def test_create_update_malformed_entity(self):
+        body = {'server': 'string'}
+        self._unprocessable_server_update(body=body)
