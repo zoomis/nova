@@ -16,11 +16,12 @@
 
 import base64
 import os
+import re
 import socket
-from xml.dom import minidom
 
 import webob
 from webob import exc
+from xml.dom import minidom
 
 from nova.api.openstack import common
 from nova.api.openstack.compute import ips
@@ -163,9 +164,17 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
             if server_node.getAttribute(attr):
                 server[attr] = server_node.getAttribute(attr)
 
+        scheduler_hints = self._extract_scheduler_hints(server_node)
+        if scheduler_hints:
+            server['os:scheduler_hints'] = scheduler_hints
+
         metadata_node = self.find_first_child_named(server_node, "metadata")
         if metadata_node is not None:
             server["metadata"] = self.extract_metadata(metadata_node)
+
+        user_data_node = self.find_first_child_named(server_node, "user_data")
+        if user_data_node is not None:
+            server["user_data"] = self.extract_text(user_data_node)
 
         personality = self._extract_personality(server_node)
         if personality is not None:
@@ -184,6 +193,17 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
             server['auto_disk_config'] = utils.bool_from_str(auto_disk_config)
 
         return server
+
+    def _extract_scheduler_hints(self, server_node):
+        """Marshal the scheduler hints attribute of a parsed request"""
+        node = self.find_first_child_named(server_node, "scheduler_hints")
+        if node:
+            scheduler_hints = {}
+            for child in self.extract_elements(node):
+                scheduler_hints[child.nodeName] = self.extract_text(child)
+            return scheduler_hints
+        else:
+            return None
 
     def _extract_networks(self, server_node):
         """Marshal the networks attribute of a parsed request."""
@@ -281,6 +301,15 @@ class ActionDeserializer(CommonDeserializer):
         if not node.hasAttribute("imageRef"):
             raise AttributeError("No imageRef was specified in request")
         rebuild["imageRef"] = node.getAttribute("imageRef")
+
+        if node.hasAttribute("adminPass"):
+            rebuild["adminPass"] = node.getAttribute("adminPass")
+
+        if node.hasAttribute("accessIPv4"):
+            rebuild["accessIPv4"] = node.getAttribute("accessIPv4")
+
+        if node.hasAttribute("accessIPv6"):
+            rebuild["accessIPv6"] = node.getAttribute("accessIPv6")
 
         return rebuild
 
@@ -500,9 +529,8 @@ class Controller(wsgi.Controller):
             except TypeError:
                 expl = _('Bad personality format')
                 raise exc.HTTPBadRequest(explanation=expl)
-            try:
-                contents = base64.b64decode(contents)
-            except TypeError:
+            contents = self._decode_base64(contents)
+            if contents is None:
                 expl = _('Personality content for %s cannot be decoded') % path
                 raise exc.HTTPBadRequest(explanation=expl)
             injected_files.append((path, contents))
@@ -572,13 +600,27 @@ class Controller(wsgi.Controller):
 
         return networks
 
+    # NOTE(vish): Without this regex, b64decode will happily
+    #             ignore illegal bytes in the base64 encoded
+    #             data.
+    B64_REGEX = re.compile('^(?:[A-Za-z0-9+\/]{4})*'
+                           '(?:[A-Za-z0-9+\/]{2}=='
+                           '|[A-Za-z0-9+\/]{3}=)?$')
+
+    def _decode_base64(self, data):
+        data = re.sub(r'\s', '', data)
+        if not self.B64_REGEX.match(data):
+            return None
+        try:
+            return base64.b64decode(data)
+        except TypeError:
+            return None
+
     def _validate_user_data(self, user_data):
         """Check if the user_data is encoded properly."""
         if not user_data:
             return
-        try:
-            user_data = base64.b64decode(user_data)
-        except TypeError:
+        if self._decode_base64(user_data) is None:
             expl = _('Userdata content cannot be decoded')
             raise exc.HTTPBadRequest(explanation=expl)
 
@@ -613,13 +655,8 @@ class Controller(wsgi.Controller):
     @wsgi.deserializers(xml=CreateDeserializer)
     def create(self, req, body):
         """Creates a new server for a given user."""
-        if not body:
+        if not self.is_valid_body(body, 'server'):
             raise exc.HTTPUnprocessableEntity()
-
-        if not 'server' in body:
-            raise exc.HTTPUnprocessableEntity()
-
-        body['server']['key_name'] = self._get_key_name(req, body)
 
         context = req.environ['nova.context']
         server_dict = body['server']
@@ -815,13 +852,7 @@ class Controller(wsgi.Controller):
     @wsgi.serializers(xml=ServerTemplate)
     def update(self, req, id, body):
         """Update server then pass on to version-specific controller."""
-        if len(req.body) == 0:
-            raise exc.HTTPUnprocessableEntity()
-
-        if not body:
-            raise exc.HTTPUnprocessableEntity()
-
-        if not 'server' in body:
+        if not self.is_valid_body(body, 'server'):
             raise exc.HTTPUnprocessableEntity()
 
         ctxt = req.environ['nova.context']
@@ -968,14 +999,6 @@ class Controller(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'delete')
-
-    def _get_key_name(self, req, body):
-        if 'server' in body:
-            try:
-                return body['server'].get('key_name')
-            except AttributeError:
-                msg = _("Malformed server entity")
-                raise exc.HTTPBadRequest(explanation=msg)
 
     def _image_ref_from_req_data(self, data):
         try:
