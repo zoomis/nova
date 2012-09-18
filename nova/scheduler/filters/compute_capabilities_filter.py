@@ -40,30 +40,12 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
                 return False
         return True
 
-    def _satisfies_extra_specs_reverse(self, capabilities, instance_type):
-        """Check that the extra specs associated with the instance type
-        satisfy the capabilities provided by the compute service"""
-        if 'required_extra_specs' not in capabilities:
-            return True
-
-        it_es = instance_type.get('extra_specs', {})
-        for key, req in capabilities['required_extra_specs'].iteritems():
-            cap = it_es.get(key, None)
-            if not extra_specs_ops.match(cap, req):
-                return False
-        return True
-
     def host_passes(self, host_state, filter_properties):
         """Return a list of hosts that can create instance_type."""
         instance_type = filter_properties.get('instance_type')
         if not self._satisfies_extra_specs(host_state.capabilities,
                 instance_type):
             LOG.debug(_("%(host_state)s fails instance_type extra_specs "
-                    "requirements"), locals())
-            return False
-        if not self._satisfies_extra_specs_reverse(host_state.capabilities,
-                instance_type):
-            LOG.debug(_("instance_type extra_specs fails %(host_state)s "
                     "requirements"), locals())
             return False
         return True

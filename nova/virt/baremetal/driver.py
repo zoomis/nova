@@ -360,7 +360,7 @@ class BareMetalDriver(driver.ComputeDriver):
     def refresh_provider_fw_rules(self):
         self._firewall_driver.refresh_provider_fw_rules()
 
-    def _node_resources(self, node):
+    def _node_resource(self, node):
         vcpus_used = 0
         memory_mb_used = 0
         local_gb_used = 0
@@ -379,6 +379,9 @@ class BareMetalDriver(driver.ComputeDriver):
                'vcpus_used': vcpus_used,
                'memory_mb_used': memory_mb_used,
                'local_gb_used': local_gb_used,
+               'hypervisor_type': self.get_hypervisor_type(),
+               'hypervisor_version': self.get_hypervisor_version(),
+               'cpu_info': 'baremetal cpu',
                }
         return dic
 
@@ -386,7 +389,7 @@ class BareMetalDriver(driver.ComputeDriver):
         self._firewall_driver.refresh_instance_security_rules(instance)
 
     def get_available_resource(self):
-        raise exception.NovaException('should never called')
+        raise exception.NovaException('method should never be called')
 
     # Instead of add new method, should add 'nodename' parameter to
     # get_available_resource()?
@@ -396,10 +399,7 @@ class BareMetalDriver(driver.ComputeDriver):
         node = bmdb.bm_node_get(context, node_id)
         if not node:
             raise NodeNotFound(nodename=nodename)
-        dic = self._node_resources(node)
-        dic['hypervisor_type'] = self.get_hypervisor_type()
-        dic['hypervisor_version'] = self.get_hypervisor_version()
-        dic['cpu_info'] = 'baremetal cpu'
+        dic = self._node_resource(node)
         return dic
 
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
@@ -412,14 +412,11 @@ class BareMetalDriver(driver.ComputeDriver):
                                                 network_info=network_info)
 
     def _create_node_cap(self, node):
-        dic = self._node_resources(node)
+        dic = self._node_resource(node)
         dic['host'] = '%s/%s' % (FLAGS.host, node['id'])
         dic['cpu_arch'] = self._extra_specs.get('cpu_arch')
         dic['instance_type_extra_specs'] = self._extra_specs
         dic['supported_instances'] = self._supported_instances
-        dic['required_extra_specs'] = {
-            'cpu_arch': self._extra_specs.get('cpu_arch')
-            }
         # TODO(NTTdocomo): put node's extra specs here
         return dic
 
