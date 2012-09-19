@@ -26,6 +26,9 @@ To create a deployment ramdisk, use 'baremetal-mkinitrd.sh' in [baremetal-initrd
 	$ cd baremetal-initrd-builder
 	$ ./baremetal-mkinitrd.sh <ramdisk output path> <kernel version>
 
+Modules in /lib/<kernel version>/modules are used to create ramdisk.
+You can specify a 'generic' kernel installed to the working host.
+
 Example::
 
 	$ ./baremetal-mkinitrd.sh /tmp/deploy-ramdisk.img 3.2.0-26-generic
@@ -149,7 +152,7 @@ Example::
 
 Next, set baremetal extra_spec to the instance type::
 
-	$ nova-manage instance_type set_key --name=bm.small --key cpu_arch --value 's== x86_64'
+	$ nova-manage instance_type set_key --name=bm.small --key cpu_arch --value 'x86_64'
 
 How to choose the value for flavor.
 -----
@@ -250,13 +253,12 @@ How to create an image:
 Example: create a partition image from ubuntu cloud images' Precise tarball::
 
 	$ wget http://cloud-images.ubuntu.com/precise/current/precise-server-cloudimg-amd64-root.tar.gz
-	$ dd if=/dev/zero of=u.img bs=1M count=0 seek=1024
-	$ mkfs -F -t ext4 u.img
-	$ sudo mount -o loop u.img /mnt/
+	$ dd if=/dev/zero of=precise.img bs=1M count=0 seek=1024
+	$ mkfs -F -t ext4 precise.img
+	$ sudo mount -o loop precise.img /mnt/
 	$ sudo tar -C /mnt -xzf ~/precise-server-cloudimg-amd64-root.tar.gz
-	$ sudo rm /mnt/etc/resolv.conf
-		# (set a temporary DNS server to use apt-get in chroot (8.8.8.8 is Google Public DNS address))
-	$ sudo echo nameserver 8.8.8.8 >/mnt/etc/resolv.conf
+	$ sudo mv /mnt/etc/resolv.conf /mnt/etc/resolv.conf_orig
+	$ sudo cp /etc/resolv.conf /mnt/etc/resolv.conf
 	$ sudo chroot /mnt apt-get install linux-image-3.2.0-26-generic vlan open-iscsi
-	$ ln -sf ../run/resolvconf/resolv.conf /mnt/etc/resolv.conf
+	$ sudo mv /mnt/etc/resolv.conf_orig /mnt/etc/resolv.conf
 	$ sudo umount /mnt
