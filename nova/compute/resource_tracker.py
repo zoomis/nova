@@ -315,14 +315,14 @@ class ResourceTracker(object):
         """
         # ask hypervisor for its view of resource availability &
         # usage:
-        if not self.nodename:
+        if self.nodename is None:
             resources = self.driver.get_available_resource()
         else:
             resources = self.driver.get_available_node_resource(self.nodename)
         if not resources:
             # The virt driver does not support this function
             method = 'get_available_resource'
-            if self.nodename:
+            if self.nodename is not None:
                 method = 'get_available_node_resource'
             LOG.warn(_("Virt driver does not support "
                 "'%s'  Compute tracking is disabled.") % method)
@@ -358,10 +358,13 @@ class ResourceTracker(object):
 
             compute_node_ref = service['compute_node']
             if compute_node_ref:
-                for cn in compute_node_ref:
-                    if cn.get('nodename') == self.nodename:
-                        self.compute_node = cn
-                        break
+                if self.nodename is None:
+                    self.compute_node = compute_node_ref[0]
+                else:
+                    for cn in compute_node_ref:
+                        if cn.get('nodename') == self.nodename:
+                            self.compute_node = cn
+                            break
 
         if not self.compute_node:
             # Need to create the ComputeNode record:

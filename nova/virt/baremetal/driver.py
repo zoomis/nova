@@ -208,7 +208,7 @@ class BareMetalDriver(driver.ComputeDriver):
             if m['key'] == 'node':
                 nodename = m['value']
                 break
-        if not nodename:
+        if nodename is None:
             raise NodeNotSpecified()
         node_id = int(nodename)
         node = bmdb.bm_node_get(context, node_id)
@@ -391,8 +391,8 @@ class BareMetalDriver(driver.ComputeDriver):
     def get_available_resource(self):
         raise exception.NovaException('method should never be called')
 
-    # Instead of add new method, should add 'nodename' parameter to
-    # get_available_resource()?
+    # Should we add 'nodename' parameter to get_available_resource() instead
+    # of add this new method?
     def get_available_node_resource(self, nodename):
         context = nova_context.get_admin_context()
         node_id = int(nodename)

@@ -264,8 +264,6 @@ class ComputeManager(manager.SchedulerDependentManager):
             return None
 
     def _get_resource_tracker(self, nodename):
-        if not nodename:
-            nodename = ''
         rt = self._resource_tracker_dict.get(nodename)
         if not rt:
             claim_class = self.driver.get_claim_class()
@@ -277,10 +275,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         return rt
 
     def _get_default_resource_tracker(self):
-        return self._get_resource_tracker('')
+        return self._get_resource_tracker(None)
 
     def _set_default_resource_tracker(self, rt):
-        self._resource_tracker_dict[''] = rt
+        self._resource_tracker_dict[None] = rt
 
     resource_tracker = property(_get_default_resource_tracker,
                                 _set_default_resource_tracker)
@@ -2780,13 +2778,18 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         :param context: security context
         """
-        nodenames_to_remove = set(self._resource_tracker_dict.keys())
-        for nodename in self.driver.get_available_nodes():
-            rt = self._get_resource_tracker(nodename)
+        nodenames = self.driver.get_available_nodes()
+        if nodenames is None:
+            rt = self._get_resource_tracker(None)
             rt.update_available_resource(context)
-            nodenames_to_remove.discard(nodename)
-        for nodename in nodenames_to_remove:
-            self._resource_tracker_dict.pop(nodename, None)
+        else:
+            nodenames_to_remove = set(self._resource_tracker_dict.keys())
+            for nodename in nodenames:
+                rt = self._get_resource_tracker(nodename)
+                rt.update_available_resource(context)
+                nodenames_to_remove.discard(nodename)
+            for nodename in nodenames_to_remove:
+                self._resource_tracker_dict.pop(nodename, None)
 
     @manager.periodic_task(
         ticks_between_runs=FLAGS.running_deleted_instance_poll_interval)

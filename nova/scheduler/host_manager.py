@@ -274,15 +274,16 @@ class HostManager(object):
                 LOG.warn(_("No service for compute ID %s") % compute['id'])
                 continue
             host = service['host']
-            if compute.get('nodename'):
-                host_node = '%s/%s' % (host, compute['nodename'])
+            nodename = compute.get('nodename')
+            if nodename is not None:
+                host_node = '%s/%s' % (host, nodename)
             else:
                 host_node = host
             capabilities = self.service_states.get(host_node, None)
             host_state = self.host_state_cls(host, topic,
                     capabilities=capabilities,
                     service=dict(service.iteritems()),
-                    nodename=compute.get('nodename'))
+                    nodename=nodename)
             host_state.update_from_compute_node(compute)
             host_state_map[host_node] = host_state
 
