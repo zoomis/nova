@@ -5377,6 +5377,7 @@ class FakeMultiNodeVirtDriver(virt_driver.ComputeDriver):
                 'memory_mb_used': 0,
                 'local_gb': 2,
                 'local_gb_used': 0,
+                'hypervisor_hostname': nodename,
                 }
 
 

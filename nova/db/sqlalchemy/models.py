@@ -162,8 +162,6 @@ class ComputeNode(BASE, NovaBase):
     cpu_info = Column(Text, nullable=True)
     disk_available_least = Column(Integer)
 
-    nodename = Column(String(255))
-
 
 class ComputeNodeStat(BASE, NovaBase):
     """Stats related to the current workload of a compute host that are

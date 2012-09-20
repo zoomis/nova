@@ -237,6 +237,9 @@ class HostManager(object):
         capab_copy = dict(capabilities)
         capab_copy["timestamp"] = timeutils.utcnow()  # Reported time
         service_caps[service_name] = capab_copy
+        nodename = capab_copy.get('hypervisor_hostname')
+        if nodename is not None:
+            host = "%s/%s" % (host, nodename)
         self.service_states[host] = service_caps
 
     def get_all_host_states(self, context, topic):
@@ -266,7 +269,7 @@ class HostManager(object):
                 LOG.warn(_("No service for compute ID %s") % compute['id'])
                 continue
             host = service['host']
-            nodename = compute.get('nodename')
+            nodename = compute.get('hypervisor_hostname')
             if nodename is not None:
                 host_node = '%s/%s' % (host, nodename)
             else:

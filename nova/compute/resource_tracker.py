@@ -410,7 +410,7 @@ class ResourceTracker(object):
                     self.compute_node = compute_node_ref[0]
                 else:
                     for cn in compute_node_ref:
-                        if cn.get('nodename') == self.nodename:
+                        if cn.get('hypervisor_hostname') == self.nodename:
                             self.compute_node = cn
                             break
 
@@ -564,3 +564,9 @@ class ResourceTracker(object):
         if missing_keys:
             reason = _("Missing keys: %s") % missing_keys
             raise exception.InvalidInput(reason=reason)
+
+        if self.nodename is not None:
+            hhn = resources.get('hypervisor_hostname')
+            if hhn != self.nodename:
+                reason = _("hypervisor_hostname must equal to nodename")
+                raise exception.InvalidInput(reason=reason)
