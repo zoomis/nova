@@ -246,7 +246,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
 
-        self._rt_dict = {}
+        self._resource_tracker_dict = {}
 
     def _get_nodename(self, instance, context=None):
         try:
@@ -263,24 +263,24 @@ class ComputeManager(manager.SchedulerDependentManager):
                     return m['value']
             return None
 
-    def _get_rt(self, nodename):
+    def _get_resource_tracker(self, nodename):
         if not nodename:
             nodename = ''
-        rt = self._rt_dict.get(nodename)
+        rt = self._resource_tracker_dict.get(nodename)
         if not rt:
             claim_class = self.driver.get_claim_class()
             rt = resource_tracker.ResourceTracker(self.host,
                                                   self.driver,
                                                   nodename=nodename,
                                                   claim_class=claim_class)
-            self._rt_dict[nodename] = rt
+            self._resource_tracker_dict[nodename] = rt
         return rt
 
     def _get_default_resource_tracker(self):
-        return self._get_rt('')
+        return self._get_resource_tracker('')
 
     def _set_default_resource_tracker(self, rt):
-        self._rt_dict[''] = rt
+        self._resource_tracker_dict[''] = rt
 
     resource_tracker = property(_get_default_resource_tracker,
                                 _set_default_resource_tracker)
@@ -291,8 +291,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         (old_ref, instance_ref) = self.db.instance_update_and_get_original(
                 context, instance_uuid, kwargs)
         nodename = self._get_nodename(instance_ref, context=context)
-        self._get_rt(nodename).update_load_stats_for_instance(context,
-                instance_ref)
+        rt = self._get_resource_tracker(nodename)
+        rt.update_load_stats_for_instance(context, instance_ref)
         notifications.send_update(context, old_ref, instance_ref)
 
         return instance_ref
@@ -527,7 +527,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                         context, instance['uuid'],
                         {'node': nodename},
                         delete=False)
-            rt = self._get_rt(nodename)
+            rt = self._get_resource_tracker(nodename)
             try:
                 memory_mb_limit = filter_properties.get('memory_mb_limit',
                         None)
@@ -940,7 +940,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance_uuid)
         nodename = system_meta.get('node')
         # mark resources free
-        rt = self._get_rt(nodename)
+        rt = self._get_resource_tracker(nodename)
         rt.free_resources(context)
         self._notify_about_instance_usage(context, instance, "delete.end",
                 system_metadata=system_meta)
@@ -2780,12 +2780,13 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         :param context: security context
         """
-        nodenames_to_remove = set(self._rt_dict.keys())
+        nodenames_to_remove = set(self._resource_tracker_dict.keys())
         for nodename in self.driver.get_available_nodes():
-            self._get_rt(nodename).update_available_resource(context)
+            rt = self._get_resource_tracker(nodename)
+            rt.update_available_resource(context)
             nodenames_to_remove.discard(nodename)
         for nodename in nodenames_to_remove:
-            self._rt_dict.pop(nodename, None)
+            self._resource_tracker_dict.pop(nodename, None)
 
     @manager.periodic_task(
         ticks_between_runs=FLAGS.running_deleted_instance_poll_interval)

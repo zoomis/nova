@@ -5232,11 +5232,11 @@ class MultiNodeComputeTestCase(test.TestCase):
     def test_update_available_resource_add_remove_node(self):
         ctx = context.get_admin_context()
         self.compute.update_available_resource(ctx)
-        self.assertEqual(sorted(self.compute._rt_dict.keys()),
+        self.assertEqual(sorted(self.compute._resource_tracker_dict.keys()),
                          ['A', 'B', 'Z'])
         self.compute.update_available_resource(ctx)
-        self.assertEqual(sorted(self.compute._rt_dict.keys()),
+        self.assertEqual(sorted(self.compute._resource_tracker_dict.keys()),
                          ['A', 'B'])
         self.compute.update_available_resource(ctx)
-        self.assertEqual(sorted(self.compute._rt_dict.keys()),
+        self.assertEqual(sorted(self.compute._resource_tracker_dict.keys()),
                          ['A', 'B', 'Z'])
