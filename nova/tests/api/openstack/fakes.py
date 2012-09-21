@@ -402,7 +402,7 @@ def fake_instance_get_all_by_filters(num_servers=5, **kwargs):
                 found_marker = True
                 servers_list = []
         if not marker is None and not found_marker:
-            raise webob.exc.HTTPBadRequest
+            raise exc.MarkerNotFound(marker)
         if not limit is None:
             servers_list = servers_list[:limit]
         return servers_list
@@ -567,7 +567,7 @@ def stub_volume_get(self, context, volume_id):
 
 
 def stub_volume_get_notfound(self, context, volume_id):
-    raise exc.NotFound
+    raise exc.VolumeNotFound(volume_id=volume_id)
 
 
 def stub_volume_get_all(context, search_opts=None):
