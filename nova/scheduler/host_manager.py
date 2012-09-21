@@ -230,6 +230,9 @@ class HostManager(object):
 
     def update_service_capabilities(self, service_name, host, capabilities):
         """Update the per-service capabilities based on this notification."""
+        nodename = capabilities.get('hypervisor_hostname')
+        if nodename is not None:
+            host = "%s/%s" % (host, nodename)
         LOG.debug(_("Received %(service_name)s service update from "
                     "%(host)s.") % locals())
         service_caps = self.service_states.get(host, {})
@@ -237,9 +240,6 @@ class HostManager(object):
         capab_copy = dict(capabilities)
         capab_copy["timestamp"] = timeutils.utcnow()  # Reported time
         service_caps[service_name] = capab_copy
-        nodename = capab_copy.get('hypervisor_hostname')
-        if nodename is not None:
-            host = "%s/%s" % (host, nodename)
         self.service_states[host] = service_caps
 
     def get_all_host_states(self, context, topic):
