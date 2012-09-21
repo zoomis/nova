@@ -477,6 +477,3 @@ class BareMetalDriver(driver.ComputeDriver):
         if not node:
             raise NoSuitableNode(instance_uuid=instance['uuid'])
         return str(node['id'])
-
-    def get_claim_class(self):
-        return BareMetalClaim
