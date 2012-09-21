@@ -92,23 +92,14 @@ class NoSuitableNode(exception.NovaException):
     message = _("No node is suitable to run %(instance_uuid)s.")
 
 
-class BareMetalClaim(resource_tracker.Claim):
-    def _apply(self, resources, sign=1):
-        if sign < 0:
-            ratio = 0
-        else:
-            ratio = 1
-        mem = resources.get('memory_mb', 2147483647)
-        disk = resources.get('local_gb', 2147483647)
-        print mem
-        print ratio
-        values = {}
-        values['memory_mb_used'] = mem * ratio
-        values['free_ram_mb'] = mem * (1 - ratio)
-        values['local_gb_used'] = disk * ratio
-        values['free_disk_gb'] = disk * (1 - ratio)
-        print values
-        return values
+class BareMetalResourceTracker(resource_tracker.ResourceTracker):
+    def apply_instance_to_resources(self, resources, instance, sign):
+        """Update resources by instance and sign.
+        This method is overridden to modify the way to consume resources.
+        """
+        ratio = 1 if sign > 0 else 0
+        resources['memory_mb_used'] += ratio * resources['memory_mb']
+        resources['local_gb_used'] += ratio * resources['local_gb']
 
 
 def _get_baremetal_nodes(context):
@@ -477,3 +468,6 @@ class BareMetalDriver(driver.ComputeDriver):
         if not node:
             raise NoSuitableNode(instance_uuid=instance['uuid'])
         return str(node['id'])
+
+    def get_resource_tracker_class(self):
+        return BareMetalResourceTracker
