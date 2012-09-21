@@ -52,4 +52,3 @@ class BareMetalResourceTrackerTestCase(test.TestCase):
                                             sign=-1)
         self.assertEqual(self.resources['memory_mb_used'], 0)
         self.assertEqual(self.resources['local_gb_used'], 0)
-
