@@ -489,6 +489,14 @@ class ResourceTracker(object):
                 self.compute_node['id'], values, prune_stats)
         self.compute_node = dict(compute_node)
 
+    def apply_instance_to_resources(self, resources, instance, sign):
+        """Update resources by instance and sign.
+        This method is overridden to modify the way to consume resources.
+        """
+        resources['memory_mb_used'] += sign * instance['memory_mb']
+        resources['local_gb_used'] += sign * instance['root_gb']
+        resources['local_gb_used'] += sign * instance['ephemeral_gb']
+
     def _update_usage_from_instance(self, resources, instance):
         """Update usage for a single instance."""
 
@@ -509,9 +517,7 @@ class ResourceTracker(object):
         # if it's a new or deleted instance:
         if is_new_instance or is_deleted_instance:
             # new instance, update compute node resource usage:
-            resources['memory_mb_used'] += sign * instance['memory_mb']
-            resources['local_gb_used'] += sign * instance['root_gb']
-            resources['local_gb_used'] += sign * instance['ephemeral_gb']
+            self.apply_instance_to_resources(resources, instance, sign)
 
             # free ram and disk may be negative, depending on policy:
             resources['free_ram_mb'] = (resources['memory_mb'] -

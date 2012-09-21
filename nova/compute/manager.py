@@ -264,9 +264,10 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _get_resource_tracker(self, nodename):
         rt = self._resource_tracker_dict.get(nodename)
         if not rt:
-            rt = resource_tracker.ResourceTracker(self.host,
-                                                  self.driver,
-                                                  nodename=nodename)
+            rtc = self.driver.get_resource_tracker_class()
+            if not rtc:
+                rtc = resource_tracker.ResourceTracker
+            rt = rtc(self.host, self.driver, nodename=nodename)
             self._resource_tracker_dict[nodename] = rt
         return rt
 
