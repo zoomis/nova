@@ -405,7 +405,7 @@ class BareMetalDriver(driver.ComputeDriver):
     def _create_node_cap(self, node):
         dic = self._node_resource(node)
         dic['host'] = FLAGS.host
-        dic['hypervisor_hostname'] = str(node['id'])
+        dic['node'] = str(node['id'])
         dic['cpu_arch'] = self._extra_specs.get('cpu_arch')
         dic['instance_type_extra_specs'] = self._extra_specs
         dic['supported_instances'] = self._supported_instances
