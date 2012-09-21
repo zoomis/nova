@@ -372,6 +372,7 @@ class BareMetalDriver(driver.ComputeDriver):
                'local_gb_used': local_gb_used,
                'hypervisor_type': self.get_hypervisor_type(),
                'hypervisor_version': self.get_hypervisor_version(),
+               'hypervisor_hostname': str(node['id']),
                'cpu_info': 'baremetal cpu',
                }
         return dic
