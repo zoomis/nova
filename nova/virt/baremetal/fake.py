@@ -17,6 +17,7 @@
 #    under the License.
 
 from nova import flags
+from nova.virt.baremetal import baremetal_states
 
 
 FLAGS = flags.FLAGS
@@ -57,3 +58,27 @@ class Fake:
 
     def get_console_output(self, node, instance):
         return 'fake\nconsole\noutput for instance %s' % instance['id']
+
+
+class FakePowerManager(object):
+
+    def __init__(self, node):
+        pass
+
+    def activate_node(self):
+        return baremetal_states.ACTIVE
+
+    def reboot_node(self):
+        return baremetal_states.ACTIVE
+
+    def deactivate_node(self):
+        return baremetal_states.DELETED
+
+    def is_power_on(self):
+        return True
+
+    def start_console(self, port, node_id):
+        pass
+
+    def stop_console(self, node_id):
+        pass
