@@ -75,7 +75,7 @@ def _system_metadata(key, value):
 COMMON_FLAGS = dict(
     baremetal_sql_connection='sqlite:///:memory:',
     baremetal_driver='nova.virt.baremetal.fake.Fake',
-    power_manager='nova.virt.baremetal.ipmi.DummyIpmi',
+    power_manager='nova.virt.baremetal.fake.FakePowerManager',
     baremetal_vif_driver=class_path(FakeVifDriver),
     firewall_driver=class_path(FakeFirewallDriver),
     baremetal_volume_driver=class_path(FakeVolumeDriver),
