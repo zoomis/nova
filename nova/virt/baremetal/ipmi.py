@@ -219,27 +219,3 @@ class Ipmi(object):
             with open(pidfile, 'r') as f:
                 return int(f.read())
         return None
-
-
-class DummyIpmi(object):
-
-    def __init__(self, node):
-        pass
-
-    def activate_node(self):
-        return baremetal_states.ACTIVE
-
-    def reboot_node(self):
-        return baremetal_states.ACTIVE
-
-    def deactivate_node(self):
-        return baremetal_states.DELETED
-
-    def is_power_on(self):
-        return True
-
-    def start_console(self, port, node_id):
-        pass
-
-    def stop_console(self, node_id):
-        pass
