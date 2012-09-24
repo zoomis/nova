@@ -59,7 +59,7 @@ opts = [
                default='nova.virt.baremetal.tilera.TILERA',
                help='Bare-metal driver runs on'),
     cfg.StrOpt('power_manager',
-               default='nova.virt.baremetal.ipmi.Ipmi',
+               default='nova.virt.baremetal.tilera_pdu.Pdu',
                help='power management method'),
     cfg.StrOpt('baremetal_tftp_root',
                default='/tftpboot',
