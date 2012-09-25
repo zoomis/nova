@@ -51,9 +51,7 @@ class BaremetalHostState(host_manager.HostState):
                                                                        None))
 
         self.baremetal_compute = False
-        cap_extra_specs = self.capabilities.get('instance_type_extra_specs',
-                                                {})
-        if cap_extra_specs.get('baremetal_driver'):
+        if self.capabilities.get('baremetal_driver'):
             self.baremetal_compute = True
 
         if service is None:

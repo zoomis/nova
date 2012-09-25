@@ -421,13 +421,13 @@ class BareMetalDriver(driver.ComputeDriver):
                                                 network_info=network_info)
 
     def _get_host_stats(self):
-        dic = self._max_baremetal_resources(nova_context.get_admin_context())
-        memory_total = dic['memory_mb'] * 1024 * 1024
-        memory_free = (dic['memory_mb'] - dic['memory_mb_used']) * 1024 * 1024
-        disk_total = dic['local_gb'] * 1024 * 1024 * 1024
-        disk_used = dic['local_gb_used'] * 1024 * 1024 * 1024
+        res = self._max_baremetal_resources(nova_context.get_admin_context())
+        memory_total = res['memory_mb'] * 1024 * 1024
+        memory_free = (res['memory_mb'] - res['memory_mb_used']) * 1024 * 1024
+        disk_total = res['local_gb'] * 1024 * 1024 * 1024
+        disk_used = res['local_gb_used'] * 1024 * 1024 * 1024
 
-        return {
+        stats = {
           'host_name-description': 'baremetal ' + FLAGS.host,
           'host_hostname': FLAGS.host,
           'host_memory_total': memory_total,
@@ -439,10 +439,11 @@ class BareMetalDriver(driver.ComputeDriver):
           'disk_total': disk_total,
           'disk_used': disk_used,
           'host_name_label': FLAGS.host,
-          'cpu_arch': self._extra_specs.get('cpu_arch'),
           'instance_type_extra_specs': self._extra_specs,
           'supported_instances': self._supported_instances,
           }
+        stats.update(self._extra_specs)
+        return stats
 
     def update_host_status(self):
         return self._get_host_stats()
