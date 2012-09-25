@@ -151,7 +151,6 @@ class BareMetalDriver(driver.ComputeDriver):
         self._image_cache_manager = imagecache.ImageCacheManager()
 
         extra_specs = {}
-        extra_specs["hypervisor_type"] = self.get_hypervisor_type()
         extra_specs["baremetal_driver"] = FLAGS.baremetal_driver
         for pair in FLAGS.instance_type_extra_specs:
             keyval = pair.split(':', 1)
@@ -407,9 +406,8 @@ class BareMetalDriver(driver.ComputeDriver):
         dic = self._node_resource(node)
         dic['host'] = FLAGS.host
         dic['node'] = str(node['id'])
-        dic['cpu_arch'] = self._extra_specs.get('cpu_arch')
-        dic['instance_type_extra_specs'] = self._extra_specs
         dic['supported_instances'] = self._supported_instances
+        dic.update(self._extra_specs)
         # TODO(NTTdocomo): put node's extra specs here
         return dic
 
