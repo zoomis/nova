@@ -198,18 +198,17 @@ class BaremetalDriverTestCase(test_virt_drivers._VirtDriverTestCase):
         self.assertTrue(isinstance(drv._volume_driver, FakeVolumeDriver))
 
     def test_get_host_stats(self):
-        self.flags(instance_type_extra_specs=['cpu_arch:x86_64', 'x:123',
+        self.flags(instance_type_extra_specs=['cpu_arch:x86_64',
+                                              'x:123',
                                               'y:456', ])
         drv = bm_driver.BareMetalDriver()
         cap_list = drv.get_host_stats()
         self.assertTrue(isinstance(cap_list, list))
         self.assertEqual(len(cap_list), 1)
         cap = cap_list[0]
-        es = cap['instance_type_extra_specs']
-        self.assertEqual(es['cpu_arch'], 'x86_64')
-        self.assertEqual(es['x'], '123')
-        self.assertEqual(es['y'], '456')
-        self.assertEqual(es['hypervisor_type'], 'baremetal')
-        self.assertEqual(es['baremetal_driver'],
+        self.assertEqual(cap['cpu_arch'], 'x86_64')
+        self.assertEqual(cap['x'], '123')
+        self.assertEqual(cap['y'], '456')
+        self.assertEqual(cap['hypervisor_type'], 'baremetal')
+        self.assertEqual(cap['baremetal_driver'],
                          'nova.virt.baremetal.fake.Fake')
-        self.assertEqual(len(es), 5)

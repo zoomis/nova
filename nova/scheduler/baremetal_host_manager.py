@@ -61,8 +61,7 @@ def new_host_state(self, host, topic, capabilities=None, service=None,
     if capabilities is None:
         capabilities = {}
     cap = capabilities.get(topic, {})
-    cap_extra_specs = cap.get('instance_type_extra_specs', {})
-    if bool(cap_extra_specs.get('baremetal_driver')):
+    if bool(cap.get('baremetal_driver')):
         return BaremetalNodeState(host, topic, capabilities, service,
                                   nodename=nodename)
     else:
