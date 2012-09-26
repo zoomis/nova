@@ -679,3 +679,15 @@ class ComputeDriver(object):
             }
         """
         raise NotImplementedError()
+
+    def get_available_nodes(self):
+        return None
+
+    def get_available_node_resource(self, nodename):
+        raise NotImplementedError()
+
+    def get_nodename_for_new_instance(self, context, instance):
+        return None
+
+    def get_resource_tracker_class(self):
+        return None

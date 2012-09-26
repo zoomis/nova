@@ -42,6 +42,7 @@ import time
 import traceback
 
 from eventlet import greenthread
+from sqlalchemy.orm import exc as sqlexc
 
 from nova import block_device
 from nova import compute
@@ -243,15 +244,50 @@ class ComputeManager(manager.SchedulerDependentManager):
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
 
-        self.resource_tracker = resource_tracker.ResourceTracker(self.host,
-                self.driver)
+        self._resource_tracker_dict = {}
+
+    def _get_nodename(self, instance, context=None):
+        try:
+            ls = instance.get('system_metadata', [])
+        except sqlexc.DetachedInstanceError:
+            if not context:
+                context = nova.context.get_admin_context()
+            smd = self.db.instance_system_metadata_get(context,
+                                                       instance['uuid'])
+            return smd.get('node')
+        else:
+            for m in ls:
+                if m['key'] == 'node':
+                    return m['value']
+            return None
+
+    def _get_resource_tracker(self, nodename):
+        rt = self._resource_tracker_dict.get(nodename)
+        if not rt:
+            rtc = self.driver.get_resource_tracker_class()
+            if not rtc:
+                rtc = resource_tracker.ResourceTracker
+            rt = rtc(self.host, self.driver, nodename=nodename)
+            self._resource_tracker_dict[nodename] = rt
+        return rt
+
+    def _get_default_resource_tracker(self):
+        return self._get_resource_tracker(None)
+
+    def _set_default_resource_tracker(self, rt):
+        self._resource_tracker_dict[None] = rt
+
+    resource_tracker = property(_get_default_resource_tracker,
+                                _set_default_resource_tracker)
 
     def _instance_update(self, context, instance_uuid, **kwargs):
         """Update an instance in the database using kwargs as value."""
 
         (old_ref, instance_ref) = self.db.instance_update_and_get_original(
                 context, instance_uuid, kwargs)
-        self.resource_tracker.update_usage(context, instance_ref)
+        nodename = self._get_nodename(instance_ref, context=context)
+        rt = self._get_resource_tracker(nodename)
+        rt.update_usage(context, instance_ref)
         notifications.send_update(context, old_ref, instance_ref)
 
         return instance_ref
@@ -485,10 +521,18 @@ class ComputeManager(manager.SchedulerDependentManager):
                     extra_usage_info=extra_usage_info)
             network_info = self._allocate_network(context, instance,
                                                   requested_networks)
+            nodename = self._get_nodename(instance, context=context)
+            if nodename is None:
+                nodename = self.driver.get_nodename_for_new_instance(context,
+                                                                     instance)
+                self.db.instance_system_metadata_update(
+                        context, instance['uuid'],
+                        {'node': nodename},
+                        delete=False)
+            rt = self._get_resource_tracker(nodename)
             try:
                 limits = filter_properties.get('limits', {})
-                with self.resource_tracker.resource_claim(context, instance,
-                        limits):
+                with rt.resource_claim(context, instance, limits):
                     # Resources are available to build this instance here,
                     # mark it as belonging to this host:
                     self._instance_update(context, instance['uuid'],
@@ -2563,7 +2607,11 @@ class ComputeManager(manager.SchedulerDependentManager):
             # This will grab info about the host and queue it
             # to be sent to the Schedulers.
             capabilities = self.driver.get_host_stats(refresh=True)
-            capabilities['host_ip'] = FLAGS.my_ip
+            if not isinstance(capabilities, list):
+                capabilities['host_ip'] = FLAGS.my_ip
+            else:
+                for c in capabilities:
+                    c['host_ip'] = FLAGS.my_ip
             self.update_service_capabilities(capabilities)
 
     @manager.periodic_task(ticks_between_runs=10)
@@ -2731,7 +2779,18 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         :param context: security context
         """
-        self.resource_tracker.update_available_resource(context)
+        nodenames = self.driver.get_available_nodes()
+        if nodenames is None:
+            rt = self._get_resource_tracker(None)
+            rt.update_available_resource(context)
+        else:
+            nodenames_to_remove = set(self._resource_tracker_dict.keys())
+            for nodename in nodenames:
+                rt = self._get_resource_tracker(nodename)
+                rt.update_available_resource(context)
+                nodenames_to_remove.discard(nodename)
+            for nodename in nodenames_to_remove:
+                self._resource_tracker_dict.pop(nodename, None)
 
     @manager.periodic_task(
         ticks_between_runs=FLAGS.running_deleted_instance_poll_interval)

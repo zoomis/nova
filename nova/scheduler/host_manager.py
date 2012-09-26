@@ -91,9 +91,11 @@ class HostState(object):
     previously used and lock down access.
     """
 
-    def __init__(self, host, topic, capabilities=None, service=None):
+    def __init__(self, host, topic, capabilities=None, service=None,
+                 nodename=None):
         self.host = host
         self.topic = topic
+        self.nodename = nodename
 
         # Read-only capability dicts
 
@@ -170,8 +172,9 @@ class HostState(object):
         return True
 
     def __repr__(self):
-        return ("host '%s': free_ram_mb:%s free_disk_mb:%s" %
-                (self.host, self.free_ram_mb, self.free_disk_mb))
+        return ("host '%s' / nodename '%s': free_ram_mb:%s free_disk_mb:%s" %
+                (self.host, self.nodename,
+                 self.free_ram_mb, self.free_disk_mb))
 
 
 class HostManager(object):
@@ -227,6 +230,9 @@ class HostManager(object):
 
     def update_service_capabilities(self, service_name, host, capabilities):
         """Update the per-service capabilities based on this notification."""
+        node = capabilities.get('node')
+        if node is not None:
+            host = "%s/%s" % (host, node)
         LOG.debug(_("Received %(service_name)s service update from "
                     "%(host)s.") % locals())
         service_caps = self.service_states.get(host, {})
@@ -263,11 +269,17 @@ class HostManager(object):
                 LOG.warn(_("No service for compute ID %s") % compute['id'])
                 continue
             host = service['host']
-            capabilities = self.service_states.get(host, None)
+            nodename = compute.get('hypervisor_hostname')
+            if nodename is not None:
+                host_node = '%s/%s' % (host, nodename)
+            else:
+                host_node = host
+            capabilities = self.service_states.get(host_node, None)
             host_state = self.host_state_cls(host, topic,
                     capabilities=capabilities,
-                    service=dict(service.iteritems()))
+                    service=dict(service.iteritems()),
+                    nodename=nodename)
             host_state.update_from_compute_node(compute)
-            host_state_map[host] = host_state
+            host_state_map[host_node] = host_state
 
         return host_state_map

@@ -115,9 +115,10 @@ class ResourceTracker(object):
     are built and destroyed.
     """
 
-    def __init__(self, host, driver):
+    def __init__(self, host, driver, nodename=None):
         self.host = host
         self.driver = driver
+        self.nodename = nodename
         self.compute_node = None
         self.next_claim_id = 1
         self.claims = {}
@@ -363,11 +364,17 @@ class ResourceTracker(object):
         declared a need for resources, but not necessarily retrieved them from
         the hypervisor layer yet.
         """
-        resources = self.driver.get_available_resource()
+        if self.nodename is None:
+            resources = self.driver.get_available_resource()
+        else:
+            resources = self.driver.get_available_node_resource(self.nodename)
         if not resources:
             # The virt driver does not support this function
+            method = 'get_available_resource'
+            if self.nodename is not None:
+                method = 'get_available_node_resource'
             LOG.audit(_("Virt driver does not support "
-                "'get_available_resource'  Compute tracking is disabled."))
+                "'%s'  Compute tracking is disabled.") % method)
             self.compute_node = None
             self.claims = {}
             return
@@ -399,7 +406,13 @@ class ResourceTracker(object):
 
             compute_node_ref = service['compute_node']
             if compute_node_ref:
-                self.compute_node = compute_node_ref[0]
+                if self.nodename is None:
+                    self.compute_node = compute_node_ref[0]
+                else:
+                    for cn in compute_node_ref:
+                        if cn.get('hypervisor_hostname') == self.nodename:
+                            self.compute_node = cn
+                            break
 
         if not self.compute_node:
             # Need to create the ComputeNode record:
@@ -475,6 +488,14 @@ class ResourceTracker(object):
                 self.compute_node['id'], values, prune_stats)
         self.compute_node = dict(compute_node)
 
+    def apply_instance_to_resources(self, resources, instance, sign):
+        """Update resources by instance and sign.
+        This method is overridden to modify the way to consume resources.
+        """
+        resources['memory_mb_used'] += sign * instance['memory_mb']
+        resources['local_gb_used'] += sign * instance['root_gb']
+        resources['local_gb_used'] += sign * instance['ephemeral_gb']
+
     def _update_usage_from_instance(self, resources, instance):
         """Update usage for a single instance."""
 
@@ -495,9 +516,7 @@ class ResourceTracker(object):
         # if it's a new or deleted instance:
         if is_new_instance or is_deleted_instance:
             # new instance, update compute node resource usage:
-            resources['memory_mb_used'] += sign * instance['memory_mb']
-            resources['local_gb_used'] += sign * instance['root_gb']
-            resources['local_gb_used'] += sign * instance['ephemeral_gb']
+            self.apply_instance_to_resources(resources, instance, sign)
 
             # free ram and disk may be negative, depending on policy:
             resources['free_ram_mb'] = (resources['memory_mb'] -
@@ -544,3 +563,9 @@ class ResourceTracker(object):
         if missing_keys:
             reason = _("Missing keys: %s") % missing_keys
             raise exception.InvalidInput(reason=reason)
+
+        if self.nodename is not None:
+            hhn = resources.get('hypervisor_hostname')
+            if hhn != self.nodename:
+                reason = _("hypervisor_hostname must equal to nodename")
+                raise exception.InvalidInput(reason=reason)

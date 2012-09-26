@@ -17,10 +17,18 @@ Code changes
 ::
 
   nova/nova/virt/baremetal/*
+  nova/nova/virt/driver.py
   nova/nova/tests/baremetal/*
+  nova/nova/tests/compute/test_compute.py
+  nova/nova/compute/manager.py
+  nova/nova/compute/resource_tracker.py
+  nova/nova/manager.py
+  nova/nova/scheduler/driver.py
+  nova/nova/scheduler/filter_scheduler.py
+  nova/nova/scheduler/host_manager.py
   nova/nova/scheduler/baremetal_host_manager.py
-  nova/nova/tests/scheduler/test_baremetal_host_manager.py
-  nova/bin/bm*
+  nova/bin/bm_deploy_server
+  nova/bin/nova-bm-manage
 
 Additional setting for bare-metal provisioning [nova.conf]
 -----

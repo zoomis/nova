@@ -22,6 +22,7 @@ A driver for Bare-metal platform.
 """
 
 from nova.compute import power_state
+from nova.compute import resource_tracker
 from nova import context as nova_context
 from nova import db
 from nova import exception
@@ -75,8 +76,30 @@ DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     firewall.NoopFirewallDriver.__name__)
 
 
-class NoSuitableBareMetalNode(exception.NovaException):
-    message = _("Failed to find suitable BareMetalNode")
+class NodeNotSpecified(exception.NovaException):
+    message = _("Node is not specified.")
+
+
+class NodeNotFound(exception.NovaException):
+    message = _("Node %(nodename) is not found in bare-metal db.")
+
+
+class NodeInUse(exception.NovaException):
+    message = _("Node %(nodename) is used by %(instance_uuid)s.")
+
+
+class NoSuitableNode(exception.NovaException):
+    message = _("No node is suitable to run %(instance_uuid)s.")
+
+
+class BareMetalResourceTracker(resource_tracker.ResourceTracker):
+    def apply_instance_to_resources(self, resources, instance, sign):
+        """Update resources by instance and sign.
+        This method is overridden to modify the way to consume resources.
+        """
+        ratio = 1 if sign > 0 else 0
+        resources['memory_mb_used'] += ratio * resources['memory_mb']
+        resources['local_gb_used'] += ratio * resources['local_gb']
 
 
 def _get_baremetal_nodes(context):
@@ -94,28 +117,6 @@ def _get_baremetal_node_by_instance_uuid(instance_uuid):
     if node['service_host'] != FLAGS.host:
         return None
     return node
-
-
-def _find_suitable_baremetal_node(context, instance):
-    result = None
-    for node in _get_baremetal_nodes(context):
-        if node['instance_uuid']:
-            continue
-        if node['registration_status'] != 'done':
-            continue
-        if node['cpus'] < instance['vcpus']:
-            continue
-        if node['memory_mb'] < instance['memory_mb']:
-            continue
-        if result == None:
-            result = node
-        else:
-            if node['cpus'] < result['cpus']:
-                result = node
-            elif node['cpus'] == result['cpus'] \
-                    and node['memory_mb'] < result['memory_mb']:
-                result = node
-    return result
 
 
 def _update_baremetal_state(context, node, instance, state):
@@ -150,7 +151,6 @@ class BareMetalDriver(driver.ComputeDriver):
         self._image_cache_manager = imagecache.ImageCacheManager()
 
         extra_specs = {}
-        extra_specs["hypervisor_type"] = self.get_hypervisor_type()
         extra_specs["baremetal_driver"] = FLAGS.baremetal_driver
         for pair in FLAGS.instance_type_extra_specs:
             keyval = pair.split(':', 1)
@@ -162,8 +162,9 @@ class BareMetalDriver(driver.ComputeDriver):
             extra_specs['cpu_arch'] = ''
         self._extra_specs = extra_specs
 
-        x = (extra_specs['cpu_arch'], 'baremetal', 'baremetal')
-        self._supported_instances = [x]
+        self._supported_instances = [
+                (extra_specs['cpu_arch'], 'baremetal', 'baremetal'),
+                ]
 
     @classmethod
     def instance(cls):
@@ -192,10 +193,19 @@ class BareMetalDriver(driver.ComputeDriver):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
-        node = _find_suitable_baremetal_node(context, instance)
+        nodename = None
+        for m in instance['system_metadata']:
+            if m['key'] == 'node':
+                nodename = m['value']
+                break
+        if nodename is None:
+            raise NodeNotSpecified()
+        node_id = int(nodename)
+        node = bmdb.bm_node_get(context, node_id)
         if not node:
-            LOG.info("no suitable baremetal node found")
-            raise NoSuitableBareMetalNode()
+            raise NodeNotFound(nodename=nodename)
+        if node['instance_uuid']:
+            raise NodeInUse(nodename=nodename, instance_uuid=instance['uuid'])
 
         _update_baremetal_state(context, node, instance,
                                 baremetal_states.BUILDING)
@@ -340,23 +350,18 @@ class BareMetalDriver(driver.ComputeDriver):
     def refresh_provider_fw_rules(self):
         self._firewall_driver.refresh_provider_fw_rules()
 
-    def _sum_baremetal_resources(self, ctxt):
-        vcpus = 0
+    def _node_resource(self, node):
         vcpus_used = 0
-        memory_mb = 0
         memory_mb_used = 0
-        local_gb = 0
         local_gb_used = 0
-        for node in _get_baremetal_nodes(ctxt):
-            if node['registration_status'] != 'done':
-                continue
-            vcpus += node['cpus']
-            memory_mb += node['memory_mb']
-            local_gb += node['local_gb']
-            if node['instance_uuid']:
-                vcpus_used += node['cpus']
-                memory_mb_used += node['memory_mb']
-                local_gb_used += node['local_gb']
+
+        vcpus = node['cpus']
+        memory_mb = node['memory_mb']
+        local_gb = node['local_gb']
+        if node['registration_status'] != 'done' or node['instance_uuid']:
+            vcpus_used = node['cpus']
+            memory_mb_used = node['memory_mb']
+            local_gb_used = node['local_gb']
 
         dic = {'vcpus': vcpus,
                'memory_mb': memory_mb,
@@ -364,38 +369,10 @@ class BareMetalDriver(driver.ComputeDriver):
                'vcpus_used': vcpus_used,
                'memory_mb_used': memory_mb_used,
                'local_gb_used': local_gb_used,
-               }
-        return dic
-
-    def _max_baremetal_resources(self, ctxt):
-        max_node = {'cpus': 0,
-                    'memory_mb': 0,
-                    'local_gb': 0,
-                    }
-
-        for node in _get_baremetal_nodes(ctxt):
-            if node['registration_status'] != 'done':
-                continue
-            if node['instance_uuid']:
-                continue
-
-            # Put prioirty to memory size.
-            # You can use CPU and HDD, if you change the following lines.
-            if max_node['memory_mb'] < node['memory_mb']:
-                max_node = node
-            elif max_node['memory_mb'] == node['memory_mb']:
-                if max_node['cpus'] < node['cpus']:
-                    max_node = node
-                elif max_node['cpus'] == node['cpus']:
-                    if max_node['local_gb'] < node['local_gb']:
-                        max_node = node
-
-        dic = {'vcpus': max_node['cpus'],
-               'memory_mb': max_node['memory_mb'],
-               'local_gb': max_node['local_gb'],
-               'vcpus_used': 0,
-               'memory_mb_used': 0,
-               'local_gb_used': 0,
+               'hypervisor_type': self.get_hypervisor_type(),
+               'hypervisor_version': self.get_hypervisor_version(),
+               'hypervisor_hostname': str(node['id']),
+               'cpu_info': 'baremetal cpu',
                }
         return dic
 
@@ -403,12 +380,17 @@ class BareMetalDriver(driver.ComputeDriver):
         self._firewall_driver.refresh_instance_security_rules(instance)
 
     def get_available_resource(self):
+        raise exception.NovaException('method should never be called')
+
+    # Should we add 'nodename' parameter to get_available_resource() instead
+    # of add this new method?
+    def get_available_node_resource(self, nodename):
         context = nova_context.get_admin_context()
-        dic = self._max_baremetal_resources(context)
-        #dic = self._sum_baremetal_resources(ctxt)
-        dic['hypervisor_type'] = self.get_hypervisor_type()
-        dic['hypervisor_version'] = self.get_hypervisor_version()
-        dic['cpu_info'] = 'baremetal cpu'
+        node_id = int(nodename)
+        node = bmdb.bm_node_get(context, node_id)
+        if not node:
+            raise NodeNotFound(nodename=nodename)
+        dic = self._node_resource(node)
         return dic
 
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
@@ -420,36 +402,35 @@ class BareMetalDriver(driver.ComputeDriver):
         self._firewall_driver.unfilter_instance(instance_ref,
                                                 network_info=network_info)
 
-    def _get_host_stats(self):
-        res = self._max_baremetal_resources(nova_context.get_admin_context())
-        memory_total = res['memory_mb'] * 1024 * 1024
-        memory_free = (res['memory_mb'] - res['memory_mb_used']) * 1024 * 1024
-        disk_total = res['local_gb'] * 1024 * 1024 * 1024
-        disk_used = res['local_gb_used'] * 1024 * 1024 * 1024
-
-        stats = {
-          'host_name-description': 'baremetal ' + FLAGS.host,
-          'host_hostname': FLAGS.host,
-          'host_memory_total': memory_total,
-          'host_memory_overhead': 0,
-          'host_memory_free': memory_free,
-          'host_memory_free_computed': memory_free,
-          'host_other_config': {},
-          'disk_available': disk_total - disk_used,
-          'disk_total': disk_total,
-          'disk_used': disk_used,
-          'host_name_label': FLAGS.host,
-          'instance_type_extra_specs': self._extra_specs,
-          'supported_instances': self._supported_instances,
-          }
-        stats.update(self._extra_specs)
-        return stats
-
     def update_host_status(self):
-        return self._get_host_stats()
+        return self.get_host_stats(refresh=True)
 
     def get_host_stats(self, refresh=False):
-        return self._get_host_stats()
+        caps = []
+        context = nova_context.get_admin_context()
+        nodes = bmdb.bm_node_get_all(context,
+                                     service_host=FLAGS.host)
+        for node in nodes:
+            res = self._node_resource(node)
+            data = {}
+            data['vcpus'] = res['vcpus']
+            data['vcpus_used'] = res['vcpus_used']
+            data['cpu_info'] = res['cpu_info']
+            data['disk_total'] = res['local_gb']
+            data['disk_used'] = res['local_gb_used']
+            data['disk_available'] = res['local_gb'] - res['local_gb_used']
+            data['host_memory_total'] = res['memory_mb']
+            data['host_memory_free'] = res['memory_mb'] - res['memory_mb_used']
+            data['hypervisor_type'] = res['hypervisor_type']
+            data['hypervisor_version'] = res['hypervisor_version']
+            data['hypervisor_hostname'] = res['hypervisor_version']
+            data['supported_instances'] = self._supported_instances
+            data.update(self._extra_specs)
+            data['host'] = FLAGS.host
+            data['node'] = str(node['id'])
+            # TODO(NTTdocomo): put node's extra specs here
+            caps.append(data)
+        return caps
 
     def plug_vifs(self, instance, network_info):
         """Plugin VIFs into networks."""
@@ -478,3 +459,26 @@ class BareMetalDriver(driver.ComputeDriver):
     def get_console_output(self, instance):
         node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
         return self.baremetal_nodes.get_console_output(node, instance)
+
+    def get_available_nodes(self):
+        context = nova_context.get_admin_context()
+        return [str(n['id']) for n in _get_baremetal_nodes(context)]
+
+    def get_nodename_for_new_instance(self, context, instance):
+        def none_to_0(x):
+            if x is None:
+                return 0
+            else:
+                return x
+        local_gb = none_to_0(instance.get('root_gb')) + \
+                    none_to_0(instance.get('ephemeral_gb'))
+        node = bmdb.bm_node_find_free(context, FLAGS.host,
+                                      memory_mb=instance['memory_mb'],
+                                      cpus=instance['vcpus'],
+                                      local_gb=local_gb)
+        if not node:
+            raise NoSuitableNode(instance_uuid=instance['uuid'])
+        return str(node['id'])
+
+    def get_resource_tracker_class(self):
+        return BareMetalResourceTracker
