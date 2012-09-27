@@ -162,7 +162,7 @@ Start Processes
 
 
 
-Register Baremetal Host and NIC
+Register Baremetal Node and NIC
 =====
 
 First, register a baremetal node. Next, register the baremetal node's NICs.
@@ -182,7 +182,7 @@ It takes the parameters listed below.
 
 Example::
 
-	$ nova-bm-manage node create --service_host=bm1 --cpus=64 --memory_mb=16218 --local_gb=917 --pm_address=10.0.2.1 --pm_user=test --pm_password=password --prov_mac_address=98:4b:e1:67:9a:4c --terminal_port=0
+	$ nova-bm-manage node create --host=bm1 --cpus=64 --memory_mb=16218 --local_gb=917 --pm_address=10.0.2.1 --pm_user=test --pm_password=password --prov_mac_address=98:4b:e1:67:9a:4c --terminal_port=0
 
 To verify the node registration, run 'nova-bm-manage node list'::
 

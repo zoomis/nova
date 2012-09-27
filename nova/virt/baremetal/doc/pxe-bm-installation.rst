@@ -182,7 +182,7 @@ Start Processes
 	$ sudo nova-compute &
 
 
-Register Baremetal Host and NIC
+Register Baremetal Node and NIC
 =====
 
 First, register a baremetal node. In this step, one of the NICs must be specified as a PXE NIC.
@@ -205,13 +205,13 @@ It takes the parameters listed below.
 
 Example::
 
-	$ nova-bm-manage node create --host=bm1 --cpus=4 --memory_mb=6144 --local_gb=64 --pm_address=172.27.2.116 --pm_user=test --pm_password=password --prov_mac_address=98:4b:e1:67:9a:4c --terminal_port=8000
+	$ nova-bm-manage node create --host=bm1 --cpus=4 --memory_mb=6144 --local_gb=64 --pm_address=172.27.2.116 --pm_user=test --pm_password=password --prov_mac_address=98:4b:e1:11:22:33 --terminal_port=8000
 
 To verify the node registration, run 'nova-bm-manage node list'::
 
 	$ nova-bm-manage node list
 	ID        SERVICE_HOST  INSTANCE_ID   CPUS    Memory    Disk      PM_Address        PM_User           TERMINAL_PORT  PROV_MAC            PROV_VLAN
-	1         bm1           None          4       6144      64        172.27.2.116      test              8000   98:4b:e1:67:9a:4c   None
+	1         bm1           None          4       6144      64        172.27.2.116      test              8000   98:4b:e1:11:22:33   None
 
 To register a NIC, use 'nova-bm-manage interface create'.
 It takes the parameters listed below.
@@ -225,13 +225,13 @@ It takes the parameters listed below.
 
 Example::
 
-	$ nova-bm-manage interface create --node_id=1 --mac_address=98:4b:e1:67:9a:4e --datapath_id=0x123abc --port_no=24
+	$ nova-bm-manage interface create --node_id=1 --mac_address=98:4b:e1:11:22:34 --datapath_id=0x123abc --port_no=24
 
 To verify the NIC registration, run 'nova-bm-manage interface list'::
 
 	$ nova-bm-manage interface list
 	ID        BM_NODE_ID        MAC_ADDRESS         DATAPATH_ID       PORT_NO
-	1         1                 98:4b:e1:67:9a:4e   0x123abc          24
+	1         1                 98:4b:e1:11:22:34   0x123abc          24
 
 
 Run Instance
