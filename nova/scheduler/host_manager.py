@@ -230,7 +230,7 @@ class HostManager(object):
 
     def update_service_capabilities(self, service_name, host, capabilities):
         """Update the per-service capabilities based on this notification."""
-        node = capabilities.get('node')
+        node = capabilities.get('hypervisor_hostname')
         if node is not None:
             host = "%s/%s" % (host, node)
         LOG.debug(_("Received %(service_name)s service update from "
