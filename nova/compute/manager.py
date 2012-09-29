@@ -92,7 +92,7 @@ compute_opts = [
                    'fake.FakeDriver, baremetal.BareMetalDriver, '
                    'vmwareapi.VMWareESXDriver'),
     cfg.StrOpt('console_host',
-               default=socket.gethostname(),
+               default=socket.getfqdn(),
                help='Console proxy host to use to connect '
                     'to instances on this host.'),
     cfg.IntOpt('live_migration_retry_count',
@@ -1479,7 +1479,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                     teardown=True)
 
             network_info = self._get_instance_nw_info(context, instance)
-            self.driver.destroy(instance, self._legacy_nw_info(network_info))
+            block_device_info = self._get_instance_volume_block_device_info(
+                                context, instance['uuid'])
+
+            self.driver.destroy(instance, self._legacy_nw_info(network_info),
+                                block_device_info)
             self.compute_rpcapi.finish_revert_resize(context, instance,
                     migration_ref['id'], migration_ref['source_compute'],
                     reservations)
@@ -2622,8 +2626,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         virtual machines known by the hypervisor and if the number matches the
         number of virtual machines known by the database, we proceed in a lazy
         loop, one database record at a time, checking if the hypervisor has the
-        same power state as is in the database. We call eventlet.sleep(0) after
-        each loop to allow the periodic task eventlet to do other work.
+        same power state as is in the database.
 
         If the instance is not found on the hypervisor, but is in the database,
         then a stop() API will be called on the instance.

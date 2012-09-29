@@ -112,6 +112,7 @@ class BaseTestCase(test.TestCase):
         def fake_show(meh, context, id):
             return {'id': id, 'min_disk': None, 'min_ram': None,
                     'name': 'fake_name',
+                    'status': 'active',
                     'properties': {'kernel_id': 'fake_kernel_id',
                                    'ramdisk_id': 'fake_ramdisk_id',
                                    'something_else': 'meow'}}
@@ -2664,6 +2665,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.fake_image = {
             'id': 1,
             'name': 'fake_name',
+            'status': 'active',
             'properties': {'kernel_id': 'fake_kernel_id',
                            'ramdisk_id': 'fake_ramdisk_id'},
         }
@@ -2992,6 +2994,19 @@ class ComputeAPITestCase(BaseTestCase):
     def test_delete(self):
         instance, instance_uuid = self._run_instance(params={
                 'host': FLAGS.host})
+
+        self.compute_api.delete(self.context, instance)
+
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(instance['task_state'], task_states.DELETING)
+
+        db.instance_destroy(self.context, instance['uuid'])
+
+    def test_delete_in_resized(self):
+        instance, instance_uuid = self._run_instance(params={
+                'host': FLAGS.host})
+
+        instance['vm_state'] = vm_states.RESIZED
 
         self.compute_api.delete(self.context, instance)
 
@@ -5365,6 +5380,30 @@ class ComputeReschedulingExceptionTestCase(BaseTestCase):
         self.assertRaises(test.TestingException,
                 self.compute._run_instance, self.context,
                 None, {}, None, None, None, None, self.fake_instance)
+
+
+class ComputeInactiveImageTestCase(BaseTestCase):
+    def setUp(self):
+        super(ComputeInactiveImageTestCase, self).setUp()
+
+        def fake_show(meh, context, id):
+            return {'id': id, 'min_disk': None, 'min_ram': None,
+                    'name': 'fake_name',
+                    'status': 'deleted',
+                    'properties': {'kernel_id': 'fake_kernel_id',
+                                   'ramdisk_id': 'fake_ramdisk_id',
+                                   'something_else': 'meow'}}
+
+        fake_image.stub_out_image_service(self.stubs)
+        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+        self.compute_api = compute.API()
+
+    def test_create_instance_with_deleted_image(self):
+        """Make sure we can't start an instance with a deleted image."""
+        inst_type = instance_types.get_instance_type_by_name('m1.tiny')
+        self.assertRaises(exception.ImageNotActive,
+                          self.compute_api.create,
+                          self.context, inst_type, None)
 
 
 class FakeMultiNodeVirtDriver(virt_driver.ComputeDriver):
