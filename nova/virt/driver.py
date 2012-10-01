@@ -681,13 +681,44 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def get_available_nodes(self):
+        """Returns nodenames of all nodes managed by the compute service.
+
+        This method is for multi compute-nodes support. If a driver supports
+        multi compute-nodes, this method returns a list of nodenames managed
+        by the service. Otherwise, this method should return None.
+        """
         return None
 
     def get_available_node_resource(self, nodename):
+        """Returns resource information for nodename.
+
+        This method is for multi compute-nodes support. If a driver supports
+        multi compute-nodes, this method returns a dictionary describing
+        resources of the node in the same form as get_available_resource.
+
+        If get_available_nodes() returns not-None, this method is called when
+        nova-compute launches, and as part of a periodic task.
+        """
         raise NotImplementedError()
 
     def get_nodename_for_new_instance(self, context, instance):
+        """Returns a nodename for specified instance.
+
+        This method is for multi compute-nodes support. If a driver supports
+        multi compute-nodes, this method returns a node suitable to host the
+        instance. Otherwise, this method shoulf return None.
+
+        This method is called as a fallback in case that scheduler do not
+        specify nodename.
+        """
         return None
 
     def get_resource_tracker_class(self):
+        """
+        Returns the name of the custom resource tacker that should be used with
+        this compute driver.
+
+        If this method returns not-None, ComputeManager uses it as a resource
+        tracker class. Otherwise, the default resource tracker is used.
+        """
         return None
