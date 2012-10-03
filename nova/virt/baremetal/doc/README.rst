@@ -1,5 +1,5 @@
 General Bare-metal Provisioning README
-=====
+======================================
 
 :Authors:
   [USC/ISI] Mikyung Kang <mkkang@isi.edu>, David Kang <dkang@isi.edu>
@@ -12,7 +12,7 @@ General Bare-metal Provisioning README
 :Wiki: http://wiki.openstack.org/GeneralBareMetalProvisioningFramework
 
 Code changes
------
+------------
 
 ::
 
@@ -31,7 +31,7 @@ Code changes
   nova/bin/nova-bm-manage
 
 Additional setting for bare-metal provisioning [nova.conf]
------
+----------------------------------------------------------
 
 ::
 
@@ -54,14 +54,14 @@ Additional setting for bare-metal provisioning [nova.conf]
 
 
 Non-PXE (Tilera) Bare-metal Provisioning
------
+----------------------------------------
 
 1. tilera-bm-instance-creation.rst
 
 2. tilera-bm-installation.rst
 
 PXE Bare-metal Provisioning
------
+---------------------------
 
 1. pxe-bm-instance-creation.rst
 
