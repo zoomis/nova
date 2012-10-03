@@ -1,5 +1,5 @@
 PXE Baremetal Instance Creation
-======
+===============================
 
 1) A user requests a baremetal instance.
 

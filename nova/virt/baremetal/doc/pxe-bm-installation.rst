@@ -1,6 +1,6 @@
 
 Packages
-=====
+========
 
 * This procedure is for Ubuntu 12.04 x86_64. Reading 'pxe-bm-instance-creation.txt' may make this document easy to understand.
 
@@ -19,7 +19,7 @@ Example::
 
 
 Ramdisk for Deployment
-=====
+======================
 
 To create a deployment ramdisk, use 'baremetal-mkinitrd.sh' in [baremetal-initrd-builder](https://github.com/NTTdocomo-openstack/baremetal-initrd-builder)::
 
@@ -52,7 +52,7 @@ Example::
 
 
 ShellInABox
-=====
+===========
 Baremetal nova-compute uses [ShellInABox](http://code.google.com/p/shellinabox/) so that users can access baremetal host's console through web browsers.
 
 Build from source and install::
@@ -65,7 +65,7 @@ Build from source and install::
 
 
 PXE Boot Server
-=====
+===============
 
 Prepare TFTP root directory::
 
@@ -84,7 +84,7 @@ Example: start dnsmasq on eth1 with PXE and TFTP enabled::
 
 
 Nova Directories
-======
+================
 
 ::
 
@@ -94,7 +94,7 @@ Nova Directories
 
 
 Nova Flags
-=====
+==========
 
 Set these flags in nova.conf::
 
@@ -125,7 +125,7 @@ Set these flags in nova.conf::
 
 
 Baremetal Database
-=====
+==================
 
 Create the baremetal database. Grant all provileges to the user specified by the 'baremetal_sql_connection' flag.
 Example::
@@ -141,7 +141,7 @@ Create tables::
 
 
 Create Baremetal Instance Type
-=====
+==============================
 
 First, create an instance type in the normal way.
 
@@ -155,7 +155,7 @@ Next, set baremetal extra_spec to the instance type::
 	$ nova-manage instance_type set_key --name=bm.small --key cpu_arch --value 'x86_64'
 
 How to choose the value for flavor.
------
+-----------------------------------
 
 Run nova-manage instance_type list, find the maximum FlavorID in output. Use the maximum FlavorID+1 for new instance_type.
 
@@ -172,7 +172,7 @@ In the example above, the maximum Flavor ID is 5, so use 6.
 
 
 Start Processes
-======
+===============
 
 ::
 
@@ -183,7 +183,7 @@ Start Processes
 
 
 Register Baremetal Node and NIC
-=====
+===============================
 
 First, register a baremetal node. In this step, one of the NICs must be specified as a PXE NIC.
 Ensure the NIC is PXE-enabled and the NIC is selected as a primary boot device in BIOS.
@@ -235,7 +235,7 @@ To verify the NIC registration, run 'nova-bm-manage interface list'::
 
 
 Run Instance
-=====
+============
 
 Run instance using the baremetal instance type.
 Make sure to use kernel, ramdisk and image that support baremetal hardware (i.e contain drivers for baremetal hardware ).
@@ -248,7 +248,7 @@ Example::
 
 
 How to create an image:
------
+-----------------------
 
 Example: create a partition image from ubuntu cloud images' Precise tarball::
 

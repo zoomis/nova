@@ -1,5 +1,5 @@
 Non-PXE (Tilera) Baremetal Instance Creation
-======
+============================================
 
 1) A user requests a baremetal instance using tilera instance type.
 

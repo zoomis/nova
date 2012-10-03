@@ -1,6 +1,6 @@
 
 Packages
-=====
+========
 
 * This procedure is for RHEL. Reading 'tilera-bm-instance-creation.txt' may make this document easy to understand.
 
@@ -68,7 +68,7 @@ Packages
 
 
 Nova Directories
-======
+================
 
 ::
 
@@ -78,7 +78,7 @@ Nova Directories
 
 
 Nova Flags
-=====
+==========
 
 Set these flags in nova.conf::
 
@@ -103,7 +103,7 @@ Set these flags in nova.conf::
 
 
 Baremetal Database
-=====
+==================
 
 Create the baremetal database. Grant all provileges to the user specified by the 'baremetal_sql_connection' flag.
 
@@ -121,7 +121,7 @@ Create tables::
 
 
 Create Tilera Baremetal Instance Type
-=====
+=====================================
 
 First, create a tilera instance type in the normal way.
 
@@ -136,7 +136,7 @@ Next, set baremetal extra_spec to the instance type::
 
 
 How to choose the value for flavor.
------
+-----------------------------------
 
 Run nova-manage instance_type list, find the maximum FlavorID in output. Use the maximum FlavorID+1 for new instance_type::
 
@@ -152,7 +152,7 @@ In the example above, the maximum Flavor ID is 5, so use 6.
 
 
 Start Processes
-======
+===============
 
 ::
 
@@ -163,7 +163,7 @@ Start Processes
 
 
 Register Baremetal Node and NIC
-=====
+===============================
 
 First, register a baremetal node. Next, register the baremetal node's NICs.
 
@@ -213,7 +213,7 @@ To verify the NIC registration, run 'nova-bm-manage interface list'::
 
 
 Run Instance
-=======
+============
 
 Run instance using the baremetal instance type.
 Make sure to use kernel and image that support baremetal hardware (i.e contain drivers for baremetal hardware ).
