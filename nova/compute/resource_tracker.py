@@ -387,6 +387,15 @@ class ResourceTracker(object):
 
         # Grab all instances assigned to this host:
         instances = db.instance_get_all_by_host(context, self.host)
+        if self.nodename is not None:
+            # Filter instances belong to the node
+            node_instances = []
+            for instance in instances:
+                smd = db.instance_system_metadata_get(context,
+                                                      instance['uuid'])
+                if smd.get('node') == self.nodename:
+                    node_instances.append(instance)
+            instances = node_instances
 
         # Now calculate usage based on instance utilization:
         self._update_usage_from_instances(resources, instances)
