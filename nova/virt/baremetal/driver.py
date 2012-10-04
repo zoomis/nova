@@ -423,7 +423,7 @@ class BareMetalDriver(driver.ComputeDriver):
             data['host_memory_free'] = res['memory_mb'] - res['memory_mb_used']
             data['hypervisor_type'] = res['hypervisor_type']
             data['hypervisor_version'] = res['hypervisor_version']
-            data['hypervisor_hostname'] = res['hypervisor_version']
+            data['hypervisor_hostname'] = str(node['id'])
             data['supported_instances'] = self._supported_instances
             data.update(self._extra_specs)
             data['host'] = FLAGS.host
