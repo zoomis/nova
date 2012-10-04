@@ -706,7 +706,7 @@ class ComputeDriver(object):
 
         This method is for multi compute-nodes support. If a driver supports
         multi compute-nodes, this method returns a node suitable to host the
-        instance. Otherwise, this method shoulf return None.
+        instance. Otherwise, this method should return None.
 
         This method is called as a fallback in case that scheduler do not
         specify nodename.
@@ -715,7 +715,7 @@ class ComputeDriver(object):
 
     def get_resource_tracker_class(self):
         """
-        Returns the name of the custom resource tacker that should be used with
+        Returns the name of the custom resource tracker that should be used with
         this compute driver.
 
         If this method returns not-None, ComputeManager uses it as a resource
