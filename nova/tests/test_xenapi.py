@@ -618,30 +618,6 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                          os_type="linux", architecture="x86-64")
         self.check_vm_params_for_linux()
 
-    def test_spawn_vhd_glance_swapdisk(self):
-        # Change the default host_call_plugin to one that'll return
-        # a swap disk
-        orig_func = stubs.FakeSessionForVMTests.host_call_plugin
-        _host_call_plugin = stubs.FakeSessionForVMTests.host_call_plugin_swap
-        stubs.FakeSessionForVMTests.host_call_plugin = _host_call_plugin
-        # Stubbing out firewall driver as previous stub sets a particular
-        # stub for async plugin calls
-        stubs.stubout_firewall_driver(self.stubs, self.conn)
-        try:
-            # We'll steal the above glance linux test
-            self.test_spawn_vhd_glance_linux()
-        finally:
-            # Make sure to put this back
-            stubs.FakeSessionForVMTests.host_call_plugin = orig_func
-
-        # We should have 2 VBDs.
-        self.assertEqual(len(self.vm['VBDs']), 2)
-        # Now test that we have 1.
-        self.tearDown()
-        self.setUp()
-        self.test_spawn_vhd_glance_linux()
-        self.assertEqual(len(self.vm['VBDs']), 1)
-
     def test_spawn_vhd_glance_windows(self):
         self._test_spawn(IMAGE_VHD, None, None,
                          os_type="windows", architecture="i386")
@@ -1173,11 +1149,25 @@ class XenAPIImageTypeTestCase(test.TestCase):
             vm_utils.ImageType.to_string(vm_utils.ImageType.KERNEL),
             vm_utils.ImageType.KERNEL_STR)
 
-    def test_from_string(self):
-        """Can convert from string to type id."""
+    def _assert_role(self, expected_role, image_type_id):
         self.assertEquals(
-            vm_utils.ImageType.from_string(vm_utils.ImageType.KERNEL_STR),
-            vm_utils.ImageType.KERNEL)
+            expected_role,
+            vm_utils.ImageType.get_role(image_type_id))
+
+    def test_get_image_role_kernel(self):
+        self._assert_role('kernel', vm_utils.ImageType.KERNEL)
+
+    def test_get_image_role_ramdisk(self):
+        self._assert_role('ramdisk', vm_utils.ImageType.RAMDISK)
+
+    def test_get_image_role_disk(self):
+        self._assert_role('root', vm_utils.ImageType.DISK)
+
+    def test_get_image_role_disk_raw(self):
+        self._assert_role('root', vm_utils.ImageType.DISK_RAW)
+
+    def test_get_image_role_disk_vhd(self):
+        self._assert_role('root', vm_utils.ImageType.DISK_VHD)
 
 
 class XenAPIDetermineDiskImageTestCase(test.TestCase):
@@ -1410,7 +1400,6 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
         super(XenAPIGenerateLocal, self).setUp()
         self.flags(xenapi_connection_url='test_url',
                    xenapi_connection_password='test_pass',
-                   xenapi_generate_swap=True,
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
@@ -1957,8 +1946,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver',
                    host='host',
-                   connection_type='xenapi',
-                   compute_driver='nova.virt.xenapi.driver.XenAPIDriver')
+                   compute_driver='xenapi.XenAPIDriver')
         host_ref = xenapi_fake.get_all('host')[0]
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.context = context.get_admin_context()
@@ -2437,11 +2425,9 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
                             'destination_sr_ref': None,
                             'migrate_send_data': None
                            }}
-        self.assertNotRaises(None,
-                             self.conn.check_can_live_migrate_source,
-                             self.context,
-                             {'host': 'host'},
-                             dest_check_data)
+        self.conn.check_can_live_migrate_source(self.context,
+                                                {'host': 'host'},
+                                                dest_check_data)
 
     def test_check_can_live_migrate_source_with_block_migrate_fails(self):
         stubs.stubout_session(self.stubs,

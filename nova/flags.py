@@ -74,10 +74,6 @@ def _get_my_ip():
 
 
 core_opts = [
-    cfg.StrOpt('connection_type',
-               default=None,
-               help='Deprecated (use compute_driver instead): Virtualization '
-                    'api connection type : libvirt, xenapi, or fake'),
     cfg.StrOpt('sql_connection',
                default='sqlite:///$state_path/$sqlite_db',
                help='The SQLAlchemy connection string used to connect to the '
@@ -312,7 +308,6 @@ global_opts = [
                help='time period to generate instance usages for.  '
                     'Time period must be hour, day, month or year'),
     cfg.IntOpt('bandwidth_poll_interval',
-               deprecated_name='bandwith_poll_interval',
                default=600,
                help='interval to pull bandwidth usage info'),
     cfg.BoolOpt('start_guests_on_host_boot',

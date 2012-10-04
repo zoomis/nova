@@ -17,13 +17,11 @@
 # under the License.
 import mox
 import shutil
-import sys
 import tempfile
 
 from nova import context
 from nova import db
 from nova import exception
-from nova.network import ldapdns
 from nova.network import linux_net
 from nova.network import manager as network_manager
 from nova.openstack.common import importutils
@@ -1829,34 +1827,26 @@ domain1 = "example.org"
 domain2 = "example.com"
 
 
-class FakeLdapDNS(ldapdns.LdapDNS):
-    """For testing purposes, a DNS driver backed with a fake ldap driver."""
-    def __init__(self):
-        self.lobj = fake_ldap.FakeLDAP()
-        attrs = {'objectClass': ['domainrelatedobject', 'dnsdomain',
-                                 'domain', 'dcobject', 'top'],
-                 'associateddomain': ['root'],
-                 'dc': ['root']}
-        self.lobj.add_s("ou=hosts,dc=example,dc=org",
-                        ldapdns.create_modlist(attrs))
-
-
 class LdapDNSTestCase(test.TestCase):
     """Tests nova.network.ldapdns.LdapDNS"""
     def setUp(self):
         super(LdapDNSTestCase, self).setUp()
 
-        self.saved_ldap = sys.modules.get('ldap')
-        sys.modules['ldap'] = fake_ldap
+        self.stub_module('ldap', fake_ldap)
+        dns_class = 'nova.network.ldapdns.LdapDNS'
+        self.driver = importutils.import_object(dns_class)
 
-        self.driver = FakeLdapDNS()
+        attrs = {'objectClass': ['domainrelatedobject', 'dnsdomain',
+                                 'domain', 'dcobject', 'top'],
+                 'associateddomain': ['root'],
+                 'dc': ['root']}
+        self.driver.lobj.add_s("ou=hosts,dc=example,dc=org", attrs.items())
         self.driver.create_domain(domain1)
         self.driver.create_domain(domain2)
 
     def tearDown(self):
         self.driver.delete_domain(domain1)
         self.driver.delete_domain(domain2)
-        sys.modules['ldap'] = self.saved_ldap
         super(LdapDNSTestCase, self).tearDown()
 
     def test_ldap_dns_domains(self):

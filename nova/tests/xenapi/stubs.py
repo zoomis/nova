@@ -18,7 +18,6 @@
 import contextlib
 import pickle
 import random
-import sys
 
 from nova.openstack.common import jsonutils
 from nova import test
@@ -171,16 +170,6 @@ class FakeSessionForVMTests(fake.SessionBase):
         elif (plugin, method) == ("xenhost", "iptables_config"):
             return fake.as_json(out=self._fake_iptables_save_output,
                                 err='')
-        else:
-            return (super(FakeSessionForVMTests, self).
-                    host_call_plugin(_1, _2, plugin, method, _5))
-
-    def host_call_plugin_swap(self, _1, _2, plugin, method, _5):
-        if (plugin, method) == ('glance', 'download_vhd'):
-            root_uuid = _make_fake_vdi()
-            swap_uuid = _make_fake_vdi()
-            return pickle.dumps(dict(root=dict(uuid=root_uuid),
-                                     swap=dict(uuid=swap_uuid)))
         else:
             return (super(FakeSessionForVMTests, self).
                     host_call_plugin(_1, _2, plugin, method, _5))
@@ -365,16 +354,6 @@ class XenAPITestBase(test.TestCase):
     def setUp(self):
         super(XenAPITestBase, self).setUp()
 
-        self.orig_XenAPI = sys.modules.get('XenAPI')
-        sys.modules['XenAPI'] = fake
+        self.stub_module('XenAPI', fake)
 
         fake.reset()
-
-    def tearDown(self):
-        if self.orig_XenAPI is not None:
-            sys.modules['XenAPI'] = self.orig_XenAPI
-            self.orig_XenAPI = None
-        else:
-            sys.modules.pop('XenAPI')
-
-        super(XenAPITestBase, self).tearDown()

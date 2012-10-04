@@ -24,6 +24,7 @@ inline callbacks.
 """
 
 import functools
+import sys
 import unittest
 import uuid
 
@@ -138,6 +139,7 @@ class TestCase(unittest.TestCase):
         self.stubs = stubout.StubOutForTesting()
         self.injected = []
         self._services = []
+        self._modules = {}
 
     def tearDown(self):
         """Runs after each test method to tear down test environment."""
@@ -150,6 +152,14 @@ class TestCase(unittest.TestCase):
         finally:
             # Reset any overridden flags
             FLAGS.reset()
+
+            # Unstub modules
+            for name, mod in self._modules.iteritems():
+                if mod is not None:
+                    sys.modules[name] = mod
+                else:
+                    sys.modules.pop(name)
+            self._modules = {}
 
             # Stop any timers
             for x in self.injected:
@@ -170,6 +180,11 @@ class TestCase(unittest.TestCase):
             # suite
             for key in [k for k in self.__dict__.keys() if k[0] != '_']:
                 del self.__dict__[key]
+
+    def stub_module(self, name, mod):
+        if name not in self._modules:
+            self._modules[name] = sys.modules.get(name)
+        sys.modules[name] = mod
 
     def flags(self, **kw):
         """Override flag variables for a test."""
@@ -284,33 +299,6 @@ class TestCase(unittest.TestCase):
             self.assertFalse(a in b, *args, **kwargs)
         else:
             f(a, b, *args, **kwargs)
-
-    def assertNotRaises(self, exc_class, func, *args, **kwargs):
-        """Assert that a particular exception is not raised.
-
-        If exc_class is None, then we assert that *no* error is raised.
-
-        Otherwise, we assert that only a particular error wasn't raised;
-        if any different exceptions were raised, we just silently capture
-        them and return.
-        """
-        exc_msg = kwargs.pop('exc_msg', '')
-
-        if exc_class is None:
-            # Ensure no errors were raised
-            try:
-                return func(*args, **kwargs)
-            except Exception:
-                raise
-                raise AssertionError(exc_msg)
-        else:
-            # Ensure a specific error wasn't raised
-            try:
-                return func(*args, **kwargs)
-            except exc_class:
-                raise AssertionError(exc_msg)
-            except Exception:
-                pass  # Any other errors are fine
 
     def assertIsInstance(self, a, b, *args, **kwargs):
         """Python < v2.7 compatibility.  Assert 'a' is Instance of 'b'"""
