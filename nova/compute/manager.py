@@ -260,7 +260,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     return m['value']
             return None
 
-    def _get_resource_tracker(self, nodename):
+    def _get_resource_tracker(self, nodename=None):
         rt = self._resource_tracker_dict.get(nodename)
         if not rt:
             rtc = self.driver.get_resource_tracker_class()
@@ -270,13 +270,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._resource_tracker_dict[nodename] = rt
         return rt
 
-    def _get_default_resource_tracker(self):
-        return self._get_resource_tracker(None)
-
     def _set_default_resource_tracker(self, rt):
         self._resource_tracker_dict[None] = rt
 
-    resource_tracker = property(_get_default_resource_tracker,
+    resource_tracker = property(_get_resource_tracker,
                                 _set_default_resource_tracker)
 
     def _instance_update(self, context, instance_uuid, **kwargs):
@@ -2649,10 +2646,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             # to be sent to the Schedulers.
             capabilities = self.driver.get_host_stats(refresh=True)
             if not isinstance(capabilities, list):
-                capabilities['host_ip'] = FLAGS.my_ip
-            else:
-                for c in capabilities:
-                    c['host_ip'] = FLAGS.my_ip
+                capabilities = [capabilities]
+            for capability in capabilities:
+                capability['host_ip'] = FLAGS.my_ip
             self.update_service_capabilities(capabilities)
 
     @manager.periodic_task(ticks_between_runs=10)
