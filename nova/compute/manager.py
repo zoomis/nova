@@ -247,8 +247,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _get_nodename(self, instance, context=None):
         if not context:
             context = nova.context.get_admin_context()
-        smd = self.db.instance_system_metadata_get(context,
-                                                   instance['uuid'])
+        smd = self.db.instance_system_metadata_get(context, instance['uuid'])
         return smd.get('node')
 
     def _get_resource_tracker(self, nodename=None):
