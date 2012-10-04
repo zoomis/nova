@@ -715,8 +715,8 @@ class ComputeDriver(object):
 
     def get_resource_tracker_class(self):
         """
-        Returns the name of the custom resource tracker that should be used with
-        this compute driver.
+        Returns the name of the custom resource tracker that should be used
+        with this compute driver.
 
         If this method returns not-None, ComputeManager uses it as a resource
         tracker class. Otherwise, the default resource tracker is used.
