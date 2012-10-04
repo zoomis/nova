@@ -129,7 +129,8 @@ def _start_dnsmasq(interface, tftp_root, client_address, pid_path, lease_path):
              '--enable-tftp',
              '--tftp-root=%s' % tftp_root,
              '--dhcp-boot=pxelinux.0',
-             '--dhcp-range=%s,%s' % (client_address, client_address))
+             '--dhcp-range=%s,%s' % (client_address, client_address),
+             run_as_root=True)
 
 
 def _cache_image_x(context, target, image_id,
