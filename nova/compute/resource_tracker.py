@@ -388,7 +388,7 @@ class ResourceTracker(object):
         # Grab all instances assigned to this host:
         instances = db.instance_get_all_by_host(context, self.host)
         if self.nodename is not None:
-            # Filter instances belong to the node
+            # Collect instances belong to the node
             node_instances = []
             for instance in instances:
                 smd = db.instance_system_metadata_get(context,

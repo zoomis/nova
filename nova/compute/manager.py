@@ -42,7 +42,6 @@ import time
 import traceback
 
 from eventlet import greenthread
-from sqlalchemy.orm import exc as sqlexc
 
 from nova import block_device
 from nova import compute
@@ -246,19 +245,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._resource_tracker_dict = {}
 
     def _get_nodename(self, instance, context=None):
-        try:
-            ls = instance.get('system_metadata', [])
-        except sqlexc.DetachedInstanceError:
-            if not context:
-                context = nova.context.get_admin_context()
-            smd = self.db.instance_system_metadata_get(context,
-                                                       instance['uuid'])
-            return smd.get('node')
-        else:
-            for m in ls:
-                if m['key'] == 'node':
-                    return m['value']
-            return None
+        if not context:
+            context = nova.context.get_admin_context()
+        smd = self.db.instance_system_metadata_get(context,
+                                                   instance['uuid'])
+        return smd.get('node')
 
     def _get_resource_tracker(self, nodename=None):
         rt = self._resource_tracker_dict.get(nodename)
