@@ -14,6 +14,9 @@ ipmitool: CommandFilter, /usr/bin/ipmitool, root
 # nova/virt/baremetal/vlan.py: 'ip', 'link', 'set', vlan_interface, 'down'
 ip: CommandFilter, /sbin/ip, root
 
+# nova/virt/baremetal/pxe.py: 'dnsmasq', ...
+dnsmasq: CommandFilter, /usr/sbin/dnsmasq, root
+
 # nova/virt/baremetal/pxe.py: 'kill', '-TERM', str(dnsmasq_pid)
 kill_dnsmasq: KillFilter, root, /usr/sbin/dnsmasq, -15, -TERM
 
@@ -48,6 +51,3 @@ dd: CommandFilter, /sbin/fdisk, root
 fdisk: CommandFilter, /bin/dd, root
 mkswap: CommandFilter, /sbin/mkswap, root
 blkid: CommandFilter, /sbin/blkid, root
-
-# nova/virt/baremetal/pxe.py: 'dnsmasq', ...
-dnsmasq: CommandFilter, /usr/sbin/dnsmasq, root
