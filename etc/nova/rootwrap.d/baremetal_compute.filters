@@ -48,3 +48,6 @@ dd: CommandFilter, /sbin/fdisk, root
 fdisk: CommandFilter, /bin/dd, root
 mkswap: CommandFilter, /sbin/mkswap, root
 blkid: CommandFilter, /sbin/blkid, root
+
+# nova/virt/baremetal/pxe.py: 'dnsmasq', ...
+dnsmasq: CommandFilter, /usr/sbin/dnsmasq, root
