@@ -127,28 +127,12 @@ First, create a tilera instance type in the normal way.
 
 Example::
 
-	$ nova-manage instance_type create --name=tp64.8x8 --cpu=64 --memory=16218 --root_gb=917 --ephemeral_gb=0 --flavor=6 --swap=1024 --rxtx_factor=1
+	$ nova-manage instance_type create --name=tp64.8x8 --cpu=64 --memory=16218 --root_gb=917 --ephemeral_gb=0 --swap=1024 --rxtx_factor=1
 	(about --flavor, see 'How to choose the value for flavor' section below)
 
 Next, set baremetal extra_spec to the instance type::
 
 	$ nova-manage instance_type set_key --name=tp64.8x8 --key cpu_arch --value 's== tilepro64'
-
-
-How to choose the value for flavor.
------------------------------------
-
-Run nova-manage instance_type list, find the maximum FlavorID in output. Use the maximum FlavorID+1 for new instance_type::
-
-	$ nova-manage instance_type list
-	m1.medium: Memory: 4096MB, VCPUS: 2, Root: 40GB, Ephemeral: 0Gb, FlavorID: 3, Swap: 0MB, RXTX Factor: 1.0, ExtraSpecs {}
-	m1.small: Memory: 2048MB, VCPUS: 1, Root: 20GB, Ephemeral: 0Gb, FlavorID: 2, Swap: 0MB, RXTX Factor: 1.0, ExtraSpecs {}
-	m1.large: Memory: 8192MB, VCPUS: 4, Root: 80GB, Ephemeral: 0Gb, FlavorID: 4, Swap: 0MB, RXTX Factor: 1.0, ExtraSpecs {}
-	m1.tiny: Memory: 512MB, VCPUS: 1, Root: 0GB, Ephemeral: 0Gb, FlavorID: 1, Swap: 0MB, RXTX Factor: 1.0, ExtraSpecs {}
-	m1.xlarge: Memory: 16384MB, VCPUS: 8, Root: 160GB, Ephemeral: 0Gb, FlavorID: 5, Swap: 0MB, RXTX Factor: 1.0, ExtraSpecs {}
-
-In the example above, the maximum Flavor ID is 5, so use 6.
-
 
 
 Start Processes
