@@ -41,6 +41,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova.network import api as network_api
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -197,9 +198,9 @@ class ComputeTestCase(BaseTestCase):
                                                           spectacular=True)
 
         super(ComputeTestCase, self).setUp()
-        self.stubs.Set(nova.network.API, 'get_instance_nw_info',
+        self.stubs.Set(network_api.API, 'get_instance_nw_info',
                        fake_get_nw_info)
-        self.stubs.Set(nova.network.API, 'allocate_for_instance',
+        self.stubs.Set(network_api.API, 'allocate_for_instance',
                        fake_get_nw_info)
         self.compute_api = compute.API()
 
@@ -1192,7 +1193,7 @@ class ComputeTestCase(BaseTestCase):
         def dummy(*args, **kwargs):
             pass
 
-        self.stubs.Set(nova.network.API, 'add_fixed_ip_to_instance',
+        self.stubs.Set(network_api.API, 'add_fixed_ip_to_instance',
                        dummy)
         self.stubs.Set(nova.compute.manager.ComputeManager,
                        'inject_network_info', dummy)
@@ -1213,7 +1214,7 @@ class ComputeTestCase(BaseTestCase):
         def dummy(*args, **kwargs):
             pass
 
-        self.stubs.Set(nova.network.API, 'remove_fixed_ip_from_instance',
+        self.stubs.Set(network_api.API, 'remove_fixed_ip_from_instance',
                        dummy)
         self.stubs.Set(nova.compute.manager.ComputeManager,
                        'inject_network_info', dummy)
@@ -2665,7 +2666,7 @@ class ComputeAPITestCase(BaseTestCase):
                                                           spectacular=True)
 
         super(ComputeAPITestCase, self).setUp()
-        self.stubs.Set(nova.network.API, 'get_instance_nw_info',
+        self.stubs.Set(network_api.API, 'get_instance_nw_info',
                        fake_get_nw_info)
         self.security_group_api = compute.api.SecurityGroupAPI()
         self.compute_api = compute.API(
@@ -3531,6 +3532,27 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(properties['extra_param'], 'value1')
 
         db.instance_destroy(self.context, instance['uuid'])
+
+    def test_snapshot_image_metadata_inheritance(self):
+        # Ensure image snapshots inherit metadata from the base image
+        self.flags(non_inheritable_image_properties=['spam'])
+
+        def fake_instance_system_metadata_get(context, uuid):
+            return dict(image_a=1, image_b=2, image_c='c', d='d', spam='spam')
+
+        self.stubs.Set(db, 'instance_system_metadata_get',
+                       fake_instance_system_metadata_get)
+
+        instance = self._create_fake_instance()
+        image = self.compute_api.snapshot(self.context, instance, 'snap1',
+                                          {'extra_param': 'value1'})
+
+        properties = image['properties']
+        self.assertEqual(properties['a'], 1)
+        self.assertEqual(properties['b'], 2)
+        self.assertEqual(properties['c'], 'c')
+        self.assertEqual(properties['d'], 'd')
+        self.assertFalse('spam' in properties)
 
     def test_backup(self):
         """Can't backup an instance which is already being backed up."""
