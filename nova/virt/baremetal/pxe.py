@@ -175,6 +175,10 @@ def _build_pxe_config(deployment_id, deployment_key, deployment_iscsi_iqn,
         pxeconf += " %s" % FLAGS.baremetal_pxe_append_params
     pxeconf += "\n"
     pxeconf += "\n"
+    pxeconf += "label local\n"
+    pxeconf += "  localboot 0\n"
+    pxeconf += "\n"
+    pxeconf += "\n"
     return pxeconf
 
 

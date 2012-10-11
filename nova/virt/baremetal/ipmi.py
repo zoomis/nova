@@ -80,6 +80,7 @@ class Ipmi(object):
         self._user = node['pm_user']
         self._password = node['pm_password']
         self._interface = "lanplus"
+        self.power_state = False
         if self._address == None:
             raise IpmiError(-1, "address is None")
         if self._user == None:
@@ -109,17 +110,26 @@ class Ipmi(object):
         return out, err
 
     def activate_node(self):
-        self._power_off()
-        state = self._power_on()
+#        self._power_off()
+#        state = self._power_on()
+        LOG.debug("in activate node")
+        state = baremetal_states.ACTIVE
+        self.power_state = True
         return state
 
     def reboot_node(self):
-        self._power_off()
-        state = self._power_on()
+#        self._power_off()
+#        state = self._power_on()
+        LOG.debug("in reboot node")
+        state = baremetal_states.ACTIVE
+        self.power_state = True
         return state
 
     def deactivate_node(self):
-        state = self._power_off()
+        #state = self._power_off()
+        LOG.debug("in deactivate node")
+        state = baremetal_states.DELETED
+        self.power_state = False
         return state
 
     def _power_on(self):
@@ -157,8 +167,9 @@ class Ipmi(object):
         return r == "Chassis Power is off\n"
 
     def is_power_on(self):
-        r = self._power_status()
-        return r == "Chassis Power is on\n"
+        #r = self._power_status()
+        #return r == "Chassis Power is on\n"
+        return self.power_state
 
     def start_console(self, port, node_id):
         pidfile = self._console_pidfile(node_id)
@@ -202,11 +213,11 @@ class Ipmi(object):
 
     def stop_console(self, node_id):
         console_pid = self._console_pid(node_id)
-        if console_pid:
-            utils.execute('kill', str(console_pid),
-                          run_as_root=True,
-                          check_exit_code=False)
-        _unlink_without_raise(self._console_pidfile(node_id))
+        #if console_pid:
+        #    utils.execute('kill', str(console_pid),
+        #                  run_as_root=True,
+        #                  check_exit_code=False)
+        #_unlink_without_raise(self._console_pidfile(node_id))
 
     def _console_pidfile(self, node_id):
         name = "%s.pid" % node_id
@@ -219,3 +230,4 @@ class Ipmi(object):
             with open(pidfile, 'r') as f:
                 return int(f.read())
         return None
+
