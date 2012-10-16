@@ -358,7 +358,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.assertDictMatch(fake_diagnostics, expected)
 
     def test_instance_snapshot_fails_with_no_primary_vdi(self):
-        def create_bad_vbd(vm_ref, vdi_ref):
+        def create_bad_vbd(session, vm_ref, vdi_ref, userdevice,
+                           vbd_type='disk', read_only=False, bootable=False):
             vbd_rec = {'VM': vm_ref,
                'VDI': vdi_ref,
                'userdevice': 'fake',
@@ -367,7 +368,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             xenapi_fake.after_VBD_create(vbd_ref, vbd_rec)
             return vbd_ref
 
-        self.stubs.Set(xenapi_fake, 'create_vbd', create_bad_vbd)
+        self.stubs.Set(vm_utils, 'create_vbd', create_bad_vbd)
         stubs.stubout_instance_snapshot(self.stubs)
         # Stubbing out firewall driver as previous stub sets alters
         # xml rpc result parsing
@@ -2296,9 +2297,6 @@ class VmUtilsTestCase(test.TestCase):
     """Unit tests for xenapi utils."""
 
     def test_upload_image(self):
-        """Ensure image properties include instance system metadata
-           as well as few local settings."""
-
         def fake_instance_system_metadata_get(context, uuid):
             return dict(image_a=1, image_b=2, image_c='c', d='d')
 
@@ -2337,8 +2335,8 @@ class VmUtilsTestCase(test.TestCase):
         vm_utils.upload_image(ctx, session, instance, "vmi uuids", "image id")
 
         actual = self.kwargs['properties']
-        expected = dict(a=1, b=2, c='c', d='d',
-                        auto_disk_config='auto disk config',
+        # Inheritance happens in another place, now
+        expected = dict(auto_disk_config='auto disk config',
                         os_type='os type')
         self.assertEquals(expected, actual)
 

@@ -2981,6 +2981,7 @@ def volume_detached(context, volume_id):
         volume_ref['mountpoint'] = None
         volume_ref['attach_status'] = 'detached'
         volume_ref['instance_uuid'] = None
+        volume_ref['attach_time'] = None
         volume_ref.save(session=session)
 
 
@@ -5184,7 +5185,10 @@ def get_instance_uuid_by_ec2_id(context, ec2_id, session=None):
 
 @require_context
 def _ec2_instance_get_query(context, session=None):
-    return model_query(context, models.InstanceIdMapping, session=session)
+    return model_query(context,
+                       models.InstanceIdMapping,
+                       session=session,
+                       read_deleted='yes')
 
 
 @require_admin_context

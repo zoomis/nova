@@ -51,7 +51,7 @@
 
 
 """
-  CLI interface for nova management.
+  CLI interface for nova bare-metal management.
 """
 
 import ast
@@ -100,6 +100,7 @@ def args(*args, **kwargs):
 
 
 class BareMetalDbCommands(object):
+    """Class for managing the bare-metal database."""
 
     @args('--version', dest='version', metavar='<version>',
             help='Bare-metal Database version')
@@ -113,6 +114,7 @@ class BareMetalDbCommands(object):
 
 
 class BareMetalNodeCommands(object):
+    """Class for mangaging bare-metal nodes."""
 
     @args('--host', dest='host', metavar='<host>',
           help='Compute service\'s hostname')
@@ -139,6 +141,7 @@ class BareMetalNodeCommands(object):
     def create(self, host, cpus, memory_mb, local_gb, pm_address, pm_user,
                pm_password, prov_mac_address, prov_vlan_id=None,
                terminal_port=None):
+        """Creates bare-metal nodes"""
         values = {
             'service_host': host,
             'cpus': cpus,
@@ -160,10 +163,12 @@ class BareMetalNodeCommands(object):
     @args('--id', dest='node_id', metavar='<id>',
             help='ID of bare-metal node')
     def delete(self, node_id):
+        """Deletes bare-metal nodes"""
         ctx = context.get_admin_context()
         bmdb.bm_node_destroy(ctx, node_id)
 
     def list(self):
+        """Show a list of all bare-metal nodes"""
         fmt = "%-8s  %-12s  %-36s  %-6s  %-8s  %-8s  %-16s  %-16s " + \
               "%-5s  %-18s  %-4s"
         print fmt % (
@@ -190,6 +195,7 @@ class BareMetalNodeCommands(object):
 
 
 class BareMetalInterfaceCommands(object):
+    """Class for mangaging bare-metal nodes' NICs."""
 
     @args('--node_id', dest='node_id', metavar='<node_id>',
             help='ID of bare-metal node')
@@ -200,6 +206,7 @@ class BareMetalInterfaceCommands(object):
     @args('--port_no', dest='port_no', metavar='<port_no>',
             help='OpenFlow port number')
     def create(self, node_id, mac_address, datapath_id, port_no):
+        """Creates bare-metal nodes' NICs"""
         datapath_id = datapath_id.lower()
         if not datapath_id.startswith("0x"):
             datapath_id = "0x" + datapath_id
@@ -225,12 +232,14 @@ class BareMetalInterfaceCommands(object):
     @args('--id', dest='if_id', metavar='<id>',
             help='ID of interface')
     def delete(self, if_id):
+        """Deletes bare-metal nodes' NICs"""
         ctx = context.get_admin_context()
         bmdb.bm_interface_destroy(ctx, if_id)
 
     @args('--node_id', dest='node_id', metavar='<node_id>',
             help='ID of bare-metal node')
     def list(self, node_id=None):
+        """Show a list of all NICs. Filter by node ID"""
         fmt = "%-8s  %-16s  %-18s  %-16s  %-4s"
         print fmt % (
                     _('ID'),
@@ -250,10 +259,12 @@ class BareMetalInterfaceCommands(object):
 
 
 class BareMetalPxeIpCommands(object):
+    """Class for mangaging IPs in bare-metal PXE networks."""
 
     @args('--cidr', dest='cidr_str', metavar='<cidr>',
             help='Network CIDR')
     def create(self, cidr_str):
+        """Creates IPs by range"""
         ctx = context.get_admin_context()
         cidr = netaddr.IPNetwork(cidr_str)
         num_ips = len(cidr)
@@ -267,6 +278,7 @@ class BareMetalPxeIpCommands(object):
     @args('--cidr', dest='cidr_str', metavar='<cidr>',
             help='Network CIDR')
     def delete(self, ip_id=None, cidr_str=None):
+        """Deletes IPs by range"""
         if ip_id is None and cidr_str is None:
             raise Exception("Please specify either ID or CIDR")
         ctx = context.get_admin_context()
@@ -280,6 +292,7 @@ class BareMetalPxeIpCommands(object):
                 bmdb.bm_pxe_ip_destroy_by_address(ctx, address)
 
     def list(self):
+        """Show a list of all IPs"""
         fmt = "%-8s  %-15s  %-15s  %-8s"
         print fmt % (
                     _('ID'),

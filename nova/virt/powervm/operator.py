@@ -99,12 +99,7 @@ class PowerVMOperator(object):
         layer, as a list.
         """
         lpar_instances = self._operator.list_lpar_instances()
-        # We filter out instances that haven't been created
-        # via OpenStack. Notice that this is fragile and it can
-        # be improved later.
-        instances = [instance for instance in lpar_instances
-                     if re.search(r'^instance-[0-9]{8}$', instance)]
-        return instances
+        return lpar_instances
 
     def get_available_resource(self):
         """Retrieve resource info.
@@ -281,8 +276,8 @@ class PowerVMOperator(object):
                        "PowerVM system.") % instance_name)
 
     def _cleanup(self, instance_name):
+        lpar_id = self._get_instance(instance_name)['lpar_id']
         try:
-            lpar_id = self._get_instance(instance_name)['lpar_id']
             vhost = self._operator.get_vhost_by_instance_id(lpar_id)
             disk_name = self._operator.get_disk_name_by_vhost(vhost)
 

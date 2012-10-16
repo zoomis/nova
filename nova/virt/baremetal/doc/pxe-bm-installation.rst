@@ -147,28 +147,11 @@ First, create an instance type in the normal way.
 
 Example::
 
-	$ nova-manage instance_type create --name=bm.small --cpu=2 --memory=4096 --root_gb=10 --ephemeral_gb=20 --flavor=6 --swap=1024 --rxtx_factor=1
-	(about --flavor, see 'How to choose the value for flavor' section below)
+	$ nova-manage instance_type create --name=bm.small --cpu=2 --memory=4096 --root_gb=10 --ephemeral_gb=20 --swap=1024 --rxtx_factor=1
 
 Next, set baremetal extra_spec to the instance type::
 
 	$ nova-manage instance_type set_key --name=bm.small --key cpu_arch --value 'x86_64'
-
-How to choose the value for flavor.
------------------------------------
-
-Run nova-manage instance_type list, find the maximum FlavorID in output. Use the maximum FlavorID+1 for new instance_type.
-
-::
-
-	$ nova-manage instance_type list
-	m1.medium: Memory: 4096MB, VCPUS: 2, Root: 40GB, Ephemeral: 0Gb, FlavorID: 3, Swap: 0MB, RXTX Factor: 1.0, ExtraSpecs {}
-	m1.small: Memory: 2048MB, VCPUS: 1, Root: 20GB, Ephemeral: 0Gb, FlavorID: 2, Swap: 0MB, RXTX Factor: 1.0, ExtraSpecs {}
-	m1.large: Memory: 8192MB, VCPUS: 4, Root: 80GB, Ephemeral: 0Gb, FlavorID: 4, Swap: 0MB, RXTX Factor: 1.0, ExtraSpecs {}
-	m1.tiny: Memory: 512MB, VCPUS: 1, Root: 0GB, Ephemeral: 0Gb, FlavorID: 1, Swap: 0MB, RXTX Factor: 1.0, ExtraSpecs {}
-	m1.xlarge: Memory: 16384MB, VCPUS: 8, Root: 160GB, Ephemeral: 0Gb, FlavorID: 5, Swap: 0MB, RXTX Factor: 1.0, ExtraSpecs {}
-
-In the example above, the maximum Flavor ID is 5, so use 6.
 
 
 Start Processes
