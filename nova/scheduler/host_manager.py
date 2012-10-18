@@ -312,10 +312,13 @@ class HostManager(object):
     def filter_hosts(self, hosts, filter_properties, filters=None):
         """Filter hosts and return only ones passing all filters"""
         filtered_hosts = []
+        LOG.debug(_("filter_prperties %(filter_properties)s") % locals())
         filter_fns = self._choose_host_filters(filters)
         for host in hosts:
+            LOG.debug(_("in filter_host %(host)s") % locals())
             if host.passes_filters(filter_fns, filter_properties):
                 filtered_hosts.append(host)
+        LOG.debug(_("filtered_hosts %(filtered_hosts)s") % locals())
         return filtered_hosts
 
     def update_service_capabilities(self, service_name, host, capabilities):

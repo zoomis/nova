@@ -54,6 +54,7 @@ class BareMetalNode(BASE, models.NovaBase):
     task_state = Column(String(255))
     prov_vlan_id = Column(Integer)
     terminal_port = Column(Integer)
+    type = Column(Text)
     __table_args__ = (
             Index('idx_bm_nodes_service_host_deleted',
                   'service_host', 'deleted'),
