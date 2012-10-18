@@ -35,6 +35,8 @@ class BaremetalNodeState(host_manager.HostState):
 
     def update_from_compute_node(self, compute):
         """Update information about a host from its compute_node info."""
+        LOG.debug(_("in Update from computei baremetal %(compute)s") %
+                locals())
         all_ram_mb = compute['memory_mb']
 
         free_disk_mb = compute['free_disk_gb'] * 1024
@@ -62,9 +64,13 @@ def new_host_state(self, host, topic, capabilities=None, service=None,
         capabilities = {}
     cap = capabilities.get(topic, {})
     if bool(cap.get('baremetal_driver')):
+        LOG.debug(_("in new_host_state baremetal %(nodename)s ,and cap is: %(cap)s") %
+                locals())
         return BaremetalNodeState(host, topic, capabilities, service,
                                   nodename=nodename)
     else:
+        LOG.debug(_("in else new_host_state baremetal %(nodename)s ,and cap is: %(cap)s") %
+                locals())
         return host_manager.HostState(host, topic, capabilities, service,
                                       nodename=nodename)
 

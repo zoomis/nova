@@ -67,11 +67,17 @@ class FilterScheduler(driver.Scheduler):
                 locals())
 
         payload = dict(request_spec=request_spec)
+        LOG.debug(_("payload is %(payload)s") %
+                locals())
         notifier.notify(context, notifier.publisher_id("scheduler"),
                         'scheduler.run_instance.start', notifier.INFO, payload)
 
+        LOG.debug(_("filter_properties are %(filter_properties)s") %
+                locals())
         weighted_hosts = self._schedule(context, "compute", request_spec,
                                         filter_properties, instance_uuids)
+        LOG.debug(_("weighted_hosts are %(weighted_hosts)s") %
+                locals())
 
         # NOTE(comstud): Make sure we do not pass this through.  It
         # contains an instance of RpcContext that cannot be serialized.
@@ -83,6 +89,8 @@ class FilterScheduler(driver.Scheduler):
             try:
                 try:
                     weighted_host = weighted_hosts.pop(0)
+                    LOG.debug(_("weighted_host poped is %(weighted_host)s") %
+                            locals())
                 except IndexError:
                     raise exception.NoValidHost(reason="")
 
@@ -263,8 +271,11 @@ class FilterScheduler(driver.Scheduler):
         # selections can adjust accordingly.
 
         # unfiltered_hosts_dict is {host : ZoneManager.HostInfo()}
+
+        LOG.debug(_("filter_props in _schedule %(filter_properties)s") % locals())
         unfiltered_hosts_dict = self.host_manager.get_all_host_states(
                 elevated, topic)
+        LOG.debug(_("unfiltered host dict is %(unfiltered_hosts_dict)s") % locals())
 
         # Note: remember, we are using an iterator here. So only
         # traverse this list once. This can bite you if the hosts

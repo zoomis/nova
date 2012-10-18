@@ -3046,6 +3046,9 @@ class HostState(object):
         data["hypervisor_type"] = self.connection.get_hypervisor_type()
         data["hypervisor_version"] = self.connection.get_hypervisor_version()
         data["hypervisor_hostname"] = self.connection.get_hypervisor_hostname()
+        _extra_spec = {}
+        _extra_spec['cpu_arch'] = 'virtual'
+        data.update(_extra_spec)
         data["supported_instances"] = \
             self.connection.get_instance_capabilities()
 

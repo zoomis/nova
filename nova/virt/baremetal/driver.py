@@ -425,7 +425,10 @@ class BareMetalDriver(driver.ComputeDriver):
             data['hypervisor_version'] = res['hypervisor_version']
             data['hypervisor_hostname'] = str(node['id'])
             data['supported_instances'] = self._supported_instances
-            data.update(self._extra_specs)
+	    _ext_s = self._extra_specs
+            if node['type'] is not None:
+                _ext_s['cpu_arch'] = node['type']
+            data.update(_ext_s)
             data['host'] = FLAGS.host
             data['node'] = str(node['id'])
             # TODO(NTTdocomo): put node's extra specs here

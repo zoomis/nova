@@ -50,6 +50,7 @@ def upgrade(migrate_engine):
         Column('task_state', String(length=255)),
         Column('prov_vlan_id', Integer),
         Column('terminal_port', Integer),
+        Column('type', String(length=255)),
         mysql_engine='InnoDB',
         #mysql_charset='utf8'
     )

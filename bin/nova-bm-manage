@@ -137,9 +137,11 @@ class BareMetalNodeCommands(object):
                'in the form of xx:xx:xx:xx:xx:xx')
     @args('--prov_vlan_id', dest='prov_vlan_id', metavar='<prov_vlan_id>',
           help='VLAN ID (optional)')
+    @args('--type', dest='type', metavar='<type of baremetal>',
+          help='shows baremeatl type (e.g., x86_64,i686,etc.')
     def create(self, host, cpus, memory_mb, local_gb, pm_address, pm_user,
                pm_password, prov_mac_address, prov_vlan_id=None,
-               terminal_port=None):
+               terminal_port=None, type=None):
         """Creates bare-metal nodes"""
         values = {
             'service_host': host,
@@ -154,6 +156,7 @@ class BareMetalNodeCommands(object):
             'terminal_port': terminal_port,
             'registration_status': 'done',
             'task_state': None,
+            'type': type,
         }
         ctx = context.get_admin_context()
         r = bmdb.bm_node_create(ctx, values)
@@ -169,7 +172,7 @@ class BareMetalNodeCommands(object):
     def list(self):
         """Show a list of all bare-metal nodes"""
         fmt = "%-8s  %-12s  %-36s  %-6s  %-8s  %-8s  %-16s  %-16s " + \
-              "%-5s  %-18s  %-4s"
+              "%-5s  %-18s  %-4s  %-20s"
         print fmt % (
                     _('ID'),
                     _('SERVICE_HOST'),
@@ -181,7 +184,8 @@ class BareMetalNodeCommands(object):
                     _('PM_User'),
                     _('TERMINAL_PORT'),
                     _('PROV_MAC'),
-                    _('PROV_VLAN'))
+                    _('PROV_VLAN'),
+                    _('TYPE'))
         ctxt = context.get_admin_context()
         for node in bmdb.bm_node_get_all(ctxt):
             print fmt % (node['id'], node['service_host'],
@@ -189,7 +193,7 @@ class BareMetalNodeCommands(object):
                          node['cpus'], node['memory_mb'], node['local_gb'],
                          node['pm_address'], node['pm_user'],
                          node['terminal_port'],
-                         node['prov_mac_address'], node['prov_vlan_id'])
+                         node['prov_mac_address'], node['prov_vlan_id'], node['type'])
         print
 
 
