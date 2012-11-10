@@ -43,6 +43,9 @@ quantum_opts = [
     cfg.StrOpt('quantum_admin_auth_url',
                default='http://localhost:5000/v2.0',
                help='auth url for connecting to quantum in admin context'),
+    cfg.StrOpt('quantum_admin_auth_region',
+               default='RegionOne',
+               help='auth region for connecting to quantum in admin context'),
     cfg.StrOpt('quantum_auth_strategy',
                default='keystone',
                help='auth strategy for connecting to '
