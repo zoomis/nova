@@ -33,6 +33,7 @@ def _get_auth_token():
             tenant_name=FLAGS.quantum_admin_tenant_name,
             password=FLAGS.quantum_admin_password,
             auth_url=FLAGS.quantum_admin_auth_url,
+            region_name=FLAGS.quantum_admin_auth_region,
             timeout=FLAGS.quantum_url_timeout,
             auth_strategy=FLAGS.quantum_auth_strategy)
         httpclient.authenticate()
