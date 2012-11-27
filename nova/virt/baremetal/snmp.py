@@ -56,35 +56,153 @@ class SnmpNetBootError(Exception):
 
     def __str__(self):
         return "%s: %s" % (self.status, self.msg)
+#pm_user has the oids and type of bm
+#type,oid_s[..]
 
+class SnmpTypeB(object):
+
+    def __init__(self, address, community, oids):
+        self._address = address
+        self._community = community
+        self._oids = oids
+        self._oid_s_p = oids[0]
+        self._oid_s_r = oids[1]
+        self._oid_g = oids[2]
+
+    def _exec_snmpget_tool(self, oid):
+        args = []
+        args.append("snmpget")
+        args.append("-t")
+        args.append("15")
+        args.append("-v1")
+        args.append("-c"+self._community)
+        args.append(self._address)
+        args.append(oid)
+        #print args
+        LOG.debug("A:snmpget commands: %s", args)
+        out, err = utils.execute(*args, attempts=3)
+        LOG.debug("out: %s", out)
+        LOG.debug("err: %s", err)
+        return out, err
+
+    def _exec_snmpset_tool(self, oid, command):
+        args = []
+        args.append("snmpset")
+        args.append("-t")
+        args.append("15")
+        args.append("-v1")
+        args.append("-c"+self._community)
+        args.append(self._address)
+        args.append(oid)
+        args.extend(command.split(" "))
+        LOG.debug("A:snmpset commands: %s", args)
+        out, err = utils.execute(*args, attempts=3)
+        LOG.debug("out: %s", out)
+        LOG.debug("err: %s", err)
+        return out, err
+
+    def power_on(self):
+        self._exec_snmpset_tool(self._oid_s_p, "i 1")
+
+    def power_off(self):
+        self._exec_snmpset_tool(self._oid_s_p, "i 0")
+
+    def reboot(self):
+        self._exec_snmpset_tool(self._oid_s_r, "i 1")
+
+    def power_status(self):
+        out_err = self._exec_snmpget_tool(self._oid_g)
+        if out_err[1]=="":
+           if out_err[0].endswith("1\n"):
+              out_err = ("1\n", "")
+           elif out_err[0].endswith("0\n"):
+              out_err = ("2\n", "")
+        return out_err 
+
+class SnmpTypeA(object):
+
+    def __init__(self, address, community, oids):
+        self._address = address
+        self._community = community
+        self._oids = oids
+        self._oid_s = oids[0]
+        self._oid_g = oids[1]
+
+    def _exec_snmpget_tool(self, command):
+        args = []
+        args.append("snmpget")
+        args.append("-v2c")
+        args.append("-c"+self._community)
+        args.append(self._address)
+        args.append(self._oid_g)
+        LOG.debug("A:snmpget commands: %s", args)
+        print args
+        out, err = utils.execute(*args, attempts=3)
+        LOG.debug("out: %s", out)
+        LOG.debug("err: %s", err)
+        return out, err
+
+    def _exec_snmpset_tool(self, command):
+        args = []
+        args.append("snmpset")
+        args.append("-v2c")
+        args.append("-c"+self._community)
+        args.append(self._address)
+        args.append(self._oid_s)
+        args.extend(command.split(" "))
+        LOG.debug("A:snmpset commands: %s", args)
+        print args
+        out, err = utils.execute(*args, attempts=3)
+        LOG.debug("out: %s", out)
+        LOG.debug("err: %s", err)
+        return out, err
+
+    def power_on(self):
+        self._exec_snmpset_tool("i 1")
+
+    def power_off(self):
+        self._exec_snmpset_tool("i 2")
+
+    def reboot(self):
+        self._exec_snmpset_tool("i 3")
+
+    def power_status(self):
+        out_err = self._exec_snmpget_tool("")
+        return out_err       
 
 class SnmpNetBoot(object):
 
     def __init__(self, node):
         self._address = node['pm_address']
-	oids = node['pm_user'].split(",")
-        self._oid_s = oids[0]
-        self._oid_g = oids[1]
+        oids = node['pm_user'].split(",")
+        self._type = oids[0]
+        self._oids = oids[1:]
         self._community = node['pm_password']
         self._interface = "lanplus"
         self.power_state = False
         if self._address == None:
             raise SnmpNetBootError(-1, "address is None")
-        if self._oid_s == None:
-            raise SnmpNetBootError(-1, "snmp oid_s(user) is None")
-        if self._oid_g == None:
-            raise SnmpNetBootError(-1, "snmp oid_g(user) is None")
+        if self._type == "a":
+           if len(self._oids) < 2:
+              raise SnmpNetBootError(-1, "snmp oid for type a is not enough")
+        elif self._type == "b":
+           if len(self._oids) < 3:
+              raise SnmpNetBootError(-1, "snmp oid for type b is not enough")
         if self._community == None:
             raise SnmpNetBootError(-1, "snmp community(password) is None")
+        if self._type == "a":
+           self._snmp = SnmpTypeA(self._address, self._community, self._oids)
+        elif self._type == "b":
+           self._snmp = SnmpTypeB(self._address, self._community, self._oids)
 
     def _exec_snmpget_tool(self, command):
         args = []
         args.append("snmpget")
-	args.append("-v2c")
-	args.append("-c"+self._community)
+        args.append("-v2c")
+        args.append("-c"+self._community)
         args.append(self._address)
         args.append(self._oid_g)
-#        args.extend(command.split(" "))
+#       args.extend(command.split(" "))
         LOG.debug("snmpget commands: %s", args)
         out, err = utils.execute(*args, attempts=3)
         LOG.debug("out: %s", out)
@@ -94,8 +212,8 @@ class SnmpNetBoot(object):
     def _exec_snmpset_tool(self, command):
         args = []
         args.append("snmpset")
-	args.append("-v2c")
-	args.append("-c"+self._community)
+        args.append("-v2c")
+        args.append("-c"+self._community)
         args.append(self._address)
         args.append(self._oid_s)
         args.extend(command.split(" "))
@@ -133,7 +251,8 @@ class SnmpNetBoot(object):
             if count > 3:
                 return baremetal_states.ERROR
             try:
-                self._exec_snmpset_tool("i 1")
+                self._snmp.power_on()
+                #self._exec_snmpset_tool("i 1")
             except Exception:
                 LOG.exception("power_on failed")
             time.sleep(5)
@@ -146,7 +265,8 @@ class SnmpNetBoot(object):
             if count > 3:
                 return baremetal_states.ERROR
             try:
-                self._exec_snmpset_tool("i 2")
+                self._snmp.power_off()
+                #self._exec_snmpset_tool("i 2")
             except Exception:
                 LOG.exception("power_off failed")
             time.sleep(5)
@@ -154,18 +274,20 @@ class SnmpNetBoot(object):
 
     def _reboot(self):
         count = 0
-	if self._is_power_off():
-	    return self._power_on()
-	else:
+        if self._is_power_off():
+            return self._power_on()
+        else:
             try:
-                self._exec_snmpset_tool("i 3")
+                self._snmp.reboot()
+                #self._exec_snmpset_tool("i 3")
             except Exception:
                 LOG.exception("reboot failed")
             time.sleep(5)
         return baremetal_states.ACTIVE
 
     def _power_status(self):
-        out_err = self._exec_snmpget_tool("")
+        #out_err = self._exec_snmpget_tool("")
+        out_err = self._snmp.power_status()
         LOG.debug("in power status %s", out_err)
         return out_err[0]
 
@@ -185,5 +307,3 @@ class SnmpNetBoot(object):
     def stop_console(self, node_id):
 	pass
         #raise SnmpNetBootError(-1, "Not Implemented")
-
-

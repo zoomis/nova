@@ -148,8 +148,8 @@ def switch_pxe_config(path, root_uuid):
     with open(path, 'w') as f:
         for line in lines:
             line = rre.sub(root, line)
-            #line = dre.sub('default boot', line)
-            line = dre.sub('default local', line)
+            line = dre.sub('default boot', line)
+#           line = dre.sub('default local', line)
             f.write(line)
 
 
