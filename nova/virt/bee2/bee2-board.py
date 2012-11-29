@@ -38,10 +38,7 @@ LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 def get_baremetal_nodes():
-#    return PXE()
     return BEE2()
-
-#Template = None
 
 def _cache_image_x(context, target, image_id,
                    user_id, project_id):
@@ -49,13 +46,13 @@ def _cache_image_x(context, target, image_id,
         libvirt_utils.fetch_image(context, target, image_id,
                                   user_id, project_id)
 
-#class PXE(object):
 class BEE2(object):
 
     def define_vars(self, instance, network_info, block_device_info):
         var = {}
         var['image_root'] = os.path.join(FLAGS.instances_path,
                                          instance['name'])
+        var['network_info'] = network_info
         return var
 
     def create_image(self, var, context, image_meta, node, instance,
@@ -79,12 +76,25 @@ class BEE2(object):
         shutil.rmtree(image_root, ignore_errors=True)
         LOG.debug("finished destroy_image")
 
-    def getfpga(self, image_path, node):
+    def _find_MAC_Addresses(self, network_info):
+        nets = []
+        ifc_num = -1
+        for (network_ref, mapping) in network_info:
+            ifc_num += 1
+            name = 'eth%d' % ifc_num
+            net_info = {'name': name,
+                    'hwaddress': mapping['mac']}
+            nets.append(net_info)
+        return nets
+
+    def _getfpga(self, image_path, node, nets):
         LOG.debug("Processing GET & PROGRAM command")
         try:
-            result, message = tcp_handler("GET", 1, node['pm_address'])
-            result, message = tcp_handler("PRG", 1, node['pm_address'], image_path)
-            LOG.debug("after processing tcp_handler:GET & PROGRAM command")
+            result, message = tcp_handler("GET", 1, "", 9, node['pm_address'])
+            result, message = tcp_handler("PRG", 1, "", 9, node['pm_address'], image_path)
+            for index, item in enumerate(nets):
+                result, message = tcp_handler("MAC", 1, item['hwaddress'], (index+1),node['pm_address'], image_path)
+            LOG.debug("after processing tcp_handler:GET & PROGRAM $ SET-MAC commands")
         except:
             LOG.debug("TCP DIED")
             LOG.exception("failed to connect to the subAgent host")
@@ -96,10 +106,10 @@ class BEE2(object):
                 LOG.debug("FPGA-GET&PRG ERROR!")
         LOG.debug("FPGA-GET&PRG Finished")
 
-    def releasefpga(self, node):
+    def _releasefpga(self, node):
         LOG.debug("Processing RELEASE command")
         try:
-            result, message = tcp_handler("REL", 1, node['pm_address'])
+            result, message = tcp_handler("REL", 1, "", 9, node['pm_address'])
         except:
             LOG.debug("TCP DIED")
             LOG.exception("failed to connect to the subAgent host")
@@ -115,11 +125,13 @@ class BEE2(object):
         image_path = var['image_path']
         inst_type_id = instance['instance_type_id']
         inst_type = instance_types.get_instance_type(inst_type_id)
-        self.getfpga(image_path, node)
+        network_info = var['network_info']
+        nets = self._find_MAC_Addresses(network_info)
+        self._getfpga(image_path, node, nets)
         LOG.debug("successfully bypassing activate_bootloader")
 
     def deactivate_bootloader(self, var, context, node, instance):
-        self.releasefpga(node)
+        self._releasefpga(node)
 	LOG.debug("bypassing deactivate_bootloader")
 	pass
     def activate_node(self, var, context, node, instance):

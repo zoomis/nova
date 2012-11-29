@@ -7,7 +7,7 @@ import socket
 import os
 #from libs.customized_logging import logger
 
-def tcp_handler (cmd, fpga_num, subagent_address, dir_path=0):
+def tcp_handler (cmd, fpga_num, mac_address, port_number, subagent_address, dir_path=0):
     result = "OK"
     # open a socket
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -26,8 +26,12 @@ def tcp_handler (cmd, fpga_num, subagent_address, dir_path=0):
         client_socket.send(str(fpga_num) + "\r\n")
         if (cmd == "PRG"):
             size = str(os.path.getsize(dir_path))
-            print ("FPGA-IMAGE size is=%s", size) 
+            print ("FPGA-IMAGE size is=%s", size)
             client_socket.send(str(size) + "\r\n")
+        if (cmd == "MAC"):
+            #mac_address = "23:45:67:89:ab:cd"
+            print ("FPGA-MAC-ADDRESS is=%s", mac_address)
+            client_socket.send(mac_address + "\r\n")
         client_socket.send("\r\n")
         if (cmd == "PRG"):
             bit_file = open(dir_path)
@@ -35,6 +39,10 @@ def tcp_handler (cmd, fpga_num, subagent_address, dir_path=0):
             while (data != ""):
                 client_socket.send(data)
                 data = bit_file.read(1024)
+        if (cmd == "MAC"):
+            #port_number = 2
+            print ("FPGA-PORT-NUMBER is=%s", str(port_number))
+            client_socket.send(str(port_number) + "\r\n")
 
     except socket.timeout:
         result = -1
