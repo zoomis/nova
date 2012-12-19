@@ -263,8 +263,8 @@ class HostState(object):
                                 return False
 
           if force_hosts:
-		LOG.debug(_("Host filter for forced host %(force_hosts)s"), locals())
-		if not _host in force_hosts:
+                LOG.debug(_("Host filter for forced host %(force_hosts)s"), locals())
+                if not _host in force_hosts:
                         LOG.debug(_('Host filter fails for non-forced host %(host)s'),
                                   {'host': _host})
                         return False

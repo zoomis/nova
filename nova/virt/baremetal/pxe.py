@@ -282,9 +282,9 @@ class PXE(object):
         rules = ""
         i = 0
         for hwaddr in nics_in_order:
-            rules += 'SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ' \
+            rules += 'SUBSYSTEM=="net", ACTION=="add", ' \
                      'ATTR{address}=="%s", ATTR{dev_id}=="0x0", ' \
-                     'ATTR{type}=="1", KERNEL=="eth*", NAME="eth%d"\n' \
+                     'ATTR{type}=="1", NAME="eth%d"\n' \
                      % (hwaddr.lower(), i)
             i += 1
         if not injected_files:
