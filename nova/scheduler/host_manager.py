@@ -238,43 +238,49 @@ class HostState(object):
         _scheduler_hints = filter_properties.get('scheduler_hints', [])
         if _scheduler_hints:
 
-          ignore_hosts = _scheduler_hints.get('ignore_hosts', [])
-          force_hosts = _scheduler_hints.get('force_hosts', [])
-          node_ids = _scheduler_hints.get('node_ids', [])
-          _nodename = self.nodename
-          _host = self.host
+            ignore_hosts = _scheduler_hints.get('ignore_hosts', [])
+            if type(ignore_hosts) is unicode:
+                ignore_hosts = [ignore_hosts]
+            force_hosts = _scheduler_hints.get('force_hosts', [])
+            if type(force_hosts) is unicode:
+                force_hosts = [force_hosts]
+            node_ids = _scheduler_hints.get('node_ids', [])
+            if type(node_ids) is unicode:
+                node_ids = [node_ids]
+            _nodename = self.nodename
+            _host = self.host
 
-          LOG.debug(_("in passes filter:scheduler_hints: %(_scheduler_hints)s") % locals())
-          LOG.debug(_("in passes filter:force_hosts: %(force_hosts)s") % locals())
-          LOG.debug(_("in passes filter:ignore_hosts: %(ignore_hosts)s") % locals())
-          LOG.debug(_("in passes filter:node_ids: %(node_ids)s") % locals())
-          LOG.debug(_("in passes filter:self.host and self.node_id: %(_host)s, %(_nodename)s") % locals())
+            LOG.debug(_("in passes filter:scheduler_hints: %(_scheduler_hints)s") % locals())
+            LOG.debug(_("in passes filter:force_hosts: %(force_hosts)s") % locals())
+            LOG.debug(_("in passes filter:ignore_hosts: %(ignore_hosts)s") % locals())
+            LOG.debug(_("in passes filter:node_ids: %(node_ids)s") % locals())
+            LOG.debug(_("in passes filter:self.host and self.node_id: %(_host)s, %(_nodename)s") % locals())
 
-          if ignore_hosts:
+            if ignore_hosts:
                 if self.host in ignore_hosts:
-                        if node_ids:
-                                if _nodename in node_ids:
-                                        LOG.debug(_('Host filter fails for ignored host %(host)s and id %(nodename)'),
+                    if node_ids:
+                        if _nodename in node_ids:
+                            LOG.debug(_('Host filter fails for ignored host %(host)s and id %(nodename)'),
                                          {'host': self.host, 'nodename': _nodename})
-                                        return False
-                        else:
-                                LOG.debug(_('Host filter fails for ignored host %(host)s'),
+                            return False
+                    else:
+                        LOG.debug(_('Host filter fails for ignored host %(host)s'),
                                  {'host': self.host})
-                                return False
-
-          if force_hosts:
-                LOG.debug(_("Host filter for forced host %(force_hosts)s"), locals())
-                if not _host in force_hosts:
-                        LOG.debug(_('Host filter fails for non-forced host %(host)s'),
-                                  {'host': _host})
                         return False
 
+            if force_hosts:
+                LOG.debug(_("Host filter for forced host %(force_hosts)s"), locals())
+                if not _host in force_hosts:
+                    LOG.debug(_('Host filter fails for non-forced host %(host)s'),
+                                  {'host': _host})
+                    return False
+
                 if node_ids:
-                        LOG.debug(_("node ids requested are: (%(node_ids)s), local node_id = %(_nodename)s") % locals())
-                        if not _nodename in node_ids:
-                                LOG.debug(_('Host filter fails for node_id %(nodename)s'),
+                    LOG.debug(_("node ids requested are: (%(node_ids)s), local node_id = %(_nodename)s") % locals())
+                    if not _nodename in node_ids:
+                        LOG.debug(_('Host filter fails for node_id %(nodename)s'),
                                           {'nodename': _nodename})
-                                return False
+                        return False
 
         for filter_fn in filter_fns:
             if not filter_fn(self, filter_properties):

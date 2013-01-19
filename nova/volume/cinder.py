@@ -32,10 +32,10 @@ from nova.openstack.common import log as logging
 
 cinder_opts = [
     cfg.StrOpt('cinder_catalog_info',
-            default='volume:cinder:publicURL',
+            default='volume:cinder:publicURL:region',
             help='Info to match when looking for cinder in the service '
                  'catalog. Format is : separated values of the form: '
-                 '<service_type>:<service_name>:<endpoint_type>'),
+                 '<service_type>:<service_name>:<endpoint_type>:<region_name>'),
     cfg.StrOpt('cinder_endpoint_template',
                default=None,
                help='Override service catalog lookup with template for cinder '
@@ -60,10 +60,11 @@ def cinderclient(context):
         url = FLAGS.cinder_endpoint_template % context.to_dict()
     else:
         info = FLAGS.cinder_catalog_info
-        service_type, service_name, endpoint_type = info.split(':')
+        service_type, service_name, endpoint_type, region_name = info.split(':')
         url = sc.url_for(service_type=service_type,
                          service_name=service_name,
-                         endpoint_type=endpoint_type)
+                         endpoint_type=endpoint_type,
+                         attr='region', filter_value=region_name)
 
     LOG.debug(_('Cinderclient connection created using URL: %s') % url)
 
