@@ -47,7 +47,6 @@ tgtadm: CommandFilter, /usr/sbin/tgtadm, root
 # bm_deploy_server
 iscsiadm: CommandFilter, /sbin/iscsiadm, root
 fdisk: CommandFilter, /sbin/fdisk, root
-dd: CommandFilter, /sbin/fdisk, root
-fdisk: CommandFilter, /bin/dd, root
+dd: CommandFilter, /bin/dd, root
 mkswap: CommandFilter, /sbin/mkswap, root
 blkid: CommandFilter, /sbin/blkid, root
