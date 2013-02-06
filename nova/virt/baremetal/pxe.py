@@ -143,7 +143,7 @@ def _cache_image_x(context, target, image_id,
 def _build_pxe_config(deployment_id, deployment_key, deployment_iscsi_iqn,
                       deployment_aki_path, deployment_ari_path,
                       aki_path, ari_path,
-                      iscsi_portal):
+                      iscsi_portal, flavor_cpu_arch):
     # 'default deploy' will be replaced to 'default boot' by bm_deploy_server
     pxeconf = "default deploy\n"
     pxeconf += "\n"
@@ -173,6 +173,8 @@ def _build_pxe_config(deployment_id, deployment_key, deployment_iscsi_iqn,
         pxeconf += ' bm_iscsi_portal=%s' % iscsi_portal
     if FLAGS.baremetal_pxe_append_params:
         pxeconf += " %s" % FLAGS.baremetal_pxe_append_params
+    if flavor_cpu_arch == 'nf1_i686':
+        pxeconf += ' vmalloc=256M'
     pxeconf += "\n"
     pxeconf += "\n"
     pxeconf += "label local\n"
@@ -466,6 +468,9 @@ class PXE(object):
         if FLAGS.baremetal_pxe_append_iscsi_portal:
             if pxe_ip:
                 iscsi_portal = pxe_ip['server_address']
+
+        instance_extra_specs = inst_type['extra_specs']
+        flavor_cpu_arch = instance_extra_specs['cpu_arch']
         pxeconf = _build_pxe_config(deployment_id,
                                     deployment_key,
                                     deployment_iscsi_iqn,
@@ -473,7 +478,8 @@ class PXE(object):
                                     deployment_ari_path=tftp_paths[1],
                                     aki_path=tftp_paths[2],
                                     ari_path=tftp_paths[3],
-                                    iscsi_portal=iscsi_portal)
+                                    iscsi_portal=iscsi_portal,
+                                    flavor_cpu_arch=flavor_cpu_arch)
         utils.ensure_tree(pxe_config_dir)
         libvirt_utils.write_to_file(pxe_config_path, pxeconf)
 
