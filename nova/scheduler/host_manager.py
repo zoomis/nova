@@ -27,6 +27,10 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova.scheduler import filters
 
+import httplib2
+import json
+import requests
+
 host_manager_opts = [
     cfg.MultiStrOpt('scheduler_available_filters',
             default=['nova.scheduler.filters.standard_filters'],
@@ -45,13 +49,18 @@ host_manager_opts = [
                   ],
                 help='Which filter class names to use for filtering hosts '
                       'when not specified in the request.'),
+    cfg.StrOpt('janus_host',
+               default='http://localhost',
+               help='SDI manager host name'),
+    cfg.StrOpt('janus_port',
+               default='9091',
+               help='SDI manager host port'),
     ]
 
 FLAGS = flags.FLAGS
 FLAGS.register_opts(host_manager_opts)
 
 LOG = logging.getLogger(__name__)
-
 
 class ReadOnlyDict(UserDict.IterableUserDict):
     """A read-only dict."""
@@ -219,6 +228,11 @@ class HostManager(object):
     def filter_hosts(self, hosts, filter_properties, filters=None):
         """Filter hosts and return only ones passing all filters"""
         filtered_hosts = []
+	# select hosts from Janus
+	print '-----------------------------------------------'
+	print json.dumps(hosts)
+	selectedHosts = self._selectHostsBySDI(hosts, filter_properties)
+
         filter_fns = self._choose_host_filters(filters)
         for host in hosts:
             if host.passes_filters(filter_fns, filter_properties):
@@ -271,3 +285,15 @@ class HostManager(object):
             host_state_map[host] = host_state
 
         return host_state_map
+
+    def _selectHostsBySDI(self, hosts, filter_properties):
+        LOG.debug(_("call select hosts by SDI (%s)")%hosts)
+	LOG.debug(_("pass hosts and filter properties to Janus"))
+	# call scheduler backend in Janus
+        schedulerJanus = FLAGS.janus_host+':'+FLAGS.janus_port+'/filterhosts'
+	headers = {'content-type': 'application/json'}
+        r = requests.put(schedulerJanus, data=json.dumps(hosts), headers=headers)
+	# return hosts from Janus
+	selectHosts = json.loads(r.json)
+	LOG.debug(_("receive results from Janus: %s"), selectHosts)
+        return selectHosts

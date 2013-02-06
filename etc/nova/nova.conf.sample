@@ -1946,4 +1946,11 @@
 ####          prepared. Maximum value is 600 seconds (10 minutes).
 
 
+# added by eliot
+# janus_host=
+#### (StrOpt) SDI manager host name
+
+# janus_port=
+#### (StrOpt) SDI manager host port
+
 # Total option count: 505
