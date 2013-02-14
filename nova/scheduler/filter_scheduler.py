@@ -29,6 +29,7 @@ from nova.openstack.common.notifier import api as notifier
 from nova.scheduler import driver
 from nova.scheduler import least_cost
 from nova.scheduler import scheduler_options
+from nova.scheduler.plugins import janus_plugin
 
 
 FLAGS = flags.FLAGS
@@ -251,6 +252,19 @@ class FilterScheduler(driver.Scheduler):
         unfiltered_hosts_dict = self.host_manager.get_all_host_states(
                 elevated, topic)
 
+        # -------------------------------------------------------------------------------
+        # @author Eliot J. Kang <eliot@savinetwork.ca>
+        # Get hosts based on plugins
+        # remove all hosts from unfiltered_hosts_dict which are not in plugined_hosts
+        plugined_hosts = self.host_manager.get_plugined_hosts(elevated, topic, 
+                                                              janus_plugin.JanusPlugin())
+        LOG.debug(_("Host list before plugin: %s") % unfiltered_hosts_dict)
+        for key in unfiltered_hosts_dict.keys():
+            if not key in plugined_hosts:
+                del unfiltered_hosts_dict[key]
+        LOG.debug(_("Host list after plugin: %s") % unfiltered_hosts_dict)
+        # -------------------------------------------------------------------------------
+
         # Note: remember, we are using an iterator here. So only
         # traverse this list once. This can bite you if the hosts
         # are being scanned in a filter or weighing function.
@@ -262,6 +276,8 @@ class FilterScheduler(driver.Scheduler):
         else:
             num_instances = request_spec.get('num_instances', 1)
         for num in xrange(num_instances):
+            # Select hosts based on Plugins
+            
             # Filter local hosts based on requirements ...
             hosts = self.host_manager.filter_hosts(hosts,
                     filter_properties)

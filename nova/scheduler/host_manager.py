@@ -228,11 +228,6 @@ class HostManager(object):
     def filter_hosts(self, hosts, filter_properties, filters=None):
         """Filter hosts and return only ones passing all filters"""
         filtered_hosts = []
-	# select hosts from Janus
-	print '-----------------------------------------------'
-	print json.dumps(hosts)
-	selectedHosts = self._selectHostsBySDI(hosts, filter_properties)
-
         filter_fns = self._choose_host_filters(filters)
         for host in hosts:
             if host.passes_filters(filter_fns, filter_properties):
@@ -286,14 +281,25 @@ class HostManager(object):
 
         return host_state_map
 
-    def _selectHostsBySDI(self, hosts, filter_properties):
-        LOG.debug(_("call select hosts by SDI (%s)")%hosts)
-	LOG.debug(_("pass hosts and filter properties to Janus"))
-	# call scheduler backend in Janus
-        schedulerJanus = FLAGS.janus_host+':'+FLAGS.janus_port+'/filterhosts'
-	headers = {'content-type': 'application/json'}
-        r = requests.put(schedulerJanus, data=json.dumps(hosts), headers=headers)
-	# return hosts from Janus
-	selectHosts = json.loads(r.json)
-	LOG.debug(_("receive results from Janus: %s"), selectHosts)
-        return selectHosts
+    def get_plugined_hosts(self, context, topic, plugin):
+        """Returns a dict of all the hosts the HostManager
+        knows about.
+        @author Eliot J. Kang <eliot@savinetwork.ca>
+        """
+       
+        if topic != 'compute':
+            raise NotImplementedError(_(
+                "host_manager only implemented for 'compute'"))
+
+        hosts = []
+        compute_nodes = db.compute_node_get_all(context)
+        for compute in compute_nodes:
+            service = compute['service']
+            if not service:
+                LOG.warn(_("No service for compute ID %s") % compute['id'])
+                continue
+            host = service['host']
+            hosts.append(host)
+
+        hosts = plugin.host_select(hosts)
+        return hosts
