@@ -41,8 +41,13 @@ class JanusPlugin(plugins.BaseHostPlugin):
         # call scheduler backend in Janus
         janus = FLAGS.janus_host+':'+FLAGS.janus_port+'/filterhosts'
         headers = {'content-type': 'application/json'}
-        r = requests.put(janus, data=json.dumps(hosts), headers=headers)
-        # return hosts from Janus
-        selectedHosts = r.json
-        LOG.debug(_("receive results from Janus: %s"), selectedHosts)
+        selectedHosts = hosts
+        try:
+            r = requests.put(janus, data=json.dumps(hosts), headers=headers)
+            selectedHosts = r.json
+            # return hosts from Janus
+            LOG.debug(_("receive results from Janus: %s"), selectedHosts)
+        except:
+            # handling exceptions
+            LOG.debug(_("Exception: %s"), selectedHosts)
         return selectedHosts
