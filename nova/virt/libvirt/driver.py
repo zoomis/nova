@@ -49,6 +49,7 @@ import shutil
 import sys
 import tempfile
 import uuid
+import sensors
 
 from eventlet import greenthread
 from eventlet import tpool
