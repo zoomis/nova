@@ -411,3 +411,26 @@ class HostManager(object):
             host_state_map[host_node] = host_state
 
         return host_state_map
+
+    def get_plugined_hosts(self, context, topic, plugin):
+        """Returns a dict of all the hosts the HostManager
+        knows about.
+        @author Eliot J. Kang <eliot@savinetwork.ca>
+        """
+       
+        if topic != 'compute':
+            raise NotImplementedError(_(
+                "host_manager only implemented for 'compute'"))
+
+        hosts = []
+        compute_nodes = db.compute_node_get_all(context)
+        for compute in compute_nodes:
+            service = compute['service']
+            if not service:
+                LOG.warn(_("No service for compute ID %s") % compute['id'])
+                continue
+            host = service['host']
+            hosts.append(host)
+
+        hosts = plugin.host_select(hosts)
+        return hosts
