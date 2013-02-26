@@ -221,7 +221,7 @@ def upgrade(migrate_engine):
         Column('current_workload', Integer),
         Column('running_vms', Integer),
         Column('hypervisor_hostname', String(length=255)),
-        Column('temperature', Text, nullable=False),
+        Column('temperature', Float, nullable=False),
         mysql_engine='InnoDB',
         #mysql_charset='utf8'
     )

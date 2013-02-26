@@ -2169,6 +2169,29 @@ class LibvirtDriver(driver.ComputeDriver):
     def get_temperature (self):
         """Get temperature information.
 
+        return a temperature of physical id 0 of coretemp module
+
+        :return: see above description
+        @author Eliot J. Kang <eliot@savinetwork.ca>
+
+        """
+
+        sensors.init()
+        temperature = 0.0
+        try :
+            for chip in sensors.iter_detected_chips():
+                if chip.adapter_name == 'ISA adapter':
+                    for feature in chip:
+                        if feature.label.startswith('Physical'):
+                            temperature = feature.get_value()
+                            break                   
+        finally :
+            sensors.cleanup()
+        return jsonutils.dumps(temperature)
+
+    def get_temperature_json (self):
+        """Get temperature information.
+
         Obtains temperature from sensors
         and returns as a json string.
 

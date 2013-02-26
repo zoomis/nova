@@ -166,7 +166,8 @@ class ComputeNode(BASE, NovaBase):
     #
     # Temperature: temperature list for CPU cores or any devices, ignore the default value
     #             {"CPU": {"Core1": 50.0, "Core2", 50.2}}
-    temperature = Column(Text, nullable=True)
+    # Change(eliot): float value as an average of all cores
+    temperature = Column(Float, nullable=True)
 
 class ComputeNodeStat(BASE, NovaBase):
     """Stats related to the current workload of a compute host that are

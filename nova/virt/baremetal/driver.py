@@ -373,6 +373,7 @@ class BareMetalDriver(driver.ComputeDriver):
                'hypervisor_version': self.get_hypervisor_version(),
                'hypervisor_hostname': str(node['id']),
                'cpu_info': 'baremetal cpu',
+               'temperature': 30.0,
                }
         return dic
 
