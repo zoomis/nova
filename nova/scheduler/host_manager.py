@@ -370,7 +370,7 @@ class HostManager(object):
         service_caps[service_name] = capab_copy
         self.service_states[host] = service_caps
 
-    def get_all_host_states(self, context, topic):
+    def get_all_host_states(self, context, topic, nodes=None):
         """Returns a dict of all the hosts the HostManager
         knows about. Also, each of the consumable resources in HostState
         are pre-populated and adjusted based on data in the db.
@@ -381,7 +381,9 @@ class HostManager(object):
         Note: this can be very slow with a lot of instances.
         InstanceType table isn't required since a copy is stored
         with the instance (in case the InstanceType changed since the
-        instance was created)."""
+        instance was created).  
+
+        nodes are a list which should be included"""
 
         if topic != 'compute':
             raise NotImplementedError(_(
@@ -398,6 +400,13 @@ class HostManager(object):
                 continue
             host = service['host']
             nodename = compute.get('hypervisor_hostname')
+
+            # ignore a node which is not in the nodes list
+            # @author Eliot J. Kang <eliot@savinetwork.ca>
+            if not nodes == None and not nodename in nodes:
+                LOG.debug(_("Ignore the node (%s) becuase it is not in the list: %s") % (nodename, nodes))
+                continue
+
             if nodename is not None:
                 host_node = '%s/%s' % (host, nodename)
             else:
@@ -412,7 +421,7 @@ class HostManager(object):
 
         return host_state_map
 
-    def get_plugined_hosts(self, context, topic, plugin):
+    def get_plugined_nodes(self, context, topic, plugin, metric):
         """Returns a dict of all the hosts the HostManager
         knows about.
         @author Eliot J. Kang <eliot@savinetwork.ca>
@@ -426,11 +435,15 @@ class HostManager(object):
         compute_nodes = db.compute_node_get_all(context)
         for compute in compute_nodes:
             service = compute['service']
+            nodename = compute.get('hypervisor_hostname')
             if not service:
                 LOG.warn(_("No service for compute ID %s") % compute['id'])
                 continue
-            host = service['host']
+            nodename = compute.get('hypervisor_hostname')
+            host = nodename
             hosts.append(host)
 
-        hosts = plugin.host_select(hosts)
+        LOG.debug(_("Host list before plugin: %s") % hosts)
+        hosts = plugin.host_select(hosts, metric)
+        LOG.debug(_("Host list after plugin: %s") % hosts)
         return hosts

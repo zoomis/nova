@@ -363,6 +363,7 @@ class BareMetalDriver(driver.ComputeDriver):
             memory_mb_used = node['memory_mb']
             local_gb_used = node['local_gb']
 
+        # TODO(eliot): We have to add get_temperature for baremetal resource
         dic = {'vcpus': vcpus,
                'memory_mb': memory_mb,
                'local_gb': local_gb,
@@ -372,8 +373,9 @@ class BareMetalDriver(driver.ComputeDriver):
                'hypervisor_type': self.get_hypervisor_type(),
                'hypervisor_version': self.get_hypervisor_version(),
                'hypervisor_hostname': str(node['id']),
+#               'hypervisor_hostname': node['service_host'],
                'cpu_info': 'baremetal cpu',
-               'temperature': 30.0,
+               'temperature': 85.2,
                }
         return dic
 

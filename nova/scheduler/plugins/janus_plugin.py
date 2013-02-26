@@ -34,16 +34,17 @@ LOG = logging.getLogger(__name__)
 class JanusPlugin(plugins.BaseHostPlugin):
     """Disk Filter with over subscription flag"""
 
-    def host_select(self, hosts):
+    def host_select(self, hosts, metric):
         """select host by Janus plugin"""
-        LOG.debug(_("call select hosts by Janus plugin (%s)")%hosts)
+        LOG.debug(_("call select hosts by Janus plugin (%s) by metric (%s)")%(hosts,metric))
         LOG.debug(_("pass hosts to Janus"))
         # call scheduler backend in Janus
         janus = FLAGS.janus_host+':'+FLAGS.janus_port+'/filterhosts'
         headers = {'content-type': 'application/json'}
         selectedHosts = hosts
+        data = {'metric': metric, 'hosts': hosts}
         try:
-            r = requests.put(janus, data=json.dumps(hosts), headers=headers)
+            r = requests.put(janus, data=json.dumps(data), headers=headers)
             selectedHosts = r.json
             # return hosts from Janus
             LOG.debug(_("receive results from Janus: %s"), selectedHosts)
