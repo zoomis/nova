@@ -39,7 +39,7 @@ class JanusPlugin(plugins.BaseHostPlugin):
         LOG.debug(_("call select hosts by Janus plugin (%s) by metric (%s)")%(hosts,metric))
         LOG.debug(_("pass hosts to Janus"))
         # call scheduler backend in Janus
-        janus = FLAGS.janus_host+':'+FLAGS.janus_port+'/filterhosts'
+        janus = 'http://%s:%s/filterhosts'%(FLAGS.janus_host,FLAGS.janus_port)
         headers = {'content-type': 'application/json'}
         selectedHosts = hosts
         data = {'metric': metric, 'hosts': hosts}
