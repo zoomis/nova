@@ -277,6 +277,7 @@ class FilterScheduler(driver.Scheduler):
         # plugined_hosts = ['node']
         sch_metric = 'temperature'
         _scheduler_hints = filter_properties.get('scheduler_hints', [])
+        LOG.debug(_("sch_metric: %s") % sch_metric)
         if _scheduler_hints:
             sch_metric = _scheduler_hints.get('sch_metric', [])
             LOG.debug(_("sch_metric: %s") % sch_metric)
